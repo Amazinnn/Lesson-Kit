@@ -157,7 +157,7 @@ A small manifest may be inline. Inline `kind:"content-bundle"` and `type:"conten
 `knowledge_item` (required), `knowledge_type`, `importance`, `source_location`, `body`, `graph_label`, `related_kp_ids`, `fragile`.
 
 7. Problem fields:
-`problem_text` (required), `problem_type` (required; machine enum: calculation/proof/modeling/explanation/experiment/design/application/counterexample/other; Chinese display label is explanatory only: proof = 证明题), `kp_ids`, `source_kind`, `origin_kind`, `source_evidence` (required), `source_answer`, `solution`, `solution_origin`, `display_title`, `display_summary`, `exam_year`, and `figures`.
+`problem_text` (required), `problem_type` (required; machine enum: calculation/proof/modeling/explanation/experiment/design/application/counterexample/other; Chinese display label is explanatory only: proof = 证明题), `kp_ids`, `source_kind`, `origin_kind`, `source_evidence` (required), `source_answer`, `solution`, `solution_origin`, `display_title`, `display_summary`, `exam_year`, `figures`, and `parts` (mixed-problem parts — see item 18).
 `problem_type` describes the disciplinary form, not the practice UI. A yes/no or choice problem normally uses `problem_type:"other"`; the practice form is expressed by `quiz_type`, `options`, and `answer_key`.
 
 8. Practice forms:
@@ -182,11 +182,20 @@ Objective source problems are still imported when the source has no known answer
 
 15. Existing problems are modified in place with a `problem-patch`; do not delete and re-import them merely to add an answer key, source metadata, objective-practice fields, or extracted options. Shape:
 {"kind":"problem-patch","items":[{"problem_id":"…", ...fields to change...}]}
-Patchable fields include `problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`, `origin_kind`, `source_evidence`, `source_answer`, `solution_origin`, `display_title`, `display_summary`, `exam_year`, `practice_modes`, `micro_quiz`, and `answer_key`. Problem ids are immutable. Difficulty still uses `lesson-kit difficulty`. Converting an existing problem to yes/no/choice uses `practice_modes` plus the full `micro_quiz` object (`quiz_type`, `options`, `answer_key`, `error_reason`); preserve source option text rather than rewriting it. In-place patching preserves all learning history and is rollbackable by ingest batch.
+Patchable fields include `problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`, `origin_kind`, `source_evidence`, `source_answer`, `solution_origin`, `display_title`, `display_summary`, `exam_year`, `practice_modes`, `micro_quiz`, `parts`, and `answer_key`. Problem ids are immutable. Difficulty still uses `lesson-kit difficulty`. Converting an existing problem to yes/no/choice uses `practice_modes` plus the full `micro_quiz` object (`quiz_type`, `options`, `answer_key`, `error_reason`); preserve source option text rather than rewriting it. In-place patching preserves all learning history and is rollbackable by ingest batch.
 
 16. Server validation is authoritative. If any item is invalid the entire submitted manifest is zero-write and the result names the failures. Correct the causes and resubmit the complete manifest; do not silently drop rejected items or claim success. If turn context includes `last_check_outcome`, obey it: after success do not duplicate the same content; after a rejection fix the reported causes before resubmission.
 
 17. When repairing a Paper that is missing a problem the learner actually answered on paper, create that problem as ordinary governed content under an existing knowledge point with truthful `source_evidence`, append it to the Paper with `lesson-kit papers <workspace> append <ps-NNN> --problem <id>`, then import the attempt. Do not invent the problem, its knowledge point, or its source, and do not edit the saved Paper JSON directly.
+
+18. Problem parts (综合题小问): a problem MAY declare `parts`, an ordered list whose saved order is authoritative — practice renders it as saved and never reorders or splits it. One problem may mix judgment, choice, calculation and proof parts. Each part:
+- required: `id` (lowercase `[a-z][a-z0-9_-]{0,63}`, unique inside the problem), `prompt` (non-empty), `type` in yes_no / single_choice / multiple_choice / calculation / proof / open_response;
+- `reference_answer` and `reference_reasoning`: optional text; a proof part uses reasoning only and must not carry `short_answer` or `reference_answer`;
+- `short_answer`: optional boolean marking that a concise final result can be extracted; a missing learner result stays "unprovided", never wrong;
+- objective parts (yes_no / single_choice / multiple_choice) require distinct `options` (yes_no defaults to 是/否; others need at least two) and an optional `answer_key` naming them — one scalar for yes_no / single_choice, a list for multiple_choice;
+- a problem without `parts` remains answerable as one legacy whole problem.
+
+Author `parts` inside a content-bundle problem, or add/replace them with a `problem-patch` on an existing problem. Do not also declare `quiz_type` / `micro_quiz` on a problem that has `parts`. Later parts edits follow existing content-revision rules (only affected unfinished practice is invalidated) and never rewrite historical submissions. Pools created before this contract need the additive migration (`python pool/scripts/migrate-progress.py --db pool/<course>.db`) before `parts` can be stored.
 """,
 }
 

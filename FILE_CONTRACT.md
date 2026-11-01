@@ -51,6 +51,36 @@ submits require stable `request_id`. GET/POST `/api/w/{name}/grading` provides
 Agent read/history and `apply/withdraw/retry` actions under the local tool writer
 boundary. It is not a learner correction form or a new authentication system.
 
+### Authored problem parts (`problems.parts`)
+
+`parts` is governed authored JSON on a problem row: an ordered array whose saved
+order is authoritative — practice renders it as stored and never reorders or
+splits it. It is accepted on content-bundle problems and on `problem-patch`
+(`lesson-kit data <ws> create|update problem --input`); it is never inferred from
+practice state.
+
+| field | required | rule |
+|---|---|---|
+| `id` | yes | lowercase `[a-z][a-z0-9_-]{0,63}`, unique inside the problem |
+| `prompt` | yes | non-empty string |
+| `type` | yes | `yes_no` / `single_choice` / `multiple_choice` / `calculation` / `proof` / `open_response` |
+| `options` | objective parts | distinct strings, ≥2; `yes_no` defaults to 是/否 |
+| `answer_key` | optional | scalar naming one option (`yes_no`/`single_choice`) or a list naming options (`multiple_choice`) |
+| `reference_answer` | optional | text; forbidden on `proof` |
+| `reference_reasoning` | optional | text (the reference process) |
+| `short_answer` | optional | boolean; marks a concise final result that may be extracted |
+
+- One problem may mix judgment, choice, calculation and proof parts; a problem
+  without `parts` remains one legacy whole problem. A problem with `parts` must
+  not also declare `quiz_type` / `micro_quiz` (the bundle refuses the combination).
+- Missing final results stay "unprovided" — never synthesized as wrong; proof
+  parts carry process conclusions only.
+- Later edits follow existing content-revision invalidation rules for affected
+  unfinished practice and never rewrite historical submissions.
+- Storage requires the additive migration on older pools
+  (`python pool/scripts/migrate-progress.py --db pool/<course>.db`); the bundle
+  gate refuses `parts` with an actionable error when `problems.parts` is absent.
+
 ## Workspace layout and artifact roots
 
 Lesson Kit's bundled teaching resources are installed package files under

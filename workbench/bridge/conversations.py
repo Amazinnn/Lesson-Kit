@@ -768,7 +768,7 @@ def _prompt(message, context):
         "同一回复里的 content-bundle 区块都会被依次应用，不要只导一章就停下来。"
         "6) 题目字段：problem_text、problem_type（machine enum: calculation/proof/modeling/explanation/experiment/design/application/counterexample/other; 中文释义仅作说明：proof = 证明题）、kp_ids、source_kind、"
         "origin_kind、source_evidence、source_answer、solution、solution_origin、display_title、"
-        "display_summary、figures；图片引用形如 figure:f1。"
+        "display_summary、figures、parts（综合题小问，按小问声明题型）；图片引用形如 figure:f1。"
         "7) 练习题型三选一：普通题、yes_no、single_choice/multiple_choice；"
         "客观题即使题源没有正确答案也照样入库，可暂缺 answer_key。"
         "来源语义包含 source_problem、adapted_problem、generated_grounded。"

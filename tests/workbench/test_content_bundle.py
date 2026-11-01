@@ -839,6 +839,51 @@ class ContentBundleTests(unittest.TestCase):
         )
         self.assertEqual(stored, [(None,)])
 
+    def test_problem_parts_are_saved_through_the_bundle(self):
+        parts = [
+            {"id": "a", "prompt": "判断：电场有方向。", "type": "yes_no",
+             "answer_key": "是"},
+            {"id": "b", "prompt": "求 E 的大小。", "type": "calculation",
+             "reference_answer": "42", "reference_reasoning": "由库仑定律得…",
+             "short_answer": True},
+            {"id": "c", "prompt": "证明该场为无旋场。", "type": "proof",
+             "reference_reasoning": "取任意闭合回路，环量为零。"},
+        ]
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [formal("mixed", ["dmath-ch06-kp-001"], parts=parts)],
+        }
+        result = self.apply(manifest)
+        self.assertEqual(result["counts"]["problems"], 1)
+        stored = self.query(
+            "SELECT parts FROM problems WHERE ingest_batch_id=?",
+            (result["batch_id"],),
+        )
+        self.assertEqual(json.loads(stored[0][0]), parts)
+
+    def test_invalid_parts_refuse_the_whole_bundle(self):
+        before = self.count("problems")
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [formal("bad", ["dmath-ch06-kp-001"], parts=[
+                {"id": "A", "prompt": "大写 id", "type": "calculation"}])],
+        }
+        with self.assertRaisesRegex(ValueError, "part id"):
+            self.apply(manifest)
+        self.assertEqual(self.count("problems"), before)
+
+    def test_parts_and_quiz_type_cannot_combine(self):
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [micro("both", ["dmath-ch06-kp-001"], parts=[
+                {"id": "a", "prompt": "小题", "type": "calculation"}])],
+        }
+        with self.assertRaisesRegex(ValueError, "cannot combine"):
+            self.apply(manifest)
+
 
 if __name__ == "__main__":
     unittest.main()

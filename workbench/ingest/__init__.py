@@ -707,6 +707,7 @@ def _bundle_problem_fields(item, kp_ids):
         "display_title": item.get("display_title"),
         "display_summary": item.get("display_summary"),
         "exam_year": item.get("exam_year"),
+        "parts": item.get("parts"),
     }
 
 
@@ -755,6 +756,10 @@ def _has_column(conn, table, column):
 
 def _has_exam_year(conn):
     return _has_column(conn, "problems", "exam_year")
+
+
+def _has_parts_column(conn):
+    return _has_column(conn, "problems", "parts")
 
 
 def _problem_identity_errors(conn, candidates):
@@ -939,6 +944,25 @@ def _gate_content_bundle(conn, manifest, course=""):
         errors.extend(_inline_problem_difficulty_errors(item, label))
         is_micro = item.get("quiz_type") is not None or item.get("micro_quiz") is not None
         fields = _bundle_problem_fields(item, resolved)
+        if fields.get("parts") is not None:
+            # Authored parts ride the same governed creation path as every other
+            # problem field; a mixed problem declares its forms per part instead
+            # of a whole-problem quiz_type.
+            from workbench.domain.problem_parts import validate as validate_parts
+            try:
+                validate_parts(fields["parts"])
+            except ValueError as exc:
+                errors.append(f"{label}: {exc}")
+            if is_micro:
+                errors.append(
+                    f"{label}: parts and quiz_type cannot combine — declare each "
+                    "part's answering type inside parts instead"
+                )
+            elif not _has_parts_column(conn):
+                errors.append(
+                    f"{label}: this pool has no problems.parts column yet — run: "
+                    "python pool/scripts/migrate-progress.py --db pool/<course>.db"
+                )
         if is_micro:
             payload = _bundle_micro_payload(item)
             row = {
@@ -1267,6 +1291,9 @@ def _apply_content_bundle(database, manifest, backup, course=None):
             if _has_exam_year(conn):
                 columns.append("exam_year")
                 values.append(fields["exam_year"])
+            if fields.get("parts") and _has_parts_column(conn):
+                columns.append("parts")
+                values.append(json.dumps(fields["parts"], ensure_ascii=False))
             conn.execute(
                 f"INSERT INTO problems ({', '.join(columns)})"
                 f" VALUES ({', '.join('?' for _ in columns)})",

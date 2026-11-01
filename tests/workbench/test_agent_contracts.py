@@ -19,6 +19,8 @@ class AgentContractTests(unittest.TestCase):
         self.assertIn("staged_manifest_dir", content)
         self.assertIn("source_evidence", content)
         self.assertIn("zero-write", content)
+        self.assertIn("Problem parts (综合题小问)", content)
+        self.assertIn("Do not also declare `quiz_type`", content)
 
     def test_contract_module_is_a_read_only_discovery_cli(self):
         from workbench.bridge import agent_contracts
@@ -47,6 +49,7 @@ class AgentContractTests(unittest.TestCase):
         self.assertIn("主动读取 Lesson Kit 数据", prompt)
         self.assertIn("python -m workbench.bridge.agent_contracts list", prompt)
         self.assertIn("普通教学问答无需读取无关契约", prompt)
+        self.assertIn("parts（综合题小问", prompt)
         for topic in agent_contracts.topics():
             self.assertIn(topic, prompt)
         # A normal turn should carry a map and a compact schema reminder, not
