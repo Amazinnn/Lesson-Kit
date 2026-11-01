@@ -3933,6 +3933,17 @@
     var approval = action.paper_approval || {};
     var id = String(turnId || approval.turn_id || action.turn_id
       || action.practice_set_id || "proposal");
+    if (approval.status === "pending") {
+      /* 2026-11-01 (agent-chat-simplify): a live decision is presented exactly
+         once, in the composer-side approval card; the message flow keeps only
+         resolved history. */
+      var stale = aiPaperProposalCards[id];
+      if (stale) {
+        stale.remove();
+        delete aiPaperProposalCards[id];
+      }
+      return;
+    }
     var card = aiPaperProposalCards[id];
     if (!card) {
       card = document.createElement("article");

@@ -329,6 +329,32 @@ function paperProposalMessage(approval) {
   };
 }
 
+test("a pending proposal shows only in the composer card, not in the message flow", async () => {
+  const approval = paperApproval();
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a"),
+      pending_paper_approval: approval,
+      messages: [paperProposalMessage(approval)],
+    });
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: () => 1,
+  });
+  const messages = app.elements["ai-messages"];
+
+  await flush();
+  await flush();
+  assert.equal(app.elements["ai-paper-approval"].classList.contains("hidden"), false);
+  assert.equal(
+    nodesWithClass(messages, "ai-paper-proposal-history").length, 0);
+  // Resolved history returning to the flow is covered by the stale-approval
+  // refresh test asserting /已批准/ inside #ai-messages.
+});
+
 function deferred() {
   let resolve;
   let reject;
