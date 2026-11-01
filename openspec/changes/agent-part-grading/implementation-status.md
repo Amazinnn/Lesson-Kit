@@ -2,7 +2,7 @@
 
 Workspace: `C:/Users/yanwei/.codex/worktrees/agent-part-grading/lesson-kit`
 Branch: `codex/agent-part-grading`
-Base: `2d1242b9317dcd220ede37dfca9cb5d2d304242a`
+Base: `7bb15d4c` (rebased onto `main` on 2026-11-01; previous base `2d1242b9`)
 
 ## Contract reconciliation
 
@@ -26,6 +26,13 @@ Base: `2d1242b9317dcd220ede37dfca9cb5d2d304242a`
 - What these checks cover: mixed-part fixtures, immutable per-part Attempts, hidden grading disclosure, bad-batch zero writes, learning-effect isolation, grading revision/withdrawal history, Bridge retry/recovery, late arrival without new Attempts, stale revision/content rejection, and subjective status projection.
 - Browser evidence reused from `.superpowers/sdd/task-ui-report.md` with screenshot `.superpowers/sdd/part-ui-browser.png`; evidence was recorded against an isolated temp registry/pool with provider discovery disabled and no live-model run. Touch acceptance used click-equivalent persistent details; a real touch device was not executed. No test writes went to a real user pool.
 - Not claimed here: installed runtime behavior, live-model grading, or a real touch device.
+- Re-run after rebasing onto `main` on 2026-11-01, same isolated setup:
+  - `python -m pytest tests -q`: 1300 passed.
+  - `node --test tests/workbench/part_practice.test.js tests/workbench/paper_practice.test.js`: 23 passed.
+  - `python -m compileall -q lessonkit.py workbench pipeline pool tests`: passed.
+  - `openspec validate --specs --strict`: 20 passed.
+  - `python lessonkit.py guard extract-problems --course dmath --chapter ch06`: PASS.
+  - Conflicts resolved as additive merges only (agent-resources/runtime routes and styles from `main` plus part/grading routes and styles from this branch); no side was dropped.
 
 ## Implemented storage and surface handoff
 
