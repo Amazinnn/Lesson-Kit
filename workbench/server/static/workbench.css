@@ -2738,12 +2738,6 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
   font-size: 12px;
   overflow-wrap: anywhere;
 }
-.ai-plan-impact {
-  margin-top: 4px;
-  color: var(--ink-muted);
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
 /* ============================================================================
    共享阅读版式层 `.wb-reading` —— 内容排版（markdown 语义元素）
    （design.md D-5 / decisions.md A-6 / tasks.md 6.1）

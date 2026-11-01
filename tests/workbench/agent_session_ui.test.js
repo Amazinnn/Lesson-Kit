@@ -578,7 +578,7 @@ test(`a ${terminalStatus} accepted send offers a new linked attempt from its sav
 });
 }
 
-test("tool activity cards show terminal failures and only explicit known impact", async () => {
+test("tool activity cards show terminal failures and never display impact", async () => {
   const app = setup((url, options) => {
     if (url.endsWith("/ai/providers")) return response([]);
     if (url.endsWith("/ai/sessions") && !options) {
@@ -609,9 +609,11 @@ test("tool activity cards show terminal failures and only explicit known impact"
   const verified = rows.find((item) => item.activityParts?.label.textContent === "Store batch");
   assert.ok(failed.className.includes("is-failed"));
   assert.equal(failed.activityParts.state.textContent, "失败");
-  assert.equal(failed.activityParts.impact.textContent, "影响未知");
-  assert.equal(command.activityParts.impact.textContent, "影响未知");
-  assert.equal(verified.activityParts.impact.textContent, "已知影响：batch-9 applied");
+  // 2026-11-01 (agent-chat-simplify): impact lines are retired entirely —
+  // neither known nor unknown impact is rendered, and no inference from names.
+  assert.equal(failed.activityParts.impact, undefined);
+  assert.equal(command.activityParts.impact, undefined);
+  assert.equal(verified.activityParts.impact, undefined);
 });
 
 test("reloaded failed history renders saved activities without a blank assistant answer", async () => {

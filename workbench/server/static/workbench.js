@@ -4743,18 +4743,8 @@
       parts.summary.textContent = String(summary);
       parts.summary.classList.toggle("hidden", !summary);
     }
-    if (parts.impact) {
-      var evidence = activity.impact;
-      if (evidence && evidence.status === "known" && evidence.summary) {
-        parts.impact.textContent = "已知影响：" + String(evidence.summary);
-      } else if (["tool", "command", "file", "file-read", "file-write", "lesson-kit", "search"]
-          .indexOf(activity.activity_type) !== -1) {
-        parts.impact.textContent = "影响未知";
-      } else {
-        parts.impact.textContent = "";
-      }
-      parts.impact.classList.toggle("hidden", !parts.impact.textContent);
-    }
+    /* Impact is deliberately not displayed: cards state status and evidenced
+       output only, and never claim (or disclaim) write effects. */
   }
 
   function aiCreateExecutionPlan() {
@@ -4799,17 +4789,14 @@
       detail.className = "ai-plan-detail hidden";
       var summary = document.createElement("div");
       summary.className = "ai-plan-summary hidden";
-      var impact = document.createElement("div");
-      impact.className = "ai-plan-impact hidden";
       body.appendChild(heading);
       body.appendChild(detail);
       body.appendChild(summary);
-      body.appendChild(impact);
       row.appendChild(marker);
       row.appendChild(body);
       row.activityParts = {
         label: label, state: state, detail: detail, summary: summary,
-        impact: impact, body: body,
+        body: body,
       };
       plan.rows[id] = row;
       plan.list.appendChild(row);
@@ -4867,15 +4854,12 @@
       detail.className = "ai-plan-detail hidden";
       var summary = document.createElement("div");
       summary.className = "ai-plan-summary hidden";
-      var impact = document.createElement("div");
-      impact.className = "ai-plan-impact hidden";
       body.appendChild(heading);
       body.appendChild(detail);
       body.appendChild(summary);
-      body.appendChild(impact);
       row.appendChild(body);
       row.activityParts = {
-        label: label, state: state, detail: detail, summary: summary, impact: impact, body: body,
+        label: label, state: state, detail: detail, summary: summary, body: body,
         disclosure: null, output: null,
       };
       aiPiActivities[id] = row;
