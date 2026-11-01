@@ -2596,10 +2596,10 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
 .ai-option input { width: auto; margin: 0; }
 .ai-conversation { display: flex; flex: 1; flex-direction: column; min-height: 0;  padding-top: 14px; }
 .ai-conversation .side-label { flex: none; }
-#ai-messages { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; min-height: 0; font-size: 14px; }
-#ai-messages .msg { font-size: 14px; line-height: 22px; padding: 10px 2px; margin-bottom: 4px; }
+#ai-messages { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; min-height: 0; font-size: 16px; }
+#ai-messages .msg { font-size: 16px; line-height: 24px; padding: 10px 2px; margin-bottom: 4px; }
 #ai-input-row { display: flex; gap: 6px; margin-top: 12px; align-items: flex-end; }
-#ai-input { flex: 1; min-height: 32px; }
+#ai-input { flex: 1; min-height: 32px; font-size: 16px; }
 .ai-send-actions { display: flex; gap: 5px; }
 #ai-status { min-height: 18px; margin: 6px 0 0; }
 .ai-plan {
@@ -5195,7 +5195,7 @@ html[data-motion="off"] *::after {
   transform: scale(1.06);
 }
 .paper-options label { display: flex; gap: 12px; align-items: baseline; padding: 12px; margin: 6px 0; border: 1px solid var(--rule-hair); border-radius: 8px; }
-#paper-answer { width: 100%; box-sizing: border-box; margin: 12px 0; resize: vertical; }
+#paper-answer { width: 100%; box-sizing: border-box; margin: 12px 0; resize: vertical; font-size: 16px; line-height: 24px; }
 #paper-reference, #paper-rating { margin-top: 16px; }
 #paper-rating form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 #paper-rating input[type=number] { width: 90px; }
