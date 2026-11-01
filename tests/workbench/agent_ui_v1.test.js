@@ -54,7 +54,6 @@ function setup() {
     layout: new Element("layout", { workspace: "alpha", page: "kp", objectId: "kp-7" }),
     "ai-column": new Element("ai-column"),
     "ai-messages": new Element("ai-messages"),
-    "ai-context-chips": new Element("ai-context-chips"),
     "ai-input": new Element("ai-input"),
     "ai-input-row": new Element("ai-input-row"),
     "ai-approval-slot": new Element("ai-approval-slot"),
@@ -85,9 +84,11 @@ function setup() {
 
 test("server shell loads Agent UI v1 foundation and declares transient surfaces", () => {
   for (const id of [
-    "ai-context-chips", "ai-composer-shell", "ai-approval-slot",
+    "ai-composer-shell", "ai-approval-slot",
     "agent-activity-float", "agent-activity-toggle", "agent-artifact-split",
   ]) assert.ok(pages.includes(id), `${id} missing from shell`);
+  assert.equal(pages.includes("ai-context-chips"), false,
+    "context chips are retired (agent-chat-simplify)");
   assert.equal(pages.includes("agent-bottom-dock"), false, "task progress must not render a Bottom Dock");
   assert.ok(pages.includes("aria-controls='agent-activity-body'"));
   assert.ok(pages.includes("/static/agent-ui.css"));
@@ -97,14 +98,10 @@ test("server shell loads Agent UI v1 foundation and declares transient surfaces"
   assert.equal(css.includes("#0b0f19"), false, "Agent UI must not introduce a dark island");
 });
 
-test("surface controller renders compact context chips and respects explicit collapse", () => {
+test("surface controller respects explicit collapse without context chips", () => {
   const { elements, ui, storage } = setup();
-  assert.equal(elements["ai-context-chips"].children.length, 3);
-  assert.equal(elements["ai-context-chips"].children[0].textContent, "知识点");
-  assert.equal(elements["ai-context-chips"].children[2].textContent, "范围 2 个知识点");
-  storage.set("wb_agent_scope_alpha", JSON.stringify(["kp-1"]));
-  ui.renderContext();
-  assert.ok(elements["ai-context-chips"].children[2].textContent.includes("1"));
+  assert.equal(elements["ai-context-chips"], undefined);
+  assert.ok(storage !== null);
   ui.collapseAux();
   assert.equal(ui.state.userCollapsed, true);
   const panel = [...css.matchAll(/\.agent-artifact-split\s*\{[^}]*\}/g)]

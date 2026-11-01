@@ -46,52 +46,6 @@
     }
   }
 
-  function pageLabel(page) {
-    return ({
-      practice: "练习",
-      "practice-sets": "试卷",
-      kp: "知识点",
-      kps: "知识点",
-      graph: "知识图谱",
-      records: "记录",
-      goals: "目标",
-    })[page] || "当前页";
-  }
-
-  function selectedKpCount(layout) {
-    if (!layout || !window || !window.sessionStorage) return 0;
-    var workspace = layout.dataset && layout.dataset.workspace;
-    if (!workspace) return 0;
-    try {
-      var raw = window.sessionStorage.getItem("wb_agent_scope_" + workspace);
-      var value = raw ? JSON.parse(raw) : [];
-      return Array.isArray(value) ? value.filter(Boolean).length : 0;
-    } catch (_) {
-      return 0;
-    }
-  }
-
-  function chip(text, primary) {
-    var span = document.createElement("span");
-    span.className = "agent-context-chip" + (primary ? " is-primary" : "");
-    span.textContent = text;
-    return span;
-  }
-
-  function renderContext() {
-    var host = byId("ai-context-chips");
-    var layout = byId("layout");
-    if (!host || !layout) return;
-    host.innerHTML = "";
-    var page = layout.dataset ? layout.dataset.page : "";
-    host.appendChild(chip(pageLabel(page), true));
-    if (layout.dataset && layout.dataset.objectId) {
-      host.appendChild(chip(layout.dataset.objectId, false));
-    }
-    var count = selectedKpCount(layout);
-    if (count) host.appendChild(chip("范围 " + count + " 个知识点", false));
-  }
-
   function autosizeInput() {
     var input = byId("ai-input");
     if (!input || !input.style) return;
@@ -447,7 +401,6 @@
     state.initialized = true;
     var rail = byId("ai-column");
     if (rail && rail.classList) rail.classList.add("agent-rail");
-    renderContext();
     bindComposer();
     bindAuxCollapse();
     bindActivityToggle();
@@ -456,7 +409,6 @@
 
   var api = {
     init: init,
-    renderContext: renderContext,
     resetConversation: resetConversation,
     resetTurn: resetTurn,
     setRunning: setRunning,

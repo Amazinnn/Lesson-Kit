@@ -29,35 +29,6 @@
 .ai-conversation { border-top: 0 !important; padding-top: 12px !important; }
 #ai-messages { min-height: 0; scrollbar-gutter: stable; }
 
-.agent-context-chips {
-  display: flex;
-  flex: none;
-  gap: 5px;
-  min-height: 28px;
-  padding: 8px 0 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.agent-context-chips::-webkit-scrollbar { display: none; }
-.agent-context-chip {
-  flex: none;
-  max-width: 190px;
-  padding: 2px 8px;
-  border: 1px solid var(--rule-hair);
-  border-radius: 999px;
-  background: var(--surface-card);
-  color: var(--ink-muted);
-  font-size: 11px;
-  line-height: 18px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.agent-context-chip.is-primary {
-  border-color: var(--ink-strong);
-  box-shadow: inset 3px 0 0 var(--role-blue);
-  color: var(--ink-strong);
-}
 
 .agent-composer-shell {
   position: relative;

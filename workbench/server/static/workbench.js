@@ -47,7 +47,6 @@
   function saveSelectedKpIds(ids) {
     var unique = Array.from(new Set((ids || []).filter(Boolean)));
     store(SELECTION_KEY, unique);
-    if (window.AgentUISurfaces) window.AgentUISurfaces.renderContext();
     return unique;
   }
 
@@ -4038,8 +4037,7 @@
       aiPaperApprovalNotice = null;
       notice = null;
     }
-    if (status) status.textContent = notice ? notice.text
-      : "确认前不会修改试卷；批准或取消后，队列仍需手动继续。";
+    if (status) status.textContent = notice ? notice.text : "";
     if (details) aiPaperApprovalDetails(details, current);
     if (approve) approve.disabled = inFlight || unknown;
     if (cancel) cancel.disabled = inFlight || unknown;
@@ -4191,11 +4189,13 @@
         || record.status === "running" || !!approvalPending);
     }
     if (status) {
+      /* 2026-11-01 (agent-chat-simplify): only functional queue states keep a
+         sentence; the ordinary running-state explainer is retired. */
       status.textContent = approvalPending
         ? "试卷更新待确认；批准或取消后，仍需手动继续队列。"
         : paused
         ? "队列已暂停；继续后会按顺序发送。"
-        : pending.length ? "当前回复结束后按顺序发送；列表中的消息尚未开始。" : "";
+        : "";
     }
     if (aiQueueEditingTurn && !pending.some(function (message) {
       return message.turn_id === aiQueueEditingTurn;
@@ -4537,12 +4537,14 @@
       var card = document.createElement("div");
       card.className = "ai-send-recovery";
       var label = document.createElement("p");
+      /* 2026-11-01 (agent-chat-simplify): keep the state word, drop the
+         instructional tail; the hover title still carries the exact error. */
       if (record.status === "unknown") {
-        label.textContent = "发送未确认；点击核对后再决定是否重发。";
+        label.textContent = "发送未确认";
       } else if (record.status === "rejected") {
-        label.textContent = "发送被拒绝；等待手动重发。";
+        label.textContent = "发送被拒绝";
       } else {
-        label.textContent = "本轮未完成；等待手动重试。";
+        label.textContent = "本轮未完成";
       }
       label.title = record.error || "";
       card.appendChild(label);
