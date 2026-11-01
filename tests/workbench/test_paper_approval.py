@@ -317,6 +317,61 @@ class PaperApprovalTests(unittest.TestCase):
         self.assertEqual(json.loads((folder / "turn-003.json").read_text(
             encoding="utf-8"))["status"], "queued")
 
+    def _resolve_finished_proposal(self, paper_ids, decision):
+        paper = self.paper(paper_ids)
+        folder, answer = self.conversation(paper["practice_set_id"])
+        self.propose(folder, answer)
+        record_path = folder / "conversation.json"
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+        record.update({"status": "idle", "current_turn_id": None,
+                       "queue_paused": True})
+        record_path.write_text(json.dumps(record), encoding="utf-8")
+        result = self.conversations.resolve_paper_approval(
+            self.pool, self.workspace, "conv-001", "turn-001",
+            expected_revision=1, decision=decision)
+        return folder, record_path, result
+
+    def test_approval_resolution_with_empty_queue_lifts_pause_and_sends_directly(self):
+        folder, record_path, result = self._resolve_finished_proposal(
+            ["dmath-ch06-prob-001", "dmath-ch06-prob-002"], "approve")
+        conversation = json.loads(record_path.read_text(encoding="utf-8"))
+        self.assertFalse(conversation["queue_paused"])
+
+        with mock.patch.object(
+                self.conversations.threading, "Thread") as thread:
+            started = self.conversations.start_turn(
+                self.pool, self.workspace, "conv-001", "下一个问题", {},
+                queue_action="queue")
+            thread.return_value.start.assert_called_once()
+        self.assertEqual(started["status"], "running")
+
+    def test_cancel_with_empty_queue_lifts_pause(self):
+        folder, record_path, result = self._resolve_finished_proposal(
+            ["dmath-ch06-prob-001", "dmath-ch06-prob-002"], "cancel")
+        self.assertEqual(result["approval"]["status"], "cancelled")
+        conversation = json.loads(record_path.read_text(encoding="utf-8"))
+        self.assertFalse(conversation["queue_paused"])
+
+    def test_approval_resolution_with_retained_queue_keeps_it_paused(self):
+        paper = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
+        folder, answer = self.conversation(paper["practice_set_id"])
+        self.propose(folder, answer)
+        self.queue_turn(folder, "turn-002", "B")
+
+        approved = self.conversations.resolve_paper_approval(
+            self.pool, self.workspace, "conv-001", "turn-001",
+            expected_revision=1, decision="approve")
+
+        self.assertEqual(approved["approval"]["status"], "approved")
+        self.assertTrue(approved["queue_paused"])
+        queued = self.conversations.start_turn(
+            self.pool, self.workspace, "conv-001", "C", {},
+            queue_action="queue")
+        self.assertEqual(queued["status"], "queued")
+        conversation = json.loads((folder / "conversation.json").read_text(
+            encoding="utf-8"))
+        self.assertTrue(conversation["queue_paused"])
+
     def test_http_projection_and_paper_approval_route(self):
         from workbench.server import app
 
@@ -346,7 +401,9 @@ class PaperApprovalTests(unittest.TestCase):
             with urllib.request.urlopen(request) as response:
                 result = json.loads(response.read().decode("utf-8"))
             self.assertEqual(result["approval"]["status"], "cancelled")
-            self.assertTrue(result["queue_paused"])
+            # 2026-11-01 contract change (agent-chat-simplify): an empty queue
+            # has no retained work to protect, so cancellation lifts the pause.
+            self.assertFalse(result["queue_paused"])
             self.assertIsNone(self.conversations.get(
                 self.pool, "conv-001")["pending_paper_approval"])
         finally:

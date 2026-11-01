@@ -21,7 +21,7 @@
 ## Decisions
 
 1. **composer 退实时编辑用属性开关**：`pages.py` 给 `#ai-input` 加 `data-plain-text`。替代方案（给 `.lk-live-editor` 补 flex 样式 + 改 CM keymap 桥接）被否：桥接无法表达"Enter=发送"且要维护两套按键语义；属性开关是 live-editor 自带的退出通道，一行生效。
-2. **队列暂停语义**：暂停保护的是"遗留排队消息"。实现两处——`submit_turn` 的 `start_now` 允许 `queue_paused and not order` 时直发；`resolve_paper_approval` 在成功/取消路径上，当 `_pending_paper_approval(folder) is None and not _queue_order(folder, conversation)` 时清除 `queue_paused`（对齐 `_finish` 的 interrupt 先例）。stale/invalid 路径仍保持暂停（审批尚未真正决议）。
+2. **队列暂停语义**：暂停保护的是"遗留排队消息"。实现落点只在 `resolve_paper_approval` 的成功/取消路径——决议落盘后，当 `_pending_paper_approval(folder) is None and not _queue_order(folder, conversation)` 时清除 `queue_paused`（对齐 `_finish` 的 interrupt 先例）。`submit_turn` 的 `start_now` **不动**：若允许"暂停且队列为空即直发"，会在 interrupt 交接（waiting_for_stop 不入队）窗口绕过停顿保护，产生双跑风险；审批驱动的暂停由审批决议自己解除即可满足 spec。stale/invalid 路径保持暂停（审批尚未真正决议）。
 3. **impact 展示整体移除**：删 `.ai-plan-impact` 的创建、语义更新与渲染；provider 不产出 impact 的既有约束（`test_conversation_providers.py:539`）不变。W-89/W-90 冻结裁决由所有者 2026-11-01 决定推翻，在 `workbench-component-forms/design-notes/copy-table.md` 登记推翻记录，不改历史条目本身。
 4. **对话流审批卡**：仅删 `record.pending_paper_approval` 的 in-flow 渲染分支（workbench.js:3856-3871 一带）；`ai-paper-approval-history-*`（已决议）保留。composer 卡 `#ai-paper-approval` 不动。
 5. **删除清单**（标注保留项）：side-label「对话/选择 Agent/待处理消息」、`#ai-queue-status` 的"当前回复结束后按顺序发送…"句、`#ai-handoff-status` 整元素、恢复卡说明句、审批卡默认句「确认前不会修改试卷…」、中栏 kicker（「Agent 活动/正在处理」「工件/最新工件」）、placeholder「输入问题」、上下文 chips（`agent-ui.js:81-93` + `pages.py:1179`）。保留：`#ai-status` 全部文案、错误/失败/暂停态文案（"队列已暂停""试卷更新待确认"两句、失败摘要、发送失败提示）。

@@ -453,6 +453,18 @@ def _ensure_approval_pause(pool, record):
         return current
 
 
+def _approval_pause_for_retained(folder, conversation):
+    """A resolved approval pauses only work it must protect: retained messages.
+
+    An empty queue has nothing to protect, so the pause lifts and the next
+    submission follows the running-send preference directly.
+    """
+    if _pending_paper_approval(folder) is None \
+            and not _queue_order(folder, conversation):
+        return False
+    return True
+
+
 def find_submission(pool, conversation_id, message, submission_id, submitted_fields):
     """Return an accepted turn for an idempotent retry, or raise on changed input."""
     if submission_id is None:
@@ -1827,12 +1839,13 @@ def resolve_paper_approval(pool, workspace, conversation_id, turn_id, *,
             approval["status"] = "cancelled"
             approval["projection"]["status"] = "cancelled"
             approval["resolved_at"] = _now()
-            conversation["queue_paused"] = True
-            conversation["updated_at"] = _now()
             _sync_paper_approval_action(turn, approval)
             turn["paper_approval"] = approval
             turn["updated_at"] = _now()
             _write_json(turn_path, turn)
+            conversation["queue_paused"] = _approval_pause_for_retained(
+                folder, conversation)
+            conversation["updated_at"] = _now()
             _write_json(conversation_path, conversation)
             return _approval_response(conversation_id, turn, conversation)
 
@@ -1911,12 +1924,13 @@ def resolve_paper_approval(pool, workspace, conversation_id, turn_id, *,
         approval["status"] = "approved"
         approval["projection"]["status"] = "approved"
         approval["resolved_at"] = _now()
-        conversation["queue_paused"] = True
-        conversation["updated_at"] = _now()
         _sync_paper_approval_action(turn, approval)
         turn["paper_approval"] = approval
         turn["updated_at"] = _now()
         _write_json(turn_path, turn)
+        conversation["queue_paused"] = _approval_pause_for_retained(
+            folder, conversation)
+        conversation["updated_at"] = _now()
         _write_json(conversation_path, conversation)
         return _approval_response(conversation_id, turn, conversation)
 
