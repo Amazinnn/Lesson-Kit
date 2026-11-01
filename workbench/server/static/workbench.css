@@ -2673,7 +2673,9 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
   white-space: pre-wrap;
 }
 /* §4.27 折叠段 · 手风琴（`disc-accordion`）：卡面 + 48px 头 + 内容在同一张卡里
-   （与 `.practice-set-item-body` / `.attempt-history` 同一套）。 */
+   （与 `.practice-set-item-body` / `.attempt-history` 同一套）。
+   2026-11-01（agent-chat-simplify）：工具卡输出块改用统一的 `.wb-collapse`
+   虚化折叠（下方），`<details>/summary` 头与 pre 内滚动条一并退役。 */
 .ai-plan-output {
   min-width: 0;
   margin-top: 5px;
@@ -2683,23 +2685,10 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
   box-shadow: var(--elev-1);
   overflow: hidden;
 }
-.ai-plan-output summary {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  min-height: 48px;
-  padding: 0 var(--sp-4);
-  cursor: pointer;
-  color: var(--ink-strong);
-  font-family: var(--font-ui);
-  font-size: var(--fs-body);
-  font-weight: 500;
-}
 .ai-plan-output pre {
-  max-height: 168px;
   margin: 0 var(--sp-4) var(--sp-4);
   padding: 7px 8px;
-  overflow: auto;
+  overflow: visible;
   background: var(--surface-code);
   /* 代码块反白面上的文字一律 `--ink-inverse`（权威表 §4.4-11）：
      继承下来的 `--ink-muted` 在浅色代码面上只有 2.81:1（< 4.5）⇒ 不合格。 */
@@ -2709,6 +2698,47 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
   line-height: 16px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+/* 长卡虚化折叠（agent-chat-simplify，全站统一）：
+   超过 320px 的卡片收起时底部 72px 渐隐，悬浮 chevron 切换开合。
+   命中区 ≥44px：视觉 28px 圆钮 + 透明 ::after 外扩 8px（§3.1 伪元素补偿）；
+   焦点环用全局 --focus-* token，收起态也不被裁切（按钮内缩 10px）。 */
+.wb-collapse { position: relative; }
+.wb-collapse.is-collapsed { max-height: 320px; overflow: hidden; }
+.wb-collapse.is-collapsed::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 72px;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(rgba(255, 255, 255, 0), var(--surface-card, #fff));
+}
+.wb-collapse-toggle {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--rule-strong, var(--ink-strong));
+  border-radius: 50%;
+  background: var(--surface-card);
+  color: var(--ink-strong);
+  font-size: 13px;
+  line-height: 26px;
+  text-align: center;
+  cursor: pointer;
+}
+.wb-collapse-toggle::after { content: ""; position: absolute; inset: -8px; }
+.wb-collapse-toggle:focus-visible {
+  outline: var(--focus-width, 2px) solid var(--focus-outer, #2b62e8);
+  outline-offset: 2px;
 }
 .ai-activity {
   min-width: 0;

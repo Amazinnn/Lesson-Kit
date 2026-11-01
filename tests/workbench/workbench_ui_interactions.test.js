@@ -3547,7 +3547,11 @@ test("Pi activities are messages that update in place and split text segments", 
   assert.equal(activity.activityParts.label.textContent, "读取文件");
   assert.equal(activity.activityParts.state.textContent, "已完成");
   assert.equal(activity.activityParts.output.textContent, "content");
-  assert.equal(activity.activityParts.disclosure.hasAttribute("open"), false);
+  // 2026-11-01 (agent-chat-simplify): the output block is a labelled collapse
+  // host; short output stays expanded because the height threshold is not met.
+  assert.equal(activity.activityParts.outputHost.getAttribute("role"), "region");
+  assert.equal(activity.activityParts.outputHost.getAttribute("aria-label"), "工具输出");
+  assert.equal(activity.activityParts.outputHost.classList.contains("wb-collapse"), false);
   assert.match(elements["ai-messages"].children[3].innerHTML, /检查完成/);
 });
 
@@ -3593,8 +3597,15 @@ test("a failed Pi activity shows its summary without expanding the output", asyn
   // the reason is visible without expanding anything
   assert.match(row.activityParts.summary.textContent, /invalid choice/);
   assert.equal(row.activityParts.summary.classList.contains("hidden"), false);
-  // the full output stays folded
-  assert.equal(row.activityParts.disclosure.hasAttribute("open"), false);
+  // 2026-11-01 (agent-chat-simplify): the output block is the shared fade
+  // collapse host — a labelled region without a summary header; visual
+  // collapse arms only beyond the height threshold (verified in browser).
+  const outputBlock = row.activityParts.outputHost;
+  assert.ok(outputBlock, "the output block is a collapse host");
+  assert.equal(outputBlock.getAttribute("role"), "region");
+  assert.equal(outputBlock.getAttribute("aria-label"), "工具输出");
+  assert.equal(outputBlock.querySelector("summary"), null);
+  assert.equal(outputBlock.querySelector("summary"), null);
   // the command itself also stays visible
   assert.match(row.activityParts.detail.textContent, /lesson-kit data create kp/);
 });

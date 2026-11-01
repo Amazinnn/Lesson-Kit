@@ -4038,7 +4038,10 @@
       notice = null;
     }
     if (status) status.textContent = notice ? notice.text : "";
-    if (details) aiPaperApprovalDetails(details, current);
+    if (details) {
+      aiPaperApprovalDetails(details, current);
+      wbApplyCollapse(details, true);
+    }
     if (approve) approve.disabled = inFlight || unknown;
     if (cancel) cancel.disabled = inFlight || unknown;
   }
@@ -4584,6 +4587,7 @@
         aiRemoveOutbox(context.conversation_id, record.submission_id);
         aiRenderOutbox();
       }, "dismiss");
+      wbApplyCollapse(card, true);
       recoveryList.appendChild(card);
     });
     if (queueEditRecovery) {
@@ -4709,6 +4713,36 @@
       });
   }
 
+  var WB_COLLAPSE_LIMIT = 320;
+
+  /* 2026-11-01 (agent-chat-simplify): one shared fade-truncation expander for
+     over-tall cards. Content stays in place; only a floating chevron and a
+     collapsed max-height are added. Hit area stays ≥44px via a transparent
+     pseudo-element, so the visible control can stay small. */
+  function wbApplyCollapse(host, startCollapsed) {
+    if (!host || host.dataset.wbCollapseApplied) return;
+    var height = host.scrollHeight || 0;
+    if (height <= WB_COLLAPSE_LIMIT) return;
+    host.dataset.wbCollapseApplied = "1";
+    host.classList.add("wb-collapse");
+    var collapsed = startCollapsed === true;
+    var toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "wb-collapse-toggle";
+    function apply() {
+      host.classList.toggle("is-collapsed", collapsed);
+      toggle.setAttribute("aria-expanded", String(!collapsed));
+      toggle.setAttribute("aria-label", collapsed ? "展开完整内容" : "收起");
+      toggle.textContent = collapsed ? "▾" : "▴";
+    }
+    toggle.addEventListener("click", function () {
+      collapsed = !collapsed;
+      apply();
+    });
+    host.appendChild(toggle);
+    apply();
+  }
+
   function aiAddMarkdown(text, cls) {
     return aiAdd(richText(text || ""), cls);
   }
@@ -4720,6 +4754,7 @@
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     renderMath(div);
+    wbApplyCollapse(div, false);
     return div;
   }
 
@@ -4825,17 +4860,18 @@
     aiUpdateActivitySemantics(row.activityParts, activity);
     if (activity.output != null && String(activity.output).length) {
       if (!row.activityParts.output) {
-        var disclosure = document.createElement("details");
+        var disclosure = document.createElement("div");
         disclosure.className = "ai-plan-output";
-        var summary = document.createElement("summary");
-        summary.textContent = "查看输出";
+        disclosure.setAttribute("role", "region");
+        disclosure.setAttribute("aria-label", "工具输出");
         var output = document.createElement("pre");
-        disclosure.appendChild(summary);
         disclosure.appendChild(output);
         row.activityParts.body.appendChild(disclosure);
+        row.activityParts.outputHost = disclosure;
         row.activityParts.output = output;
       }
       row.activityParts.output.textContent = String(activity.output);
+      wbApplyCollapse(row.activityParts.outputHost, true);
     }
     messages.scrollTop = messages.scrollHeight;
   }
@@ -4851,6 +4887,7 @@
     var id = String(activity.activity_id || "activity-" + Object.keys(aiPiActivities).length);
     var row = aiPiActivities[id];
     if (!row) {
+      if (aiStreamingMessage) wbApplyCollapse(aiStreamingMessage, false);
       aiStreamingMessage = null;
       row = document.createElement("div");
       var body = document.createElement("div");
@@ -4890,18 +4927,18 @@
     aiUpdateActivitySemantics(row.activityParts, activity);
     if (activity.output != null && String(activity.output).length) {
       if (!row.activityParts.output) {
-        var disclosure = document.createElement("details");
+        var disclosure = document.createElement("div");
         disclosure.className = "ai-plan-output";
-        var summary = document.createElement("summary");
-        summary.textContent = "查看输出";
+        disclosure.setAttribute("role", "region");
+        disclosure.setAttribute("aria-label", "工具输出");
         var output = document.createElement("pre");
-        disclosure.appendChild(summary);
         disclosure.appendChild(output);
         row.activityParts.body.appendChild(disclosure);
-        row.activityParts.disclosure = disclosure;
+        row.activityParts.outputHost = disclosure;
         row.activityParts.output = output;
       }
       row.activityParts.output.textContent = String(activity.output);
+      wbApplyCollapse(row.activityParts.outputHost, true);
     }
     messages.scrollTop = messages.scrollHeight;
   }
