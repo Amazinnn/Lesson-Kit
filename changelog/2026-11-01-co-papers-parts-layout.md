@@ -35,10 +35,18 @@ open_response）、`short_answer`、以及从既有 `solution` 派生的 `refere
   `not_requested`，三张卷 `can_start: True`。
 - 副作用：受影响题目 content revision 递增，按既有规则只影响未完成的练习项。
 
-## 登记（未处理，待所有者决定）
+## 错位题处理（所有者 2026-11-01 决定后执行）
 
-- 主观卷中混入 **7 道客观题**（无 `micro_quiz`，当前按自由作答自评）：
-  ps-006 的 co-ch01-prob-019/020/023/032/034；ps-008 的 co-ch02-prob-118；
-  ps-010 的 co-ch03-prob-028。
-- **跨章号引用**：ps-008（ch02 卷）含 co-ch05-prob-055；ps-010（ch03 卷）含
-  co-ch02-prob-011、co-ch02-prob-063。是否为内容归类有意为之待确认，未擅自移动。
+- **7 道混在主观卷里的客观题已转题型并归位**：
+  `problem-patch` batch-160 把 co-ch01-prob-019/023 转为 `single_choice`（选项照原文，
+  答案分别为 99.75% / Bus）、co-ch01-prob-020/032/034 与 co-ch02-prob-118、co-ch03-prob-028
+  转为 `yes_no`；batch-161 补齐五道判断题的 `answer_key`（否/是/否/否/是）。
+  备份 `co.db.pre-micro-convert-20261101-233220`。
+- **卷子成员调整（走 preview → 确认 → update 的受治理流程）**：
+  ps-006 17→12、ps-007 23→28、ps-008 49→47、ps-009 58→59、ps-010 23→21；
+  ps-014 原本已含 co-ch05-prob-055，无需变更（该题现只保留在 ch05 主观卷）。
+  **ps-008 的成员调整触发了检查点重置**（当时 1 项完成 / 49 份草稿），历史 Attempt
+  记录不受影响；其余五卷无可重置的进行中进度。
+- **跨章号归位**：ch05-prob-055 移出 ch02 卷（保留在 ch05 卷）；ch02-prob-011/063 移出
+  ch03 卷（保留在 ch02 卷）。按所有者「按章号归位」的决定执行。
+
