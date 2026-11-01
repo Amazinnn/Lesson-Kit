@@ -35,6 +35,13 @@
 
 批改 payload 使用 `answer_conclusion,process_conclusion,extracted_answer,reference_answer,reference_reasoning,reference_origin,feedback`；不适用维度省略。学习者响应的 `part_items`、`part_summary` 是揭晓过滤后的派生数据，不是新的持久来源。`not_requested/submitted/withdrawn` 等 UI 状态由未请求、揭晓和最新修订推导，不扩大 job 状态枚举。
 
+**未迁移池的退化路径（2026-11-01）**：缺少 `part_attempt_context`／`part_grading_revisions`／
+`part_grading_jobs` 三表（或 `problems.parts` 列）的池按迁移前行为工作：练习状态投影报告
+`grading_status='not_requested'`、不读批改表；主观提交只写迁移前的既有列（不建 part 上下文与
+job 行，不伪造结论）；显式批改请求以带 `pool/scripts/migrate-progress.py` 指引的错误失败、
+零写入。缺口由 `lesson-kit doctor` 的 `part grading schema` 检查可见。迁移是显式的一次性
+命令，服务端不在打开池时自动迁移。
+
 提交粒度保存在原工作区浏览器设置 `wb_settings_<workspace>.submissionGranularity`（`per_part/whole_problem`），不写入 Attempt；揭晓仍保存为执行级 `reveal_timing`。
 
 - **active**：当前正式字段，可以被新功能依赖。
