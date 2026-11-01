@@ -1,6 +1,7 @@
 """JSON API handlers. Each handler gets (pool, workspace, params, body)."""
 
 import json
+import sqlite3
 import threading
 from datetime import date, datetime
 from pathlib import Path
@@ -24,6 +25,14 @@ class ApiError(Exception):
         self.message = message
 
 
+def _pool_schema_error(exc):
+    """An old pool without the additive part-grading tables fails loudly, not silently."""
+    message = str(exc)
+    if "no such table" in message:
+        message += "（这个池还没有综合题批改表；运行 pool/scripts/migrate-progress.py --db <池路径> 完成显式增量迁移）"
+    return ApiError(500, message)
+
+
 def grading_read(pool, workspace, params, body):
     from workbench.bridge import grading
     try:
@@ -31,6 +40,8 @@ def grading_read(pool, workspace, params, body):
         return grading.history(pool, attempt_id) if params.get('history') == '1' else grading.get(pool, attempt_id)
     except (ValueError, KeyError) as exc:
         raise ApiError(400, str(exc)) from exc
+    except sqlite3.Error as exc:
+        raise _pool_schema_error(exc) from exc
 
 
 def grading_write(pool, workspace, params, body):
@@ -47,6 +58,8 @@ def grading_write(pool, workspace, params, body):
                              withdraw=action == 'withdraw')
     except (ValueError, KeyError, TypeError) as exc:
         raise ApiError(400, str(exc)) from exc
+    except sqlite3.Error as exc:
+        raise _pool_schema_error(exc) from exc
 
 
 def _query_int(params, name, default, *, minimum=0, maximum=None):

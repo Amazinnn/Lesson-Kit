@@ -3,6 +3,7 @@
 import json
 import os
 import threading
+import traceback
 import email.utils
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -290,6 +291,10 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             return
         except FileNotFoundError as exc:
             self._send_json(404, {"error": f"unknown: {exc}"})
+            return
+        except Exception as exc:  # last resort: a JSON 500 beats a silent dead connection
+            traceback.print_exc()
+            self._send_json(500, {"error": f"internal error: {exc}"})
             return
         finally:
             pool.close()
