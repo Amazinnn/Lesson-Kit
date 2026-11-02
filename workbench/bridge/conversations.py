@@ -79,6 +79,20 @@ def _read_json(path):
         return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _json_lines(path):
+    """JSON objects from a ``.jsonl`` file, one per line.
+
+    Split on "\\n" only: ``str.splitlines()`` also breaks on U+2028 / U+2029 /
+    U+0085, which are legal inside a JSON string. A tool output carrying one used
+    to cut a valid record in half and surface as an "Unterminated string" error
+    whenever that conversation was read.
+    """
+    if not path.is_file():
+        return []
+    text = path.read_text(encoding="utf-8")
+    return [line for line in (raw.strip() for raw in text.split("\n")) if line]
+
+
 def _write_json(path, value):
     with _LOCK:
         temporary = path.with_name(path.name + f".{threading.get_ident()}.tmp")
@@ -166,7 +180,7 @@ def get(pool, conversation_id):
     transcript_without_turn = []
     transcript = _conversation_dir(pool, conversation_id) / "transcript.jsonl"
     with _LOCK:
-        lines = transcript.read_text(encoding="utf-8").splitlines() if transcript.is_file() else []
+        lines = _json_lines(transcript)
     for line in lines:
         exchange = json.loads(line)
         turn_id = exchange.get("turn_id")
@@ -531,8 +545,7 @@ def _recover_interrupted(pool, record):
             return _fail_orphaned_interrupts(pool, current)
         transcript = _conversation_dir(pool, record["conversation_id"]) / "transcript.jsonl"
         with _LOCK:
-            transcript_lines = transcript.read_text(encoding="utf-8").splitlines() \
-                if transcript.is_file() else []
+            transcript_lines = _json_lines(transcript)
         completed = False
         for line in transcript_lines:
             try:
@@ -581,7 +594,7 @@ def _recover_interrupted(pool, record):
 def events(pool, conversation_id, turn_id, after=0):
     path = _events_file(pool, conversation_id, turn_id)
     with _LOCK:
-        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+        lines = _json_lines(path)
     rows = [json.loads(line) for line in lines]
     return [row for row in rows if row["sequence"] > after]
 
@@ -605,7 +618,7 @@ def _append_event(path, kind, **fields):
             )
             fields["impact"] = impact
     with _LOCK:
-        existing = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+        existing = _json_lines(path)
         event = {"sequence": len(existing) + 1, "kind": kind, **fields}
         with path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(event, ensure_ascii=False) + "\n")
@@ -615,7 +628,7 @@ def _append_event(path, kind, **fields):
 def _partial_output_from_events(path):
     """Rebuild only assistant text already streamed for an interrupted turn."""
     with _LOCK:
-        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+        lines = _json_lines(path)
     text_parts = []
     result_text = ""
     for line in lines:
@@ -635,7 +648,7 @@ def _coalesced_activities(path):
     rows = {}
     order = []
     with _LOCK:
-        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+        lines = _json_lines(path)
     for line in lines:
         event = json.loads(line)
         if event.get("kind") != "activity":
@@ -799,7 +812,7 @@ def _last_check_outcome(folder):
     transcript = folder / "transcript.jsonl"
     try:
         with _LOCK:
-            exchange = json.loads(transcript.read_text(encoding="utf-8").splitlines()[-1])
+            exchange = json.loads(_json_lines(transcript)[-1])
     except (OSError, UnicodeError, IndexError, json.JSONDecodeError):
         return None
     if not isinstance(exchange, dict):
@@ -1342,7 +1355,7 @@ def _continuity(folder, turn_id):
     if not path.is_file():
         return []
     exchanges = []
-    for line in path.read_text(encoding="utf-8").splitlines():
+    for line in _json_lines(path):
         value = json.loads(line)
         previous_id = value.get("turn_id", "")
         if _turn_id_number(value) >= _turn_id_number({"turn_id": turn_id}):
