@@ -108,8 +108,10 @@
     function close() {
       pinned = false;
       card.setAttribute('aria-pressed', 'false');
-      card.hidden = true;
+      // Moving focus back to the question button can emit focusin and reopen the card.
+      // Hide after focus restoration so Escape always leaves the card closed.
       if (document.activeElement === card && button.focus) button.focus();
+      card.hidden = true;
     }
     function togglePin() {
       pinned = !pinned;

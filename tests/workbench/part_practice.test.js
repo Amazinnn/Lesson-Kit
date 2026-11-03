@@ -109,3 +109,18 @@ test('preview supports Enter/Space pinning and outside-pointer dismissal', () =>
   card.fire('keydown', { key: ' ', preventDefault() {} });
   assert.equal(card.attributes['aria-pressed'], 'false');
 });
+
+test('Escape from the focused preview restores question focus without reopening it', () => {
+  const { document, button, wrap, card } = previewFixture();
+  button.focus = () => {
+    document.activeElement = button;
+    wrap.fire('focusin', { target: button }); // real browser bubbles focusin
+  };
+  card.focus();
+  wrap.fire('focusin', { target: card });
+  card.fire('click');
+  document.fire('keydown', { key: 'Escape' });
+  assert.equal(document.activeElement, button);
+  assert.equal(card.hidden, true);
+  assert.equal(card.attributes['aria-pressed'], 'false');
+});
