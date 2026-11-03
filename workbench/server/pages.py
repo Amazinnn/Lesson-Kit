@@ -237,7 +237,7 @@ def _chapter_lens(workspace):
         "<button type='button' class='chapter-lens-option' role='option'"
         f" data-chapter='{html.escape(chapter)}'"
         + (' aria-selected="true">' if chapter == active else '>')
-        f"{html.escape(chapter)}</button>"
+        + f"{html.escape(chapter)}</button>"
         for chapter in chapters
     )
     return (
