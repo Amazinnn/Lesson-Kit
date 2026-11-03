@@ -201,14 +201,12 @@ def hub_page(workspaces):
             detail_title = ""
         cards.append(
             f"<a class='workspace-card' href='/w/{ws['name']}/practice'>"
-            f"<span class='context-line'>工作区</span>"
             f"<h2>{html.escape(ws['name'])}</h2>"
             f"<p{detail_title}>{html.escape(detail)}</p></a>"
         )
     body = (
         "<main class='hub-page'>"
         "<header class='page-header'>"
-        "<p class='context-line'>lesson-kit</p>"
         "<h1>学习工作台</h1>"
         "</header>"
         f"<section class='workspace-grid' aria-label='工作区列表'>{''.join(cards)}</section>"
@@ -1082,13 +1080,8 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "</a></div>"
         for item in actionable
     )
-    # 15.3 分区标题恒定，个数走计数徽标 —— 标题不再随内容有无变体。
+    # 15.3 分区标题恒定；组标题不带任何计数（spec delta「A group heading carries no figure」）。
     rail_label = "优先回看"
-    count_badge = (
-        "<span class='count-badge'>"
-        "<span class='visually-hidden'>待回看 </span>" + str(len(actionable))
-        + "</span>"
-    )
     empty = "暂无明确薄弱证据" if not actionable else "暂无提醒"
     empty_weak = '<p class="score">' + empty + "</p>"
     return (
@@ -1103,10 +1096,10 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "<section class='side-section settings-section'>"
         "<p class='side-label'>设置</p>"
         "<a id='setting-view-toggle' class='setting-row setting-view-toggle' "
-        f"href='/w/{workspace['name']}/settings' aria-expanded='false'>设置</a>"
+        f"href='/w/{workspace['name']}/settings' aria-expanded='false'>偏好与主题</a>"
         "</section>"
         "<section class='side-section weak-section'>"
-        f"<div class='side-heading'><p class='side-label'>{rail_label}</p>{count_badge}</div>"
+        f"<div class='side-heading'><p class='side-label'>{rail_label}</p></div>"
         f"<div class='weak-list'>{weak_html or empty_weak}</div>"
         "</section>"
         "</div>"
@@ -1135,7 +1128,7 @@ def _linked_problem_source(problem):
     evidence = " ".join(str(problem.get("source_evidence") or "").split())
     if not evidence:
         return ""
-    return (f"<div class='linked-problem-source'>来源：{html.escape(evidence)}</div>")
+    return (f"<div class='linked-problem-source'>{html.escape(evidence)}</div>")
 
 
 def _problem_title(problem):

@@ -967,7 +967,6 @@ body {
    §4.13 徽标（`badge-pill` · A-115 形态裁定）：**胶囊轮廓 + 沉底实心**；
    11px 字。⚠️ **不用**近黑墨块（A-23：`--surface-code` 只服务代码块）。
    ⚠️ 边界走「1px 内发丝线」（不用 border、不改盒模型）。 */
-.count-badge,
 .lk-badge {
   flex: none;
   min-width: 18px;
@@ -2572,7 +2571,6 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
 }
 .ai-session-entry:hover { background: var(--veil-hover); }
 .ai-session-entry-title { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ai-session-entry-meta { color: var(--ink-faint); font-size: 11px; }
 #ai-session-empty { margin: 10px 0; }
 .ai-provider-options {
   display: grid;
@@ -5250,7 +5248,6 @@ html[data-motion="off"] *::after {
 .part-result { overflow-wrap: anywhere; }
 .part-result > div { margin-top: 18px; }
 .part-preview-wrap { position: relative; display: inline-flex; align-items: center; gap: 3px; }
-.part-details { font-size: .75em; padding: 3px; }
 .part-preview { position: absolute; top: 100%; left: 0; z-index: 30; width: min(360px,80vw); max-height: 45vh; overflow-y: auto; overscroll-behavior: contain; padding: 12px; color: var(--text, #222); background: var(--surface, #fff); border: 2px solid currentColor; box-shadow: 3px 5px 12px #0002; }
 .part-preview p { line-height: 1.7; margin: 8px 0; }
 #paper-links [hidden] { display: none !important; }

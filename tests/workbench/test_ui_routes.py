@@ -269,7 +269,6 @@ class UiRouteTests(unittest.TestCase):
         self.assertNotIn("id='setting-running-send'", body)
         self.assertNotIn("id='setting-show-rating'", body)
         self.assertIn("id='setting-view-toggle'", body)
-        self.assertIn("class='count-badge'", body)
         # The four sections sit on one wrapper: the rail's paper ends with the
         # content, so the lower half is not blank paper (15.3).
         self.assertIn("class='side-sections'", body)

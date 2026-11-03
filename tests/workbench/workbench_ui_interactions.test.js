@@ -4224,7 +4224,7 @@ test("a practice problem shows its source evidence under the title", async () =>
   await flush();
   const html = elements.stream._innerHTML;
   assert.match(html, /class='practice-source'/);
-  assert.match(html, /来源：教材 第12章 习题12-5/);
+  assert.match(html, /教材 第12章 习题12-5/);
   assert.match(html, /习题12-5/);
 });
 

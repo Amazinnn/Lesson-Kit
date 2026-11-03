@@ -687,7 +687,7 @@
         + "<h2>" + escapeHtml(title) + "</h2>"
         + "<div class='wb-reading wb-reading--stem problem-text'>" + richText(String(prompt)) + "</div>"
         + (problem.source_evidence
-          ? "<p class='practice-source'>来源：" + escapeHtml(problem.source_evidence) + "</p>" : "");
+          ? "<p class='practice-source'>" + escapeHtml(problem.source_evidence) + "</p>" : "");
       renderMath(ids.question);
     }
 
@@ -731,8 +731,8 @@
       var parts = [];
       if (includeVerdict) {
         if (item.state === "stuck") parts.push("<p class='muted'>本题已标记为“不会”。</p>");
-        else if (attempt.verdict === true || attempt.verdict === 1) parts.push("<p class='micro-verdict ok'>判定：正确</p>");
-        else if (attempt.verdict === false || attempt.verdict === 0) parts.push("<p class='micro-verdict bad'>判定：错误</p>");
+        else if (attempt.verdict === true || attempt.verdict === 1) parts.push("<p class='micro-verdict ok'>回答正确。</p>");
+        else if (attempt.verdict === false || attempt.verdict === 0) parts.push("<p class='micro-verdict bad'>回答错误。</p>");
         else if (item.state === "answered") parts.push("<p class='muted'>本次作答没有可用的客观判定。</p>");
       }
       var key = quiz && quizHasKey(quiz) ? quiz.answer_key : problem.source_answer;
@@ -1159,7 +1159,7 @@
           renderCurrent();
           /* 答对的挤压回弹：判定成立的这一刻，回弹挂到**被选中的那一项**
              （正确选项行，底边为锚）——与音效同一帧落地（判定为错时那边也不响）。
-             判定为错 / 不会 / 参考区里没有「判定：正确」时不动
+             判定为错 / 不会 / 参考区里没有「回答正确。」时不动
              （负反馈是摆动，不是回弹）。 */
           if (!motion) squashCorrectOption(ids.work);
         }

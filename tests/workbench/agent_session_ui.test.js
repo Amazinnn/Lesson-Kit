@@ -717,7 +717,7 @@ test("switching conversations clears approval and activity state and reloads eve
   let staleApprovalRuns = 0;
   app.ui.collapseAux();
   app.ui.confirm({ title: "Rollback A" }, () => { staleApprovalRuns += 1; });
-  const staleApprove = app.elements["ai-approval-slot"].children[0].children[3].children[1];
+  const staleApprove = app.elements["ai-approval-slot"].children[0].children[2].children[1];
 
   app.elements["ai-session-back"].click();
   await flush();

@@ -2191,7 +2191,7 @@
   function practiceSourceHtml(problem) {
     var evidence = String((problem && problem.source_evidence) || "").replace(/\s+/g, " ").trim();
     if (!evidence) return "";
-    return "<p class='practice-source'>来源：" + escapeHtml(evidence) + "</p>";
+    return "<p class='practice-source'>" + escapeHtml(evidence) + "</p>";
   }
 
 

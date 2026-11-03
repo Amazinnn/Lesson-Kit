@@ -431,17 +431,18 @@ class ApiTests(unittest.TestCase):
                     "score": 0.2, "reasons": []}]
         whole_course = _left_column({"name": "dmath"}, [{"name": "dmath"}],
                                     neutral, "practice")
-        # The rail title is stable (tasks.md 15.3); the count badge carries
-        # how many items are worth a look, so a neutral point is not listed
-        # and the badge reads zero.
+        # The rail title is stable (tasks.md 15.3); a group heading carries no
+        # figure (spec delta「A group heading carries no figure」), so a neutral
+        # point is neither listed nor counted — the rail shows the no-evidence
+        # empty state instead.
         self.assertIn("优先回看", whole_course)
-        self.assertIn("待回看 </span>0", whole_course)
+        self.assertIn("暂无明确薄弱证据", whole_course)
         self.assertNotIn("中性知识点", whole_course)
 
         chapter = _left_column({"name": "dmath", "active_chapter": "ch06"},
                                [{"name": "dmath"}], neutral, "practice")
         self.assertIn("优先回看", chapter)
-        self.assertIn("待回看 </span>0", chapter)
+        self.assertIn("暂无明确薄弱证据", chapter)
         self.assertNotIn("中性知识点", chapter)
 
 

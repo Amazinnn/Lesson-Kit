@@ -119,6 +119,7 @@
     var row = document.createElement("div");
     var status = item.status === "done" || item.status === "failed" ? item.status : "running";
     row.className = "agent-milestone is-" + status;
+    row.setAttribute("aria-label", (item.label || "执行步骤") + "，" + statusLabel(status));
     var marker = document.createElement("span");
     marker.className = "agent-milestone-marker";
     marker.textContent = status === "done" ? "✓" : status === "failed" ? "!" : "·";
@@ -126,11 +127,7 @@
     body.className = "agent-milestone-body";
     var label = document.createElement("strong");
     label.textContent = item.label || "执行步骤";
-    var stateText = document.createElement("span");
-    stateText.className = "agent-milestone-state";
-    stateText.textContent = statusLabel(status);
     body.appendChild(label);
-    body.appendChild(stateText);
     if (!compact && (item.summary || item.detail)) {
       var detail = document.createElement("p");
       detail.textContent = item.summary || item.detail;
@@ -207,10 +204,10 @@
   }
 
   function artifactMeta(action) {
+    if (action.item_count == null) return null;
     var meta = document.createElement("p");
     meta.className = "agent-artifact-meta";
-    meta.textContent = action.practice_set_id
-      + (action.item_count != null ? " · " + action.item_count + " 题" : "");
+    meta.textContent = action.item_count + " 题";
     return meta;
   }
 
@@ -236,7 +233,8 @@
     title.textContent = action.title;
     clear(body);
     clear(actions);
-    body.appendChild(artifactMeta(action));
+    var meta = artifactMeta(action);
+    if (meta) body.appendChild(meta);
     if (action.summary) {
       var summary = document.createElement("p");
       summary.className = "agent-artifact-summary";
@@ -257,15 +255,12 @@
     var card = document.createElement("section");
     card.className = "msg ai agent-artifact-card";
     if (card.dataset) card.dataset.artifactId = action.practice_set_id;
-    var kicker = document.createElement("p");
-    kicker.className = "agent-surface-kicker";
-    kicker.textContent = "工件 · 试卷";
     var title = document.createElement("strong");
     title.className = "agent-artifact-card-title";
     title.textContent = action.title;
-    card.appendChild(kicker);
     card.appendChild(title);
-    card.appendChild(artifactMeta(action));
+    var meta = artifactMeta(action);
+    if (meta) card.appendChild(meta);
     if (action.summary) {
       var summary = document.createElement("p");
       summary.className = "agent-artifact-summary";
@@ -311,22 +306,18 @@
     clear(slot);
     var card = document.createElement("section");
     card.className = "agent-approval-card";
-    var kicker = document.createElement("p");
-    kicker.className = "agent-surface-kicker";
-    kicker.textContent = "需要确认";
     var title = document.createElement("strong");
     title.className = "agent-approval-title";
     title.textContent = spec && spec.title ? spec.title : "确认操作";
     var reason = document.createElement("p");
     reason.className = "agent-approval-reason";
     reason.textContent = spec && spec.reason ? spec.reason : "此操作需要你的明确确认。";
-    card.appendChild(kicker);
     card.appendChild(title);
     card.appendChild(reason);
     if (spec && spec.impact) {
       var impact = document.createElement("p");
       impact.className = "agent-approval-impact";
-      impact.textContent = "影响：" + spec.impact;
+      impact.textContent = spec.impact;
       card.appendChild(impact);
     }
     var actions = document.createElement("div");

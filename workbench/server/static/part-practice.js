@@ -30,9 +30,8 @@
       if(changed)target.replaceChildren();
       function line(label,value) { if (value == null || value === '') return; var block = document.createElement('div'); block.className = 'wb-reading'; var title = document.createElement('strong'); title.textContent=label; var text=document.createElement('div'); text.innerHTML=o.richText(String(value)); block.append(title,text); target.append(block); }
       if(changed){
-        if (p.type !== 'proof') { line('你的答案（Agent 提炼）',g.extracted_answer); line('参考答案',g.reference_answer || p.reference_answer); }
+        if (p.type !== 'proof') { line('你的答案',g.extracted_answer); line('参考答案',g.reference_answer || p.reference_answer); }
         line('参考过程',g.reference_reasoning || p.reference_reasoning); line('点评',g.feedback);
-        if (g.reference_origin === 'agent_derived') line('参考来源','Agent 独立推导');
         if(p.grading_status==='failed'){var retry=document.createElement('button');retry.type='button';retry.textContent='重试批改';retry.addEventListener('click',function(){o.post('/grading',{action:'retry',attempt_id:p.attempt_id}).then(refresh).catch(function(e){o.error(e.message);});});target.append(retry);}
         target.dataset.version=version;
       }
@@ -80,9 +79,8 @@
     var card=document.createElement('div'); card.className='part-preview';card.hidden=true;card.tabIndex=0;card.setAttribute('role','region');card.setAttribute('aria-label','各小问做题情况');
     item.part_items.forEach(function(p,index){var line=document.createElement('p');line.textContent='小问 '+(index+1)+'：'+status(p);card.append(line);});
     var wrap=document.createElement('span');wrap.className='part-preview-wrap';button.replaceWith(wrap);wrap.append(button,card);
-    var details=document.createElement('button');details.type='button';details.className='part-details';details.textContent='详情';details.setAttribute('aria-expanded','false');wrap.append(details);
-    var pinned=false;function show(){card.replaceChildren();item.part_items.forEach(function(p,index){var line=document.createElement('p');line.textContent='小问 '+(index+1)+'：'+status(p);card.append(line);});card.hidden=false;}function hide(){if(!pinned)card.hidden=true;}
-    wrap.addEventListener('mouseenter',show);wrap.addEventListener('mouseleave',hide);wrap.addEventListener('focusin',show);wrap.addEventListener('focusout',function(e){if(!wrap.contains(e.relatedTarget))hide();});wrap.addEventListener('keydown',function(e){if(e.key==='Escape'){pinned=false;card.hidden=true;details.setAttribute('aria-expanded','false');}});details.addEventListener('click',function(){pinned=!pinned;card.hidden=!pinned;details.setAttribute('aria-expanded',String(pinned));});
+    var pinned=false;function render(){card.replaceChildren();item.part_items.forEach(function(p,index){var line=document.createElement('p');line.textContent='小问 '+(index+1)+'：'+status(p);card.append(line);});}function show(){render();card.hidden=false;}function hide(){if(!pinned)card.hidden=true;}
+    wrap.addEventListener('mouseenter',show);wrap.addEventListener('mouseleave',hide);wrap.addEventListener('focusin',show);wrap.addEventListener('focusout',function(e){if(!wrap.contains(e.relatedTarget))hide();});card.addEventListener('click',function(){pinned=!pinned;});wrap.addEventListener('keydown',function(e){if(e.key==='Escape'){pinned=false;card.hidden=true;}});
   }
   root.PartPractice={mount:mount,preview:preview,status:status};
   if(root.document)root.document.addEventListener('keydown',function(e){if(e.key==='Escape')root.document.querySelectorAll('.part-preview').forEach(function(card){card.hidden=true;});});

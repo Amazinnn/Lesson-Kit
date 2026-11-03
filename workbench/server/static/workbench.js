@@ -3892,8 +3892,7 @@
   function aiPaperApprovalDetails(host, approval, fallbackProposedIds) {
     var paperId = approval.practice_set_id || "";
     var title = approval.title || paperId;
-    aiPaperText(host, "p", "ai-paper-approval-paper", "试卷：" + title
-      + (paperId && title !== paperId ? "（" + paperId + "）" : ""));
+    aiPaperText(host, "p", "ai-paper-approval-paper", title);
     var added = Array.isArray(approval.added_problem_ids) ? approval.added_problem_ids : [];
     var removed = Array.isArray(approval.removed_problem_ids) ? approval.removed_problem_ids : [];
     var changes = [];
@@ -5742,14 +5741,7 @@
     var title = document.createElement("strong");
     title.className = "ai-session-entry-title";
     title.textContent = aiSessionLabel(record);
-    var meta = document.createElement("span");
-    meta.className = "ai-session-entry-meta";
-    var updated = record.updated_at ? String(record.updated_at).slice(0, 10) : "";
-    meta.textContent = (record.provider || "Agent")
-      + (updated ? " · " + updated : "")
-      + (record.status === "running" ? " · 运行中" : "");
     button.appendChild(title);
-    button.appendChild(meta);
     button.addEventListener("click", function () { aiLoadConversation(record.conversation_id); });
     row.appendChild(button);
     var actions = document.createElement("div");
