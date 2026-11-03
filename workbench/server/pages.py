@@ -236,7 +236,7 @@ def _chapter_lens(workspace):
     panel_options = "".join(
         "<button type='button' class='chapter-lens-option' role='option'"
         f" data-chapter='{html.escape(chapter)}'"
-        f"{' aria-selected=\"true\"' if chapter == active else ''}>"
+        + (' aria-selected="true">' if chapter == active else '>')
         f"{html.escape(chapter)}</button>"
         for chapter in chapters
     )
