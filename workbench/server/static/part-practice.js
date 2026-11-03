@@ -74,14 +74,87 @@
     var timer=setInterval(refresh,1800); root.addEventListener('storage',preference);root.addEventListener('lk-submission-granularity',preference);
     return {update:update,flush:flush,dispose:function(){dead=true;clearInterval(timer);root.removeEventListener('storage',preference);root.removeEventListener('lk-submission-granularity',preference);node.remove();}};
   }
-  function preview(button,item) {
-    if (!item.part_items || !item.part_items.length)return;
-    var card=document.createElement('div'); card.className='part-preview';card.hidden=true;card.tabIndex=0;card.setAttribute('role','region');card.setAttribute('aria-label','各小问做题情况');
-    item.part_items.forEach(function(p,index){var line=document.createElement('p');line.textContent='小问 '+(index+1)+'：'+status(p);card.append(line);});
-    var wrap=document.createElement('span');wrap.className='part-preview-wrap';button.replaceWith(wrap);wrap.append(button,card);
-    var pinned=false;function render(){card.replaceChildren();item.part_items.forEach(function(p,index){var line=document.createElement('p');line.textContent='小问 '+(index+1)+'：'+status(p);card.append(line);});}function show(){render();card.hidden=false;}function hide(){if(!pinned)card.hidden=true;}
-    wrap.addEventListener('mouseenter',show);wrap.addEventListener('mouseleave',hide);wrap.addEventListener('focusin',show);wrap.addEventListener('focusout',function(e){if(!wrap.contains(e.relatedTarget))hide();});card.addEventListener('click',function(){pinned=!pinned;});wrap.addEventListener('keydown',function(e){if(e.key==='Escape'){pinned=false;card.hidden=true;}});
+  function preview(button, item) {
+    if (!item.part_items || !item.part_items.length) return;
+    var card = document.createElement('div');
+    card.className = 'part-preview';
+    card.hidden = true;
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', '固定或取消固定各小问做题情况');
+    card.setAttribute('aria-pressed', 'false');
+
+    var wrap = document.createElement('span');
+    wrap.className = 'part-preview-wrap';
+    button.replaceWith(wrap);
+    wrap.append(button, card);
+    var pinned = false;
+
+    function render() {
+      card.replaceChildren();
+      item.part_items.forEach(function (part, index) {
+        var line = document.createElement('p');
+        line.textContent = '小问 ' + (index + 1) + '：' + status(part);
+        card.append(line);
+      });
+    }
+    function show() {
+      render();
+      card.hidden = false;
+    }
+    function hide() {
+      if (!pinned) card.hidden = true;
+    }
+    function close() {
+      pinned = false;
+      card.setAttribute('aria-pressed', 'false');
+      card.hidden = true;
+      if (document.activeElement === card && button.focus) button.focus();
+    }
+    function togglePin() {
+      pinned = !pinned;
+      card.setAttribute('aria-pressed', String(pinned));
+      if (pinned) show();
+      else card.hidden = true;
+    }
+    // Global Escape / click-outside handlers must reset the pinned state too.
+    card._closePreview = close;
+    wrap.addEventListener('mouseenter', show);
+    wrap.addEventListener('mouseleave', hide);
+    wrap.addEventListener('focusin', show);
+    wrap.addEventListener('focusout', function (event) {
+      if (!wrap.contains(event.relatedTarget)) hide();
+    });
+    card.addEventListener('click', togglePin);
+    card.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        togglePin();
+      }
+    });
+    wrap.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+      }
+    });
   }
   root.PartPractice={mount:mount,preview:preview,status:status};
-  if(root.document)root.document.addEventListener('keydown',function(e){if(e.key==='Escape')root.document.querySelectorAll('.part-preview').forEach(function(card){card.hidden=true;});});
+  if (root.document) {
+    root.document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      root.document.querySelectorAll('.part-preview').forEach(function (card) {
+        if (card._closePreview) card._closePreview();
+        else card.hidden = true;
+      });
+    });
+    root.document.addEventListener('pointerdown', function (event) {
+      root.document.querySelectorAll('.part-preview').forEach(function (card) {
+        if (!card.hidden && card.parentElement
+            && !card.parentElement.contains(event.target) && card._closePreview) {
+          card._closePreview();
+        }
+      });
+    });
+  }
 }(typeof globalThis==='object'?globalThis:this));

@@ -55,7 +55,7 @@ const PAPER_IDS = [
   "paper-practice", "paper-setup", "paper-title", "paper-count", "paper-reveal-timing",
   "paper-start", "paper-error", "paper-work", "paper-question", "paper-answer",
   "paper-options", "paper-item-submit", "paper-reference", "paper-rating", "paper-toolbar",
-  "paper-prev", "paper-next", "paper-stuck", "paper-final-submit", "paper-dots",
+  "paper-prev", "paper-next", "paper-stuck", "paper-final-submit", "paper-dots", "paper-stem-index",
   "paper-pause", "paper-completion", "paper-completion-stats", "paper-review",
   "paper-return", "paper-again", "paper-links",
   "legacy-practice",
@@ -619,4 +619,19 @@ test('motion completion is confirmation-only and disposal releases the presentat
 test('a failed final submission never celebrates',async()=>{
  const events=[];const app=fixture({active:practice(),motion:events,writeHandlers:{'POST /practice/current/submit':()=>Promise.reject(new Error('offline'))}});await flush();
  await app.ids['paper-final-submit'].dispatch('click');await flush();assert.equal(events.filter(e=>e[0]==='complete').length,0);
+});
+
+
+test("learner-visible numbering starts at 1, but persisted submission positions stay at 0", async () => {
+  const app = fixture({ active: practice() });
+  await flush();
+  assert.equal(app.ids["paper-stem-index"].textContent, "1");
+  assert.equal(app.ids["paper-dots"].children[0].textContent, "1");
+  assert.match(app.ids["paper-dots"].children[0]["aria-label"], /第1题/);
+  await app.ids["paper-options"].dispatch("change", {
+    target: { dataset: { paperChoice: "A" }, value: "A", checked: true },
+  });
+  await flush();
+  const attempt = app.calls.find((call) => call.path === "/attempts");
+  assert.equal(attempt.body.practice_position, 0);
 });

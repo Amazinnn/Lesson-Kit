@@ -180,6 +180,11 @@
       return typeof item.position === "number" ? item.position : index;
     }
 
+    // Persisted practice positions are zero-based; displayed question numbers are not.
+    function displayPosition(item, index) {
+      return itemPosition(item, index) + 1;
+    }
+
     function rowAt(index) {
       return run && run.items ? run.items[index] || null : null;
     }
@@ -642,9 +647,9 @@
         button.type = "button";
         button.className = "paper-dot state-" + status + (position === index ? " is-current" : "");
         button.dataset.paperPosition = String(index);
-        button.textContent = String(itemPosition(item, index));
+        button.textContent = String(displayPosition(item, index));
         button.disabled = navigationBusy || modeAdopting;
-        button.setAttribute("aria-label", "第" + itemPosition(item, index) + "题，" + statusLabel(status)
+        button.setAttribute("aria-label", "第" + displayPosition(item, index) + "题，" + statusLabel(status)
           + (position === index ? "，当前题" : ""));
         if (position === index) button.setAttribute("aria-current", "step");
         button.addEventListener("click", function () { moveTo(index); });
@@ -681,7 +686,7 @@
          不改成可读文本，也不加内联字号/颜色（样式归 workbench.css）。 */
       if (ids.stemIndex) {
         var stemItem = run && run.items ? run.items[position] : null;
-        ids.stemIndex.textContent = String(itemPosition(stemItem, position));
+        ids.stemIndex.textContent = String(displayPosition(stemItem, position));
       }
       ids.question.innerHTML = "<p class='section-kicker paper-run-title'>" + escapeHtml(paperTitle) + "</p>"
         + "<h2>" + escapeHtml(title) + "</h2>"
@@ -1526,9 +1531,9 @@
           link.dataset.reviewConclusions=conclusions.filter(Boolean).join(',');
           var problem = problemFor(item);
           var title = problem && (problem.display_title || problem.title) || "";
-          link.textContent = "第" + itemPosition(item, index) + "题：" + (title ? title + " · " : "")
+          link.textContent = "第" + displayPosition(item, index) + "题：" + (title ? title + " · " : "")
             + statusLabel(itemStatus(item, index));
-          link.setAttribute("aria-label", "查看第" + itemPosition(item, index) + "题，" + statusLabel(itemStatus(item, index)));
+          link.setAttribute("aria-label", "查看第" + displayPosition(item, index) + "题，" + statusLabel(itemStatus(item, index)));
           link.addEventListener("click", function () { openReview(index); });
           ids.links.appendChild(link);
         });
