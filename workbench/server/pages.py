@@ -751,7 +751,7 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
     filters = (("all", "全部"), ("work", "重点练习"), ("review", "可以复习"),
                ("mastered", "已掌握"), ("new", "未标记"))
     middle = (_page_header(_lens_label(workspace, "知识网络 / 当前章节", "知识网络 / 全课程"),
-                     "知识图谱", "约束布局 · 纸质图谱 · 蒙德里安")
+                     "知识图谱")
         + "<div class='page-content graph-content'>"
         + "<header class='graph-topbar'>"
         "<div class='search'><label class='visually-hidden' for='graph-search'>搜索知识点</label>"
