@@ -640,6 +640,7 @@
       if (motion) motion.update({ statuses: run.items.map(itemStatus), mode: currentMode(),
         archived: renderingArchived, reviewing: reviewing });
       if (!ids.dots) return;
+      if (window.PartPractice && window.PartPractice.closeAllPreviews) window.PartPractice.closeAllPreviews();
       ids.dots.replaceChildren();
       run.items.forEach(function (item, index) {
         var status = itemStatus(item, index);

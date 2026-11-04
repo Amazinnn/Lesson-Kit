@@ -4,7 +4,7 @@
   function status(p) {
     var g = p.grading && (p.grading.payload || p.grading) || {};
     return (p.locked ? '已提交' : (p.answer || (p.choices || []).length ? '草稿' : '未作答'))
-      + (p.stuck ? ' · 不会' : '') + (p.grading_status ? ' · ' + (labels[p.grading_status] || p.grading_status) : '')
+      + (p.stuck ? ' · 不会' : '') + (p.grading_status && p.grading_status !== 'not_requested' ? ' · ' + (labels[p.grading_status] || p.grading_status) : '')
       + (g.answer_conclusion ? ' · 答案：' + labels[g.answer_conclusion] : '')
       + (g.process_conclusion ? ' · 过程：' + (g.process_conclusion === 'unprovided' ? '未提供过程' : labels[g.process_conclusion]) : '')
       + (p.objective_verdict === true || p.objective_verdict === 1 ? ' · 正确' : p.objective_verdict === false || p.objective_verdict === 0 ? ' · 错误' : '');
@@ -48,9 +48,9 @@
         var summary=document.createElement('p');summary.className='part-summary';summary.setAttribute('aria-live','polite');node.append(summary);
         item.part_items.forEach(function(p,index) {
           var card=document.createElement('section'); card.className='part-card'; card.dataset.partId=p.id;
-          var prompt=document.createElement('div'); prompt.className='wb-reading part-prompt'; prompt.innerHTML=o.richText(p.prompt || '作答');
-          var heading=document.createElement('h3'); heading.textContent='小问 '+(index+1);
-          var state=document.createElement('p'); state.className='part-state'; state.setAttribute('aria-live','polite'); card.append(heading,prompt,state);
+          var heading=document.createElement('h3'); heading.textContent='小问 '+(index+1); card.append(heading);
+          if (p.prompt) { var prompt=document.createElement('div'); prompt.className='wb-reading part-prompt'; prompt.innerHTML=o.richText(p.prompt); card.append(prompt); }
+          var state=document.createElement('p'); state.className='part-state'; state.setAttribute('aria-live','polite'); card.append(state);
           if (['yes_no','single_choice','multiple_choice'].includes(p.type)) {
             (p.options || (p.type==='yes_no' ? ['是','否']:[])).forEach(function(value) { var label=document.createElement('label'), input=document.createElement('input'); input.type=p.type==='multiple_choice'?'checkbox':'radio'; input.name='part-'+p.id; input.checked=(p.choices || []).includes(value); input.addEventListener('change',function(){ p.choices=Array.from(card.querySelectorAll('input:checked')).map(function(i){return i.value;}); save(p); }); input.value=value; label.append(input,document.createTextNode(value)); label.className='part-option'; card.append(label); });
           } else { var input=document.createElement('textarea'); input.rows=6; input.value=p.answer || ''; input.setAttribute('aria-label','小问 '+(index+1)+' 作答与过程'); input.placeholder='在此自由填写答案与过程'; input.addEventListener('input',function(){p.answer=input.value; if(p.answer.trim())p.stuck=false;save(p);}); card.append(input); }
@@ -64,9 +64,10 @@
       }
       item.part_items=item.part_items.map(function(p){var stable=boundParts.find(function(old){return old.id===p.id;});if(stable && stable!==p){var draft=stable._dirty ? {answer:stable.answer,choices:stable.choices,stuck:stable.stuck,sequence:stable.sequence,_dirty:true}:null;Object.assign(stable,p,draft || {});return stable;}return p;});
       item.part_items.forEach(function(p){ var card=Array.from(node.querySelectorAll('.part-card')).find(function(c){return c.dataset.partId===p.id;}); result(card,p); });
-      var s=item.part_summary || {}, text='已提交 '+(s.submitted == null ? item.part_items.filter(function(p){return p.locked;}).length : s.submitted)+' / '+item.part_items.length;
-      ['grading','answer','process'].forEach(function(d){Object.keys(s[d] || {}).forEach(function(k){text+=' · '+({grading:'批改',answer:'答案',process:'过程'}[d])+' '+(labels[k] || k)+' '+s[d][k];});});
-      node.querySelector('.part-summary').textContent=text;
+      var s=item.part_summary || {}, submitted=(s.submitted == null ? item.part_items.filter(function(p){return p.locked;}).length : s.submitted);
+      var text=submitted>0 ? '已提交 '+submitted+' / '+item.part_items.length : '';
+      ['grading','answer','process'].forEach(function(d){Object.keys(s[d] || {}).forEach(function(k){if(k==='not_requested')return;text+=(text?' · ':'')+({grading:'批改',answer:'答案',process:'过程'}[d])+' '+(labels[k] || k)+' '+s[d][k];});});
+      var summary=node.querySelector('.part-summary'); summary.textContent=text; summary.hidden=!text;
       preference(); return true;
     }
     function preference() { node.querySelectorAll('.part-submit').forEach(function(b){b.hidden=granularity()==='whole_problem';}); var all=node.querySelector('.part-submit-all');if(all)all.hidden=o.archived() || !!(current && current.part_items.every(function(p){return p.locked;})); }
@@ -83,11 +84,17 @@
     card.setAttribute('role', 'button');
     card.setAttribute('aria-label', '固定或取消固定各小问做题情况');
     card.setAttribute('aria-pressed', 'false');
+    card.style.position = 'fixed';
 
     var wrap = document.createElement('span');
     wrap.className = 'part-preview-wrap';
     button.replaceWith(wrap);
-    wrap.append(button, card);
+    wrap.append(button);
+    // Portal to document.body: inside .paper-dots the preview is clipped by its
+    // overflow scrolling and painted over by the question card below — z-index
+    // alone cannot escape either. Fixed positioning anchored to the dot
+    // sidesteps both; scroll/resize reposition it via _placePreview.
+    if (root.document.body) root.document.body.append(card);
     var pinned = false;
 
     function render() {
@@ -98,9 +105,22 @@
         card.append(line);
       });
     }
+    function place() {
+      if (!button.getBoundingClientRect) return;
+      var r = button.getBoundingClientRect(), cr = card.getBoundingClientRect();
+      var vh = root.innerHeight != null ? root.innerHeight
+        : ((root.document.documentElement && root.document.documentElement.clientHeight) || 0);
+      var left = Math.max(8, Math.min(r.left, (root.innerWidth || 0) - (cr.width || 0) - 8));
+      var top = r.bottom + 6;
+      if (vh && top + (cr.height || 0) > vh - 8) top = Math.max(8, r.top - (cr.height || 0) - 6);
+      card.style.left = left + 'px';
+      card.style.top = top + 'px';
+    }
     function show() {
       render();
+      if (!card.parentElement && root.document.body) root.document.body.append(card);
       card.hidden = false;
+      place();
     }
     function hide() {
       if (!pinned) card.hidden = true;
@@ -121,11 +141,15 @@
     }
     // Global Escape / click-outside handlers must reset the pinned state too.
     card._closePreview = close;
+    card._previewAnchor = wrap;
+    card._placePreview = place;
     wrap.addEventListener('mouseenter', show);
     wrap.addEventListener('mouseleave', hide);
+    card.addEventListener('mouseenter', show);
+    card.addEventListener('mouseleave', hide);
     wrap.addEventListener('focusin', show);
     wrap.addEventListener('focusout', function (event) {
-      if (!wrap.contains(event.relatedTarget)) hide();
+      if (!wrap.contains(event.relatedTarget) && !card.contains(event.relatedTarget)) hide();
     });
     card.addEventListener('click', togglePin);
     card.addEventListener('keydown', function (event) {
@@ -141,7 +165,12 @@
       }
     });
   }
-  root.PartPractice={mount:mount,preview:preview,status:status};
+  root.PartPractice={mount:mount,preview:preview,status:status,closeAllPreviews:function(){
+    root.document.querySelectorAll('.part-preview').forEach(function (card) {
+      if (card._closePreview) card._closePreview();
+      if (card.remove) card.remove();
+    });
+  }};
   if (root.document) {
     root.document.addEventListener('keydown', function (event) {
       if (event.key !== 'Escape') return;
@@ -152,11 +181,19 @@
     });
     root.document.addEventListener('pointerdown', function (event) {
       root.document.querySelectorAll('.part-preview').forEach(function (card) {
-        if (!card.hidden && card.parentElement
-            && !card.parentElement.contains(event.target) && card._closePreview) {
+        var anchor = card._previewAnchor;
+        if (!card.hidden && !card.contains(event.target)
+            && !(anchor && anchor.contains(event.target)) && card._closePreview) {
           card._closePreview();
         }
       });
     });
+    var repositionOpenPreviews = function () {
+      root.document.querySelectorAll('.part-preview').forEach(function (card) {
+        if (!card.hidden && card._placePreview) card._placePreview();
+      });
+    };
+    root.document.addEventListener('scroll', repositionOpenPreviews, true);
+    root.document.addEventListener('resize', repositionOpenPreviews);
   }
 }(typeof globalThis==='object'?globalThis:this));

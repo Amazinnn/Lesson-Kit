@@ -25,6 +25,8 @@ function previewFixture() {
   const handlers = {};
   const document = {
     activeElement: null,
+    body: null,
+    documentElement: null,
     createElement(tag) {
       const node = {
         tag, children: [], handlers: {}, attributes: {}, hidden: false, parentElement: null,
@@ -48,6 +50,13 @@ function previewFixture() {
           return false;
         },
         focus() { document.activeElement = this; },
+        style: {},
+        getBoundingClientRect() { return { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }; },
+        remove() {
+          const parent = this.parentElement;
+          if (parent) { const index = parent.children.indexOf(this); if (index >= 0) parent.children.splice(index, 1); }
+          this.parentElement = null;
+        },
       };
       elements.push(node);
       return node;
@@ -67,9 +76,10 @@ function previewFixture() {
   const container = document.createElement('div');
   const button = document.createElement('button');
   container.append(button);
+  document.body = document.createElement('body');
   context.PartPractice.preview(button, { part_items: [{ id: 'p-1', answer: '草稿' }] });
   const wrap = container.children[0];
-  const card = wrap.children[1];
+  const card = document.body.children[0];
   return { document, container, button, wrap, card };
 }
 
@@ -90,7 +100,7 @@ test('Escape resets pinned preview, so the next mouseleave hides it', () => {
 test('preview supports Enter/Space pinning and outside-pointer dismissal', () => {
   const { document, container, button, wrap, card } = previewFixture();
   assert.equal(container.children.length, 1);
-  assert.equal(wrap.children.length, 2); // no redundant details button
+  assert.equal(wrap.children.length, 1); // card is portaled to document.body
   assert.equal(wrap.children[0], button);
   wrap.fire('focusin');
   let prevented = false;
