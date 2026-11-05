@@ -23,3 +23,11 @@
 主检出 workbench/server/static/workbench.js 的 ai 轮询状态处理将 failed 和 cancelled 都通过 aiUpdateOutbox 写成 failed。aiRenderOutbox 将 unknown、rejected、failed 作为可操作恢复记录呈现。这支持所有者关于停止后出现恢复记录的报告。静态证据不证明它会自动重发，也不证明重复消息的根因。
 
 Q025–Q027 已记录新的期望行为及验收门槛，尚未修改产品实现。重复消息须追踪提交身份、接受次数、内容执行和呈现后复现。
+
+## 2026-11-06 学习与复习研究核查
+
+主目录 docs/research/2026-11-02-learning-efficiency-algorithms.md 明确标为研究提案，综合调度、知识追踪、学习科学等分报告并提出分期路线。已读取总提案开头及相关主题索引，本轮未独立重验论文原始结论和数字，不将研究建议自动纳入实施范围。这些研究文件当前为未跟踪资产，规划引用不代表已纳入版本交付，后续交接须解决可获取性。
+
+教学分支 9e640332 的 workbench/domain/session_machine.py 已定义 created、briefing、running、concluding、closed 及 suspended、abandoned 的受控转移。此处是教学会话生命周期，不能直接当作诊断、加强和跨日维护的学习进程。workbench/domain/engine/registry.py 已列出 FSRS、加权选题、时间估计及 Elo 策略；workbench/data/forms.py 已消费薄弱、能力、到期等事实形成候选和原因。存在实现不等于已合入主目录、接通用户目标或通过真实学习验收。
+
+后续需建立研究依据、现行契约、分支实现、入口消费和验收证据的对应关系。先复用已有会话与调度语义，再决定是否存在必须新增的持久目标信息。
