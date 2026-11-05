@@ -4,7 +4,7 @@ The current authored-content mirror supports a limited entity projection, while 
 
 ## What Changes
 
-Planning draft grounded in Q001–Q016 and S001 in docs/design/workbench-capability-maturation/decisions.md. Further decisions remain pending; this proposal does not authorize implementation.
+Planning draft grounded in Q001–Q020 and S001 in docs/design/workbench-capability-maturation/decisions.md. Further decisions remain pending; this proposal does not authorize implementation.
 
 - Extend CLI file exchange to course-managed content, Papers, referenced images and confirmed-persisted learning state. Original materials are optionally included with size and missing-file reporting. Conversation continuation is a separate work package.
 - Receive additions, edits and explicit deletions through governed validation and mutation boundaries. A missing entity file is reported and cannot silently authorize deletion.
@@ -36,3 +36,8 @@ Primary owners are workbench CLI adapters, Data mutation/file-exchange modules a
 Reconcile GLOSSARY, DATA_MODEL, FILE_CONTRACT, ARCHITECTURE, PRODUCT-MANUAL, ACTION-GRAPH, interface surfaces and Agent-visible contracts according to their responsibilities. Existing active lifecycle and mirror changes require an explicit overlap ledger before implementation.
 
 Identity handling, receiving into an existing installation, rollback after subsequent learning, exact payload/schema compatibility and numeric benchmark targets remain under discussion. This draft is incomplete for implementation.
+
+
+## Scope refinement from Q019/Q020 and S002
+
+This is one work package inside whole-project maturation planning. Keep only the latest complete synchronization result. If new answers have been recorded after reception, refuse automatic rollback and use explicitly scoped repairs. Do not add multi-batch history browsing or sophisticated rollback across subsequent learning. Further synchronization detail is deferred while the interview covers other subsystems.
