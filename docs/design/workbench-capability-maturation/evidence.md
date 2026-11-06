@@ -49,3 +49,5 @@ docs/DATA_MODEL.md 的 active_practice_items.draft_json/draft_sequence、暂停�
 part-practice.js 的批改长文本已有 richText 消费路径，部分状态与标签为 textContent。尚未完成全字段清单，不能把全部 textContent 一概判为错误，也不能因为部分路径支持就宣称多字段渲染完整。
 
 S004 更新后，前段 300 份目标仅为已被替代的历史讨论。主检出 pages.py 的练习入口有 active-practice-resume，试卷列表另有逐卷继续入口；PRODUCT-MANUAL 已声明多张 Paper 独立保存未完成进度。下一步应核查练习开始界面是否暴露全部未完成卷及正常恢复路径，静态入口存在不能代替实际浏览器验收。
+
+标题补充核查。paper-practice.js 的试卷标题存在 textContent 与 escapeHtml 显示路径。workbench.js 的重命名入口有从 heading.textContent 获取默认值的路径。后续接入富文本后必须检查此类源内容读取，防止将渲染后的文本或公式辅助节点写回标题。此处为静态风险点，尚未做渲染改动或复现原文损坏。
