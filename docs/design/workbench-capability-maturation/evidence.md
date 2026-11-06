@@ -53,3 +53,7 @@ S004 更新后，前段 300 份目标仅为已被替代的历史讨论。主检�
 标题补充核查。paper-practice.js 的试卷标题存在 textContent 与 escapeHtml 显示路径。workbench.js 的重命名入口有从 heading.textContent 获取默认值的路径。后续接入富文本后必须检查此类源内容读取，防止将渲染后的文本或公式辅助节点写回标题。此处为静态风险点，尚未做渲染改动或复现原文损坏。
 
 首优先包补充。已读取现有 agent-chat-simplify/proposal.md，它覆盖输入框、审批、字体及部分队列暂停问题，不能直接当作本轮全部发送需求已实现。当前 workbench-ui spec 明确规定失败恢复在候选列表且对话历史不显示重试控件，与 Q025–Q027 的新期望需要显式协调。并非只删前端按钮即可完成契约变更。
+
+S005 检查。已检索规划树全部 Markdown 及 expand-file-mediated-course-sync/proposal.md 的说明、解释、披露、原因、缺口及任务用词。规划曾在 Q035/Q036/Q044/Q048/Q066/Q070 及对应 benchmark 中要求主动说明，现由 S005 统一收回默认学习 UI 展示。文件交换 proposal 的完整回执属于 CLI 工件，继续保留。此次只修改规划文档，没有新增程序中的说明机制，也未验证现有界面是否残留其他冗余字段。
+
+Q071 现状核查。workbench-ui spec 已规定运行中发送偏好在工作区设置保存且默认 queue，Bridge Conversations.send 已有 queue_action 参数和 queue/interrupt 校验。该问题可由仓库查明，撤销不计数。未执行浏览器验证，不从静态规范和代码推断现有全部发送体验无缺陷。
