@@ -47,3 +47,5 @@ workbench/server/static/workbench.js 的 aiRenderPendingQueue 已展示拖动手
 docs/DATA_MODEL.md 的 active_practice_items.draft_json/draft_sequence、暂停检查点和 wb_paper_draft 出站箱已有草稿及恢复语义。paper-practice.js 同时使用本地存储和服务端草稿路径。300 份目标须在此基础上核对记录身份、淘汰与兼容，不能简单截断现有活动执行表。
 
 part-practice.js 的批改长文本已有 richText 消费路径，部分状态与标签为 textContent。尚未完成全字段清单，不能把全部 textContent 一概判为错误，也不能因为部分路径支持就宣称多字段渲染完整。
+
+S004 更新后，前段 300 份目标仅为已被替代的历史讨论。主检出 pages.py 的练习入口有 active-practice-resume，试卷列表另有逐卷继续入口；PRODUCT-MANUAL 已声明多张 Paper 独立保存未完成进度。下一步应核查练习开始界面是否暴露全部未完成卷及正常恢复路径，静态入口存在不能代替实际浏览器验收。
