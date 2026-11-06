@@ -41,3 +41,9 @@ docs/DATA_MODEL.md 已区分原始作答、批改结果、显式不会及参考�
 主检出 workbench/ingest/__init__.py 的 content-bundle 预检路径已检查章节值、知识点 ID 前缀、引用存在性等。已读片段不能证明引用对应的学术内容与原教材一致，后续须追踪提取技能和原文核对流程。不能将本次局部静态阅读外推为全项目不存在语义核对。
 
 workbench/server/static/workbench.js 的 aiRenderPendingQueue 已展示拖动手柄、立即发送等控件；Q042 计划将队列正常展示收敛至正文、编辑、删除，需在后续 change 显式协调现行队列 UI 契约。aiRenderPendingQueue 与失败恢复的 aiRenderOutbox 为不同路径，不能只改其中一处便宣称全部发送体验完成。
+
+## 2026-11-06 草稿及渲染已有能力
+
+docs/DATA_MODEL.md 的 active_practice_items.draft_json/draft_sequence、暂停检查点和 wb_paper_draft 出站箱已有草稿及恢复语义。paper-practice.js 同时使用本地存储和服务端草稿路径。300 份目标须在此基础上核对记录身份、淘汰与兼容，不能简单截断现有活动执行表。
+
+part-practice.js 的批改长文本已有 richText 消费路径，部分状态与标签为 textContent。尚未完成全字段清单，不能把全部 textContent 一概判为错误，也不能因为部分路径支持就宣称多字段渲染完整。
