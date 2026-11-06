@@ -57,3 +57,5 @@ S004 更新后，前段 300 份目标仅为已被替代的历史讨论。主检�
 S005 检查。已检索规划树全部 Markdown 及 expand-file-mediated-course-sync/proposal.md 的说明、解释、披露、原因、缺口及任务用词。规划曾在 Q035/Q036/Q044/Q048/Q066/Q070 及对应 benchmark 中要求主动说明，现由 S005 统一收回默认学习 UI 展示。文件交换 proposal 的完整回执属于 CLI 工件，继续保留。此次只修改规划文档，没有新增程序中的说明机制，也未验证现有界面是否残留其他冗余字段。
 
 Q071 现状核查。workbench-ui spec 已规定运行中发送偏好在工作区设置保存且默认 queue，Bridge Conversations.send 已有 queue_action 参数和 queue/interrupt 校验。该问题可由仓库查明，撤销不计数。未执行浏览器验证，不从静态规范和代码推断现有全部发送体验无缺陷。
+
+顶层准则入口核查。docs/design/philosophy.md 为产品及学习理念，ARCHITECTURE §5 为工程约束。ADR 0025–0027 已禁止图谱求解器及渲染器保留并行运行时 fallback，ADR 0007 则记有旧池 related_kp_ids fallback 的历史决定，需按现行字段契约核对实际兼容责任。S006 新规写入 AGENTS 并由架构文档引用；本轮未扫描全部后端 fallback 调用，不宣称已完成存量清理。

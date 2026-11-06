@@ -361,6 +361,8 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
 
 ## 5. 工程约束（硬规则）
 
+跨层设计遵守 `AGENTS.md` 的“跨层设计准则”。UI 默认压缩注释与说明字段；后端默认禁止 fallback，例外仅限有证据的崩溃风险或严重体验退化。具体可观察行为、兼容语义和例外须在对应 OpenSpec change 协调，内部实现事实不能自行覆盖既有契约。
+
 Attempt 旧状态约束及临时父表外键修复归既有 `pool/scripts/pool_schema.py` ensure 边界。
 `ensure_workbench_schema` 先执行该修复，再运行其他可能开启事务的 ensure；沿用原始 DDL 重建，
 不先改名正式父表。savepoint 保证局部失败回滚，不提交调用方已有事务；外键开启且已在事务内时
