@@ -31,3 +31,7 @@ Q025–Q027 已记录新的期望行为及验收门槛，尚未修改产品实�
 教学分支 9e640332 的 workbench/domain/session_machine.py 已定义 created、briefing、running、concluding、closed 及 suspended、abandoned 的受控转移。此处是教学会话生命周期，不能直接当作诊断、加强和跨日维护的学习进程。workbench/domain/engine/registry.py 已列出 FSRS、加权选题、时间估计及 Elo 策略；workbench/data/forms.py 已消费薄弱、能力、到期等事实形成候选和原因。存在实现不等于已合入主目录、接通用户目标或通过真实学习验收。
 
 后续需建立研究依据、现行契约、分支实现、入口消费和验收证据的对应关系。先复用已有会话与调度语义，再决定是否存在必须新增的持久目标信息。
+
+## 2026-11-06 作答证据与基础检查
+
+docs/DATA_MODEL.md 已区分原始作答、批改结果、显式不会及参考已查看事实，并规定主观批改不自动重放掌握度和排期。题目 micro_quiz 与 flash_cards 也已有内容表示。后续诊断须核对这些证据的实际 writer/consumer，优先复用，不因两种薄弱表现而新建一套竞争状态。此轮仅核查持久语义与候选表示，未验证闪卡或选择题定位知识缺口的准确性及耗时。
