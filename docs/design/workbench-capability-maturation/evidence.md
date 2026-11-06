@@ -51,3 +51,5 @@ part-practice.js 的批改长文本已有 richText 消费路径，部分状态�
 S004 更新后，前段 300 份目标仅为已被替代的历史讨论。主检出 pages.py 的练习入口有 active-practice-resume，试卷列表另有逐卷继续入口；PRODUCT-MANUAL 已声明多张 Paper 独立保存未完成进度。下一步应核查练习开始界面是否暴露全部未完成卷及正常恢复路径，静态入口存在不能代替实际浏览器验收。
 
 标题补充核查。paper-practice.js 的试卷标题存在 textContent 与 escapeHtml 显示路径。workbench.js 的重命名入口有从 heading.textContent 获取默认值的路径。后续接入富文本后必须检查此类源内容读取，防止将渲染后的文本或公式辅助节点写回标题。此处为静态风险点，尚未做渲染改动或复现原文损坏。
+
+首优先包补充。已读取现有 agent-chat-simplify/proposal.md，它覆盖输入框、审批、字体及部分队列暂停问题，不能直接当作本轮全部发送需求已实现。当前 workbench-ui spec 明确规定失败恢复在候选列表且对话历史不显示重试控件，与 Q025–Q027 的新期望需要显式协调。并非只删前端按钮即可完成契约变更。
