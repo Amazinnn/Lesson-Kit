@@ -2,7 +2,7 @@
 
 ## 2026-11-07 接力第二棒（Codex 暂停后）
 
-实际实现仍在 `D:\.codex\worktrees\course-sync\lesson-kit` 的 `codex/course-sync`，原 main 工作区未接收。本轮完成 `3c15a893`（学习偏好浏览器消费与 surface/L2/GLOSSARY/手册/动作图登记）、`cae8215d`（接收端：共同基线=本机接收确认，`apply_exchange` 逐单元提交、失败隔离、显式删除）、`18d3abca`（执行重建：active 运行与 parked 检查点、单项补丁、generation tombstone）与 `6b5988d3`（课程交换 CLI：export/receive/check/sync/status/schedule、回执与退出码 0/2/3/4、Git 编排、每小时任务与冲突通知去重）。接力前 Node 脏检查已全绿；定向回归 100 项 pytest 通过。
+实际实现仍在 `D:\.codex\worktrees\course-sync\lesson-kit` 的 `codex/course-sync`，原 main 工作区未接收。本轮完成 `3c15a893`（学习偏好浏览器消费与 surface/L2/GLOSSARY/手册/动作图登记）、`cae8215d`（接收端：共同基线=本机接收确认，`apply_exchange` 逐单元提交、失败隔离、显式删除）、`18d3abca`（执行重建：active 运行与 parked 检查点、单项补丁、generation tombstone）与 `6b5988d3`（课程交换 CLI：export/receive/check/sync/status/schedule、回执与退出码 0/2/3/4、Git 编排、每小时任务与冲突通知去重）。接力前 Node 脏检查已全绿；全仓 pytest 1,399 项通过（353s），live specs strict 21/21 通过。
 
 仍未完成：接收端既有 writer 校验接线、Tutor 交接与免费 LLM 回写、benchmarks 与发布级验收。`tasks.md` 2.3–2.10、3.1–3.6 保持未勾选，只有实际证据才能勾选。继续顺序见交接文档末尾的「接力记录」。
 
