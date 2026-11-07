@@ -65,6 +65,16 @@ The receiver SHALL apply Independent Valid Mutation Units, retain invalid items 
 - **WHEN** the process stops at a publication boundary and the same input is received again
 - **THEN** completed identities are reconciled and unfinished units complete without duplicate records
 
+#### Scenario: Local data changes after inspection
+
+- **WHEN** confirmed local data changes after a receive inspection and before its write transaction
+- **THEN** stale writes are refused for a fresh inspection and the newer local answer or draft is preserved
+
+#### Scenario: One file cannot be published
+
+- **WHEN** an accepted file cannot be atomically published while other incoming units are independent
+- **THEN** independent units complete, the file remains explicitly pending for retry, and newer updates to that same file do not erase its unfinished publication
+
 ### Requirement: Git transport and hourly scheduling
 
 The same configured CLI SHALL coordinate file exchange and Git transport and SHALL support hourly operating-system scheduling for all registered courses with configured media. A quiet success and a single short conflict notification SHALL reflect actual outcomes. Git publication SHALL be reported independently from local reception.

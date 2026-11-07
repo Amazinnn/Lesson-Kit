@@ -303,3 +303,108 @@ def test_all_configured_aggregates_each_course_exit_code(
 
     assert code == 0, receipt
     assert receipt["courses"] == {"math": 0}
+
+
+@pytest.mark.parametrize("conflict", [False, True])
+def test_sync_never_publishes_an_unaccepted_incoming_package(workspace, tmp_path, monkeypatch, capsys, conflict):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    monkeypatch.setattr(course_sync.git_sync, "inspect_repository", lambda *a: {
+        "repo": str(repo), "branch_checked_out": True})
+    monkeypatch.setattr(course_sync.git_sync, "fetch_remote", lambda *a: {"commit": "remote-tip"})
+    monkeypatch.setattr(course_sync, "_materialize", lambda *a: tmp_path / "incoming")
+    monkeypatch.setattr(course_sync.exchange, "inspect_exchange", lambda *a: {"errors": []})
+    monkeypatch.setattr(course_sync.exchange, "apply_exchange", lambda *a: {
+        "status": "conflict" if conflict else "partial", "applied": [], "kept": [],
+        "failed": [] if conflict else [{"identity": "bad", "code": "apply_failed"}],
+        "conflicts": [{"identity": "contested"}] if conflict else []})
+    def refuse_publication(*a):
+        pytest.fail("an unresolved package must not be exported or published")
+    monkeypatch.setattr(course_sync.exchange, "export_course", refuse_publication)
+    monkeypatch.setattr(course_sync.git_sync, "publish", refuse_publication)
+    monkeypatch.setattr(course_sync, "_toast", lambda *a: True)
+    assert cli("math", "sync", "--repo", str(repo), "--path", "sync", "--json-output") == (3 if conflict else 4)
+    receipt = json.loads(capsys.readouterr().out)
+    assert receipt["remote"]["status"] == "not_published"
+
+
+def test_git_fetch_failure_keeps_a_transport_receipt(workspace, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(course_sync.git_sync, "inspect_repository", lambda *a: {
+        "repo": str(tmp_path), "branch_checked_out": True})
+    def offline(*a):
+        raise RuntimeError("remote is offline")
+    monkeypatch.setattr(course_sync.git_sync, "fetch_remote", offline)
+    assert cli("math", "sync", "--repo", str(tmp_path), "--path", "sync", "--json-output") == 4
+    receipt = json.loads(capsys.readouterr().out)
+    assert receipt["status"] == "partial"
+    assert "offline" in str(receipt["errors"])
+    stored = json.loads((workspace / ".lessonkit/course-sync/last-receipt.json").read_text(encoding="utf-8"))
+    assert stored["exit_code"] == 4
+
+
+def test_notice_rearms_after_resolution(workspace, monkeypatch):
+    from types import SimpleNamespace
+    pool = SimpleNamespace(root=workspace, course="math")
+    shown = []
+    monkeypatch.setattr(course_sync, "_toast", lambda *a: shown.append(a) or True)
+    course_sync._notice(pool, {"conflicts": ["same"]})
+    course_sync._notice(pool, {"conflicts": []})
+    course_sync._notice(pool, {"conflicts": ["same"]})
+    assert len(shown) == 2
+
+
+def test_toast_passes_text_as_data(monkeypatch):
+    calls = []
+    def capture(command, **kwargs):
+        calls.append((command, kwargs))
+        return subprocess.CompletedProcess(command, 0)
+    monkeypatch.setattr(course_sync.subprocess, "run", capture)
+    monkeypatch.setattr(course_sync.sys, "platform", "win32")
+    assert course_sync._toast("标题 ' $x", "正文 ; $y")
+    command, kwargs = calls[0]
+    assert "标题 ' $x" not in command
+    assert kwargs["env"]["LK_TOAST_TITLE"] == "标题 ' $x"
+    assert kwargs["env"]["LK_TOAST_MESSAGE"] == "正文 ; $y"
+    assert kwargs["timeout"] > 0
+
+
+def test_sync_tracks_readable_files_and_removes_old_envelopes(workspace, tmp_path, monkeypatch, capsys):
+    repo = _repo(tmp_path)
+    monkeypatch.setattr(course_sync, "_toast", lambda *a: True)
+    (workspace / ".lessonkit/learning").mkdir(parents=True)
+    (workspace / ".lessonkit/learning/summary.md").write_text("summary", encoding="utf-8")
+    assert cli("math", "sync", "--repo", str(repo), "--path", "sync") == 0
+    capsys.readouterr()
+    assert git(repo, "status", "--porcelain").stdout == ""
+    connection = sqlite3.connect(workspace / "pool/course.db")
+    connection.execute("UPDATE knowledge_points SET body='changed'")
+    connection.commit()
+    connection.close()
+    assert cli("math", "sync", "--repo", str(repo), "--path", "sync") == 0
+    capsys.readouterr()
+    assert git(repo, "status", "--porcelain").stdout == ""
+    tracked = git(repo, "ls-files", "sync/files").stdout
+    assert "summary.md" in tracked
+
+
+def test_sync_receives_tutor_edits_from_readable_git_files(workspace, tmp_path, monkeypatch, capsys):
+    repo = _repo(tmp_path)
+    monkeypatch.setattr(course_sync, "_toast", lambda *a: True)
+    learning = workspace / ".lessonkit/learning/summary.md"
+    learning.parent.mkdir(parents=True)
+    learning.write_text("before", encoding="utf-8")
+    assert cli("math", "sync", "--repo", str(repo), "--path", "sync") == 0
+    capsys.readouterr()
+    other = tmp_path / "tutor"
+    git(tmp_path, "clone", str(tmp_path / "remote.git"), str(other))
+    git(other, "config", "user.name", "Tutor Test")
+    git(other, "config", "user.email", "tutor@example.com")
+    git(other, "config", "commit.gpgsign", "false")
+    (other / "sync/files/.lessonkit/learning/summary.md").write_text("Tutor update", encoding="utf-8")
+    git(other, "add", "--", "sync/files/.lessonkit/learning/summary.md")
+    git(other, "commit", "-m", "Tutor update")
+    git(other, "push", "origin", "main")
+    code = cli("math", "sync", "--repo", str(repo), "--path", "sync", "--json-output")
+    receipt = json.loads(capsys.readouterr().out)
+    assert code == 0, receipt
+    assert learning.read_text(encoding="utf-8") == "Tutor update"

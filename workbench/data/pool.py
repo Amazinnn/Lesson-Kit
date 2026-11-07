@@ -444,3 +444,16 @@ def _maximum_readable_suffix(conn, table, column, marker):
         if (value := row[0]).startswith(marker) and value[len(marker):].isdigit()
     ]
     return max(numbers, default=None)
+
+
+def ensure_course_sync_schema(conn):
+    """Create device-local course exchange bookkeeping incrementally."""
+    changes = []
+    for name, ddl in (
+        ("course_sync_checkpoint", "singleton INTEGER PRIMARY KEY CHECK(singleton=1), state_json TEXT NOT NULL"),
+        ("course_sync_units", "identity TEXT PRIMARY KEY, asset_json TEXT NOT NULL, mappings_json TEXT NOT NULL, pending_json TEXT"),
+    ):
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone():
+            conn.execute(f"CREATE TABLE {name} ({ddl})")
+            changes.append(name)
+    return changes

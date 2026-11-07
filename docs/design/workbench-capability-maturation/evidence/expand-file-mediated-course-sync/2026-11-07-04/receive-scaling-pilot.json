@@ -1,0 +1,40 @@
+{
+  "kind": "diagnostic single runs; concurrent local test load; not F2/p95",
+  "before": [
+    {
+      "rows": 100,
+      "receive_seconds": 1.315
+    },
+    {
+      "rows": 300,
+      "receive_seconds": 5.107
+    },
+    {
+      "rows": 1000,
+      "receive_seconds": 30.541
+    }
+  ],
+  "incremental": [
+    {
+      "rows": 100,
+      "export_seconds": 0.357,
+      "receive_seconds": 0.938,
+      "status": "success",
+      "state_bytes": 135809
+    },
+    {
+      "rows": 300,
+      "export_seconds": 1.006,
+      "receive_seconds": 3.474,
+      "status": "success",
+      "state_bytes": 407409
+    },
+    {
+      "rows": 1000,
+      "export_seconds": 3.254,
+      "receive_seconds": 9.235,
+      "status": "success",
+      "state_bytes": 1358009
+    }
+  ]
+}

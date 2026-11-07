@@ -1,7 +1,7 @@
 """System Git transport for the course file exchange.
 
 This module moves bytes and reports what the repository and the remote actually
-contain. It never merges course content, never touches SQLite and never resets,
+contain. It never merges course content, never touches SQLite and only fast-forwards media ancestry and never resets,
 checks out or force-pushes anything: the coordinator compares the file set that
 `fetch_remote`/`read_remote_files` expose and composes the receipt. Every Git
 call is an argument array with an explicit working directory, so no URL, branch
@@ -265,6 +265,22 @@ def read_remote_files(repo, commit, paths):
             raise ValueError(f'managed path is not a regular file: {path!r}')
         files[path] = _git(root, 'cat-file', 'blob', sha).stdout
     return {'commit': resolved_commit, 'files': files, 'missing': missing}
+
+
+def fast_forward(repo, branch, commit):
+    """Advance media ancestry without resetting local work or merging content."""
+    root = _repository_root(repo)
+    if _current_branch(root) != _branch(branch):
+        raise ValueError("the configured media branch is not checked out")
+    resolved = _revision(root, commit)
+    if not resolved:
+        raise ValueError("the fetched media commit does not exist")
+    _git(root, "merge", "--ff-only", "--no-edit", resolved)
+
+
+def tracked_paths(repo):
+    """List tracked files so publication can include obsolete managed paths."""
+    return _records(_git(_repository_root(repo), "ls-files", "-z"))
 
 
 def publish(repo, branch, managed_paths, remote='origin', message=DEFAULT_MESSAGE):

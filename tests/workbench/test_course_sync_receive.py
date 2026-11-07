@@ -1,6 +1,7 @@
 """Receiving a course exchange package into a second installation."""
 
 import base64
+from contextlib import contextmanager
 import json
 import sqlite3
 
@@ -443,3 +444,232 @@ def test_explicit_deletion_removes_the_row_and_a_missing_file_does_not(pair, tmp
     inspected = inspect_exchange(right, workspace(right), tmp_path / "bundle")
     assert any(error["code"] == "missing_asset" for error in inspected["errors"])
     assert (right.root / ".lessonkit/practice-sets/ps-001.json").is_file()
+
+
+def test_commit_failure_does_not_acknowledge_an_incoming_edit(pair, tmp_path, monkeypatch):
+    left, right = pair
+    bundle = tmp_path / "bundle"
+    publish(left, bundle)
+    receive(right, bundle)
+    left.connect().execute("UPDATE knowledge_points SET body='after'")
+    left.commit()
+    publish(left, bundle)
+    actual = right.transaction
+    failed = False
+
+    @contextmanager
+    def fail_once(*args, **kwargs):
+        nonlocal failed
+        with actual(*args, **kwargs):
+            yield
+            if not failed and rows(right, "knowledge_points")[0]["body"] == "after":
+                failed = True
+                raise sqlite3.OperationalError("injected before SQLite commit")
+
+    monkeypatch.setattr(right, "transaction", fail_once)
+    _inspection, result = receive(right, bundle)
+    assert result["status"] == "partial"
+    assert rows(right, "knowledge_points")[0]["body"] != "after"
+    retry = inspect_exchange(right, workspace(right), bundle)
+    assert len(retry["plan"]["changes"]) == 1
+    assert retry["plan"]["outgoing"] == []
+    assert receive(right, bundle)[1]["status"] == "success"
+    assert rows(right, "knowledge_points")[0]["body"] == "after"
+
+
+def test_committed_history_survives_sidecar_failure_without_duplicates(pair, tmp_path, monkeypatch):
+    from workbench.data import course_sync
+
+    left, right = pair
+    bundle = tmp_path / "bundle"
+    publish(left, bundle)
+    receive(right, bundle)
+    left.connect().execute("INSERT INTO problem_attempts VALUES(2,'math-prob-1','new answer')")
+    left.commit()
+    publish(left, bundle)
+    original = course_sync._atomic_json
+
+    def fail_copy(path, value):
+        if path == right.root / ".lessonkit/course-sync/state.json" \
+                and len(rows(right, "problem_attempts")) == 2:
+            raise OSError("injected after SQLite commit")
+        return original(path, value)
+
+    monkeypatch.setattr(course_sync, "_atomic_json", fail_copy)
+    with pytest.raises(OSError, match="after SQLite commit"):
+        receive(right, bundle)
+    assert len(rows(right, "problem_attempts")) == 2
+    right.close()
+    monkeypatch.setattr(course_sync, "_atomic_json", original)
+    inspected, result = receive(right, bundle)
+    assert inspected["plan"]["changes"] == []
+    assert result["status"] == "success"
+    assert len(rows(right, "problem_attempts")) == 2
+    export = publish(right, tmp_path / "reply")
+    assert "course_sync_checkpoint" not in {table["table"] for table in export["tables"]}
+
+
+@pytest.mark.parametrize("deleting", [False, True])
+def test_file_publication_failure_has_read_only_inspection_and_resumes(pair, tmp_path, monkeypatch, deleting):
+    from workbench.data import course_sync
+
+    left, right = pair
+    bundle = tmp_path / "bundle"
+    publish(left, bundle)
+    receive(right, bundle)
+    relative = ".lessonkit/practice-sets/ps-001.json"
+    target = right.root / relative
+    before = target.read_bytes()
+    if deleting:
+        # A manifest tombstone is an explicit deletion, unlike a missing file.
+        manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+        descriptor = next(item for item in manifest["assets"]
+                          if item["identity"] == "file/" + relative)
+        envelope = bundle / descriptor["path"]
+        asset = json.loads(envelope.read_text(encoding="utf-8"))
+        asset["deleted"] = True
+        envelope.write_text(json.dumps(asset), encoding="utf-8")
+    else:
+        (left.root / relative).write_text('{"title":"new paper"}', encoding="utf-8")
+        publish(left, bundle)
+    original = course_sync._write_file
+
+    def fail_publish(root, change):
+        raise OSError("injected file publication failure")
+
+    monkeypatch.setattr(course_sync, "_write_file", fail_publish)
+    _inspection, failed = receive(right, bundle)
+    assert failed["status"] == "partial"
+    assert any(item["code"] == "publication_pending" for item in failed["failed"])
+    assert target.read_bytes() == before
+    right.close()
+    inspection = inspect_exchange(right, workspace(right), bundle)
+    assert inspection["plan"]["changes"] == []
+    assert inspection["plan"]["outgoing"] == []
+    assert target.read_bytes() == before  # check cannot publish pending files
+    monkeypatch.setattr(course_sync, "_write_file", original)
+    assert receive(right, bundle)[1]["status"] == "success"
+    if deleting:
+        assert not target.exists()
+    else:
+        assert target.read_bytes() == (left.root / relative).read_bytes()
+
+
+def test_invalid_file_never_enters_a_committed_checkpoint(pair, tmp_path):
+    from workbench.data import course_sync
+
+    left, right = pair
+    bundle = tmp_path / "bundle"
+    publish(left, bundle)
+    receive(right, bundle)
+    inspection = inspect_exchange(right, workspace(right), bundle)
+    bad = {"identity": "file/.lessonkit/learning/bad.md", "action": "create",
+           "asset": {"kind": "file", "content": {"path": ".lessonkit/learning/bad.md",
+                     "encoding": "base64", "data": "invalid base64!"}, "depends_on": []}}
+    inspection["plan"]["changes"] = [bad]
+    result = apply_exchange(right, workspace(right), inspection)
+    assert result["status"] == "partial"
+    state = course_sync._state(right.root, right.course, read_only=True, pool=right)
+    assert bad["identity"] not in state["base"]
+    assert not state.get("pending_files")
+
+
+def test_missing_sidecar_does_not_reset_a_committed_course_lineage(pair, tmp_path):
+    left, right = pair
+    bundle = tmp_path / "bundle"
+    publish(left, bundle)
+    publish(right, tmp_path / "other")
+    (right.root / ".lessonkit/course-sync/state.json").unlink()
+    # Make this established course non-empty, independently of the package.
+    right.connect().execute("INSERT INTO knowledge_points(kp_id,body) VALUES('own','own')")
+    right.commit()
+    with pytest.raises(ValueError, match="lineage"):
+        receive(right, bundle)
+
+
+def test_unwritable_file_does_not_block_independent_rows(pair, tmp_path, monkeypatch):
+    from workbench.data import course_sync
+
+    left, right = pair
+    bundle = tmp_path / "bundle"
+    publish(left, bundle)
+    receive(right, bundle)
+    (left.root / ".lessonkit/practice-sets/ps-001.json").write_text('{"title":"changed"}', encoding="utf-8")
+    left.connect().execute("UPDATE knowledge_points SET body='new independent body'")
+    left.commit()
+    publish(left, bundle)
+    def denied(*a):
+        raise PermissionError("file denied")
+    monkeypatch.setattr(course_sync, "_write_file", denied)
+    _inspection, result = receive(right, bundle)
+    assert result["status"] == "partial"
+    assert rows(right, "knowledge_points")[0]["body"] == "new independent body"
+    left.connect().execute("UPDATE knowledge_points SET body='another independent body'")
+    left.commit()
+    publish(left, bundle)
+    _inspection, result = receive(right, bundle)
+    assert result["status"] == "partial"
+    assert rows(right, "knowledge_points")[0]["body"] == "another independent body"
+
+
+def test_local_edit_after_inspection_cannot_be_overwritten(pair, tmp_path):
+    left, right = pair
+    bundle = tmp_path / "bundle"
+    publish(left, bundle)
+    receive(right, bundle)
+    left.connect().execute("UPDATE knowledge_points SET body='peer edit'")
+    left.commit()
+    publish(left, bundle)
+    inspection = inspect_exchange(right, workspace(right), bundle)
+    with sqlite3.connect(right.db_path) as concurrent:
+        concurrent.execute("UPDATE knowledge_points SET body='new local edit'")
+    with pytest.raises(ValueError, match="changed after inspection"):
+        apply_exchange(right, workspace(right), inspection)
+    assert rows(right, "knowledge_points")[0]["body"] == "new local edit"
+
+
+def test_pending_file_cannot_be_replaced_before_it_publishes(pair, tmp_path, monkeypatch):
+    from workbench.data import course_sync
+
+    left, right = pair
+    bundle = tmp_path / "bundle"
+    relative = ".lessonkit/practice-sets/ps-001.json"
+    publish(left, bundle)
+    receive(right, bundle)
+    original = course_sync._write_file
+    def denied(*a):
+        raise PermissionError("denied")
+    monkeypatch.setattr(course_sync, "_write_file", denied)
+    (left.root / relative).write_text('{"title":"first"}', encoding="utf-8")
+    publish(left, bundle)
+    assert receive(right, bundle)[1]["status"] == "partial"
+    (left.root / relative).write_text('{"title":"second"}', encoding="utf-8")
+    publish(left, bundle)
+    assert receive(right, bundle)[1]["status"] == "partial"
+    state = course_sync._state(right.root, right.course, read_only=True, pool=right)
+    assert len(state["pending_files"]) == 1
+    assert base64.b64decode(state["pending_files"][0]["asset"]["content"]["data"]) == b'{"title":"first"}'
+    monkeypatch.setattr(course_sync, "_write_file", original)
+    assert receive(right, bundle)[1]["status"] == "success"
+    assert (right.root / relative).read_bytes() == b'{"title":"second"}'
+
+
+@pytest.mark.parametrize("malformed", [{"paper_id": "ps-001"}, None])
+def test_bad_execution_item_does_not_block_independent_content(pair, tmp_path, malformed):
+    left, right = pair
+    running_paper(left)
+    bundle = tmp_path / "bundle"
+    publish(left, bundle)
+    manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+    descriptor = next(item for item in manifest["assets"] if item["kind"] == "execution_item")
+    envelope = bundle / descriptor["path"]
+    asset = json.loads(envelope.read_text(encoding="utf-8"))
+    asset["content"] = malformed
+    if malformed is None:
+        asset["deleted"] = True
+    envelope.write_text(json.dumps(asset), encoding="utf-8")
+    inspected, result = receive(right, bundle)
+    assert any(error["identity"] == descriptor["identity"] for error in inspected["errors"])
+    assert result["status"] == "partial"
+    assert rows(right, "knowledge_points")[0]["body"] == rows(left, "knowledge_points")[0]["body"]
+    assert rows(right, "active_practice") == []

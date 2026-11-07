@@ -11,6 +11,7 @@ import argparse
 import json
 import os
 import subprocess
+import sqlite3
 import sys
 import tempfile
 from pathlib import Path
@@ -155,10 +156,17 @@ def _inspection_receipt(inspection):
             "errors": inspection.get("errors") or []}
 
 
+def _remaining_errors(inspection, result):
+    pending = {item["identity"] for item in result["failed"] if item["code"] == "publication_pending"}
+    return [item for item in inspection.get("errors", [])
+            if item.get("code") != "publication_pending" or item.get("identity") in pending]
+
+
 def _receive_receipt(inspection, result):
     receipt = _inspection_receipt(inspection)
     receipt.update({
         "status": _applied_status(inspection, result),
+        "errors": _remaining_errors(inspection, result),
         "conflicts": [item["identity"] for item in result["conflicts"]],
         "operation": "receive-" + str(uuid4()),
         "applied": result["applied"], "kept": result["kept"], "failed": result["failed"],
@@ -171,7 +179,7 @@ def _receive_receipt(inspection, result):
 def _applied_status(inspection, result):
     if result["conflicts"]:
         return "conflict"
-    if result["failed"] or inspection.get("errors"):
+    if result["failed"] or _remaining_errors(inspection, result):
         return "partial"
     return "success"
 
@@ -258,38 +266,54 @@ def _sync(args, pool, workspace, media, emit=True):
     receipt = {"operation": "sync-" + str(uuid4()), "course": {"id": pool.course},
                "repo": repository["repo"], "branch": branch, "package": package,
                "local": {}, "remote": {}, "errors": []}
-    fetched = git_sync.fetch_remote(repository["repo"], branch, remote)
-    receipt["fetched_commit"] = fetched["commit"]
+    try:
+        fetched = git_sync.fetch_remote(repository["repo"], branch, remote)
+        receipt["fetched_commit"] = fetched["commit"]
 
-    with tempfile.TemporaryDirectory() as staging:
-        incoming = _materialize(receipt, repository["repo"], fetched["commit"], package, staging)
-        if incoming is not None:
-            inspection = exchange.inspect_exchange(pool, workspace, incoming)
-            result = exchange.apply_exchange(pool, workspace, inspection, _choices(args))
-            receipt["local"]["receive"] = {
-                "status": result["status"], "applied": result["applied"],
-                "kept": result["kept"], "failed": result["failed"],
-                "conflicts": [item["identity"] for item in result["conflicts"]],
-                "errors": inspection.get("errors") or [],
+        with tempfile.TemporaryDirectory() as staging:
+            incoming = _materialize(receipt, repository["repo"], fetched["commit"], package, staging)
+            if incoming is not None:
+                inspection = exchange.inspect_exchange(pool, workspace, incoming)
+                result = exchange.apply_exchange(pool, workspace, inspection, _choices(args))
+                receipt["local"]["receive"] = {
+                    "status": result["status"], "applied": result["applied"],
+                    "kept": result["kept"], "failed": result["failed"],
+                    "conflicts": [item["identity"] for item in result["conflicts"]],
+                    "errors": _remaining_errors(inspection, result),
+                }
+                if result["status"] != "success" or _remaining_errors(inspection, result) or receipt["errors"]:
+                    receipt["status"] = "conflict" if result["conflicts"] else "partial"
+                    receipt["remote"] = {"status": "not_published"}
+                    _notice(pool, receipt)
+                    return _finish(args, pool, receipt, _sync_exit(receipt), emit=emit)
+            git_sync.fast_forward(repository["repo"], branch, fetched["commit"])
+            package_dir = Path(repository["repo"]) / package
+            previous_paths = (_package_paths(repository["repo"], package)
+                              if (package_dir / "manifest.json").is_file() else [])
+            exported = exchange.export_course(pool, workspace, package_dir)
+            tutor_handoff.write(pool, package_dir)
+            receipt["local"]["export"] = {
+                "status": exported["status"], "assets": exported["assets"],
+                "written": exported["written"], "reused": exported["reused"],
+                "manifest_changed": exported["manifest_changed"],
+                "cleanup_errors": exported["cleanup_errors"],
             }
-        package_dir = Path(repository["repo"]) / package
-        exported = exchange.export_course(pool, workspace, package_dir)
-        tutor_handoff.write(pool, package_dir)
-        receipt["local"]["export"] = {
-            "status": exported["status"], "assets": exported["assets"],
-            "written": exported["written"], "reused": exported["reused"],
-            "manifest_changed": exported["manifest_changed"],
-            "cleanup_errors": exported["cleanup_errors"],
-        }
-    managed = _package_paths(repository["repo"], package)
-    published = git_sync.publish(repository["repo"], branch, managed, remote,
-                                 args.message or "chore: exchange course files")
-    receipt["remote"] = {"status": published["remote"]["status"],
-                         "commit": published["remote"]["commit"],
-                         "reason": published["remote"]["reason"],
-                         "local_commit": published["local"]["commit"],
-                         "changed_paths": published["local"]["changed_paths"]}
-    receipt["status"] = _sync_status(receipt)
+        tracked = set(git_sync.tracked_paths(repository["repo"]))
+        managed = sorted(set(_package_paths(repository["repo"], package))
+                         | (set(previous_paths) & tracked))
+        published = git_sync.publish(repository["repo"], branch, managed, remote,
+                                     args.message or "chore: exchange course files")
+        receipt["remote"] = {"status": published["remote"]["status"],
+                             "commit": published["remote"]["commit"],
+                             "reason": published["remote"]["reason"],
+                             "local_commit": published["local"]["commit"],
+                             "changed_paths": published["local"]["changed_paths"]}
+        receipt["status"] = _sync_status(receipt)
+    except (RuntimeError, OSError, sqlite3.Error) as exc:
+        receipt["errors"].append({"code": "exchange_or_transport_failed",
+                                  "message": git_sync.sanitize(str(exc))})
+        receipt["remote"] = {"status": "failed"}
+        receipt["status"] = "partial"
     code = _sync_exit(receipt)
     _notice(pool, receipt)
     return _finish(args, pool, receipt, code, emit=emit)
@@ -315,9 +339,20 @@ def _materialize(receipt, repo, commit, package, staging):
     target = Path(staging)
     for name, data in files["files"].items():
         relative = name[len(prefix):] if prefix else name
-        path = target / relative
+        path = exchange._relative(target, relative)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
+    package_data = exchange.read_exchange(target)
+    readable = [prefix + exchange.READABLE_DIR + "/" + asset["content"]["path"]
+                for asset in package_data["assets"].values()
+                if asset["kind"] == "file" and not asset.get("deleted")]
+    if readable:
+        copies = git_sync.read_remote_files(repo, commit, readable)
+        for name, data in copies["files"].items():
+            relative = name[len(prefix):] if prefix else name
+            path = exchange._relative(target, relative)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
     return target
 
 
@@ -327,8 +362,14 @@ def _package_paths(repo, package):
         raise _InputError("the exported package has no manifest")
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     prefix = "" if package in {"", "."} else package + "/"
-    return ([prefix + "manifest.json", prefix + tutor_handoff.FILE_NAME]
-            + [prefix + item["path"] for item in payload["assets"]])
+    paths = [prefix + "manifest.json", prefix + tutor_handoff.FILE_NAME]
+    for item in payload["assets"]:
+        paths.append(prefix + item["path"])
+        if item["kind"] == "file":
+            asset = json.loads((manifest.parent / item["path"]).read_text(encoding="utf-8"))
+            if not asset.get("deleted"):
+                paths.append(prefix + exchange.READABLE_DIR + "/" + asset["content"]["path"])
+    return paths
 
 
 def _sync_status(receipt):
@@ -355,11 +396,12 @@ def _notice(pool, receipt):
     if not isinstance(conflicts, list):
         conflicts = (receipt.get("local", {}).get("receive") or {}).get("conflicts") or []
     identities = sorted(item for item in conflicts if isinstance(item, str))
-    if not identities:
-        return
     path = pool.root / ".lessonkit/course-sync" / NOTICE
+    if not identities:
+        path.unlink(missing_ok=True)
+        return
     previous = _read_json(path) or {}
-    if previous.get("conflicts") == identities:
+    if previous.get("conflicts") == identities and previous.get("notified"):
         return
     shown = _toast(f"{pool.course}: 课程同步有待选侧的差异",
                    f"{len(identities)} 项需要在本地版本与收到的版本之间选一侧")
@@ -376,16 +418,18 @@ def _toast(title, message):
         "$t=[Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent("
         "[Windows.UI.Notifications.ToastTemplateType]::ToastText02);"
         "$n=$t.GetElementsByTagName('text');$n.Item(0).AppendChild("
-        "$t.CreateTextNode($args[0]))|Out-Null;$n.Item(1).AppendChild("
-        "$t.CreateTextNode($args[1]))|Out-Null;"
+        "$t.CreateTextNode($env:LK_TOAST_TITLE))|Out-Null;$n.Item(1).AppendChild("
+        "$t.CreateTextNode($env:LK_TOAST_MESSAGE))|Out-Null;"
         "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("
         "'Lesson Kit').Show([Windows.UI.Notifications.ToastNotification]::new($t))"
     )
     if sys.platform != "win32":
         return False
     completed = subprocess.run(
-        ["powershell", "-NoProfile", "-NonInteractive", "-Command", script, title, message],
-        stdin=subprocess.DEVNULL, capture_output=True, check=False)
+        ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+        env=dict(os.environ, LK_TOAST_TITLE=title, LK_TOAST_MESSAGE=message),
+        stdin=subprocess.DEVNULL, capture_output=True, check=False, timeout=15,
+        **git_sync.hidden_launch_kwargs())
     return completed.returncode == 0
 
 
@@ -444,9 +488,10 @@ def _run_every_course(args):
             if not media.get("repo") and not media.get("package"):
                 continue
             codes[workspace["name"]] = _dispatch(args, pool, opened, media, emit=False)
-        except _InputError as exc:
-            codes[workspace["name"]] = 2
-            failures.append({"course": workspace["name"], "error": str(exc)})
+        except (ValueError, OSError, RuntimeError, sqlite3.Error) as exc:
+            code = 2 if isinstance(exc, ValueError) else 4
+            codes[workspace["name"]] = code
+            failures.append({"course": workspace["name"], "error": git_sync.sanitize(str(exc))})
         finally:
             if pool is not None:
                 pool.close()

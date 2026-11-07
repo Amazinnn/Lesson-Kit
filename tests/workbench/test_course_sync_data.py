@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from workbench.data.course_sync import export_course, inspect_exchange, read_exchange
+from workbench.data.course_sync import export_course, inspect_exchange, read_exchange, _save_state
 from workbench.data.pool import Pool
 
 
@@ -83,7 +83,7 @@ def test_attempt_references_use_record_identity_and_ignore_local_number(course, 
     state = json.loads(state_path.read_text(encoding='utf-8'))
     old_identity = state['row_identities'].pop('problem_attempts/[1]')
     state['row_identities']['problem_attempts/[8]'] = old_identity
-    state_path.write_text(json.dumps(state), encoding='utf-8')
+    _save_state(pool, state)
     connection.execute('UPDATE problem_attempts SET id=8 WHERE id=1')
     connection.execute('UPDATE feedback_events SET attempt_id=8')
     connection.execute('UPDATE part_attempt_context SET attempt_id=8')
@@ -127,6 +127,8 @@ def test_inspection_does_not_initialize_sync_state_or_registry(course, tmp_path,
     export_course(pool, workspace, tmp_path / 'bundle')
     import shutil
     shutil.rmtree(pool.root / '.lessonkit/course-sync')
+    pool.connect().execute('DROP TABLE course_sync_checkpoint')
+    pool.commit()
     registry_home = tmp_path / 'new-registry'
     monkeypatch.setenv('LESSONKIT_WB_HOME', str(registry_home))
     before = {path.relative_to(pool.root): path.read_bytes()
@@ -168,7 +170,7 @@ def test_inspection_reports_a_shared_asset_this_side_never_acknowledged(course, 
     state_path = pool.root / '.lessonkit/course-sync/state.json'
     state = json.loads(state_path.read_text(encoding='utf-8'))
     state['base'].pop(identity)
-    state_path.write_text(json.dumps(state), encoding='utf-8')
+    _save_state(pool, state)
 
     result = inspect_exchange(pool, workspace, tmp_path / 'bundle')
 
@@ -309,3 +311,18 @@ def test_failed_republication_keeps_previous_manifest_and_asset_bytes(course, tm
     assert read_exchange(folder) == original
     export_course(pool, workspace, folder)
     assert read_exchange(folder)["course"] == original["course"]
+
+
+def test_standalone_and_installed_checkpoint_schemas_match():
+    from pool.scripts.pool_schema import ensure_course_sync_schema as standalone
+    from workbench.data.pool import ensure_course_sync_schema as installed
+
+    first, second = sqlite3.connect(":memory:"), sqlite3.connect(":memory:")
+    try:
+        assert standalone(first) == installed(second)
+        assert standalone(first) == installed(second) == []
+        query = "SELECT name,sql FROM sqlite_master WHERE type='table' ORDER BY name"
+        assert first.execute(query).fetchall() == second.execute(query).fetchall()
+    finally:
+        first.close()
+        second.close()

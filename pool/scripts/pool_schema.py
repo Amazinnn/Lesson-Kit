@@ -60,6 +60,19 @@ def ensure_columns(
     return added
 
 
+def ensure_course_sync_schema(conn):
+    """Create device-local course exchange bookkeeping incrementally."""
+    changes = []
+    for name, ddl in (
+        ("course_sync_checkpoint", "singleton INTEGER PRIMARY KEY CHECK(singleton=1), state_json TEXT NOT NULL"),
+        ("course_sync_units", "identity TEXT PRIMARY KEY, asset_json TEXT NOT NULL, mappings_json TEXT NOT NULL, pending_json TEXT"),
+    ):
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone():
+            conn.execute(f"CREATE TABLE {name} ({ddl})")
+            changes.append(name)
+    return changes
+
+
 def ensure_content_mirror_schema(conn: sqlite3.Connection) -> List[str]:
     """Add the per-entity authored-content mirror ledger idempotently.
 
@@ -608,6 +621,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         changes.extend(_ensure_problem_contract(conn))
     changes.extend(_ensure_learner_signals(conn))
     changes.extend(ensure_content_mirror_schema(conn))
+    changes.extend(ensure_course_sync_schema(conn))
 
     if not table_exists(conn, "review_schedule"):
         conn.execute(

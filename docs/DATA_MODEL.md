@@ -329,6 +329,19 @@ The learning keys are `showRating` and `showSource` (boolean), `submissionGranul
 
 ## Course exchange source identity (WP01 in progress)
 
-Data allocates one installation origin in the user-level registry `course-sync-installation.json`, under an exclusive initialization lock and atomic publication. Each course has a distinct persistent course origin in `.lessonkit/course-sync/state.json`. Copying course assets preserves the course origin and source record identities, while the receiving installation retains its own origin.
+Data allocates one installation origin in the user-level registry `course-sync-installation.json`, under an exclusive initialization lock and atomic publication. Course origin is independent and is preserved across file exchanges. `row_identities` maps local table/primary-key tuples to persistent source asset identities; SQLite-generated history IDs are namespaced by their source installation. `base` records acknowledged asset projections and is not a learner observation.
 
-`row_identities` associates a local table/primary-key tuple with its persistent source asset identity. SQLite-generated history IDs are namespaced by installation origin, never compared across devices as global row identities. `base` is a captured export projection, not a new learner observation. Record/reference remapping on receive remains an implementation prerequisite before this boundary can be released.
+Two device-local tables own committed receive bookkeeping:
+
+| Table | Fields | Writer / consumer |
+|---|---|---|
+| `course_sync_checkpoint` | `singleton=1`, `state_json` | Data stores the compacted course identity, source mappings, base and export metadata at operation boundaries. |
+| `course_sync_units` | `identity` primary key, `asset_json`, `mappings_json`, nullable `pending_json` | Each receive transaction writes acknowledged assets and new local/source mappings with its rows. `pending_json` holds a file publication intent until atomic replacement/deletion completes. |
+
+Reading overlays unit records on the checkpoint baseline. `.lessonkit/course-sync/state.json` remains a readable copy and the initial source for legacy sidecar-only courses; once a SQLite checkpoint exists it is authoritative. Missing sidecar files do not reset course identity. The current installation origin is resolved locally rather than adopted from a copied database.
+
+Compaction saves the whole acknowledged state and removes completed unit overrides in one SQLite transaction, retaining unpublished file intents. Read-only checks neither migrate nor publish files: they project committed pending bytes and report pending publication. Modifying exchanges retry publication, and one unwritable file does not block independent receive units. Invalid paths/bytes never enter a committed intent. Acknowledgements and mappings are discarded when their row transaction fails; failures after commit retain durable identities and do not duplicate history on retry.
+
+Both tables are transport bookkeeping and are excluded from portable rows, inventory counts and manifests. Incremental `ensure_course_sync_schema` definitions in the standalone pool script and installed workbench are checked for schema parity, preserving independent operation of each entry point. Existing sidecar-only courses initialize bookkeeping on their first modifying exchange. Complete reference coverage, crash boundaries and release acceptance remain WP01 prerequisites, with evidence in the program tree.
+
+WP01 inspection carries a connection-local SQLite change guard. Apply checks it before writes and within each unit's write transaction; intervening local edits cannot be overwritten by an inspection snapshot. A stale inspection requires a fresh check, preserving already committed independent units. An unresolved file intent blocks newer changes to the same asset while other identities proceed; there is never more than one durable publication intent per identity. Malformed execution items are isolated during package validation, including content-less tombstones that the execution writer cannot represent.

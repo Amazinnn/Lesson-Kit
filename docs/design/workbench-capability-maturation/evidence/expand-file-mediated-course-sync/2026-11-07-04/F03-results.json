@@ -1,0 +1,109 @@
+{
+  "probe": "F03",
+  "workspace": "D:\\.codex\\worktrees\\course-sync\\lesson-kit",
+  "temp_courses": "C:\\Users\\yanwei\\AppData\\Local\\Temp\\f03-courses-b5iimeu9",
+  "raw_relative_path": "attachments/raw.bin",
+  "probes": {
+    "1_attachment_chain": {
+      "a_export_status": "success",
+      "a_package_has_attachment": true,
+      "b_receive_status": "success",
+      "b_file_landed": true,
+      "b_file_bytes": "52415700415454414348",
+      "b_has_device_config": false,
+      "b_export_status": "success",
+      "b_package_has_attachment": false,
+      "c_receive_status": "success",
+      "c_file_landed": false
+    },
+    "2_file_tombstone": {
+      "raw_attachment": {
+        "path": "attachments/raw.bin",
+        "tombstone_form": "deleted+content",
+        "first_receive": "success",
+        "plan_changes": [],
+        "receive_status": "success",
+        "receive_failed": [],
+        "file_after_tombstone": true,
+        "export_status": "success",
+        "export_mentions_file": false,
+        "export_deleted_assets": [],
+        "holder_file_before": false,
+        "holder_receive_after_b_export": "success",
+        "holder_file_after": false
+      },
+      "managed_folder_file": {
+        "path": ".lessonkit/practice-sets/ps-002.json",
+        "tombstone_form": "deleted+content",
+        "first_receive": "success",
+        "plan_changes": [
+          "file/.lessonkit/practice-sets/ps-002.json"
+        ],
+        "receive_status": "success",
+        "receive_failed": [],
+        "file_after_tombstone": false,
+        "export_status": "success",
+        "export_mentions_file": false,
+        "export_deleted_assets": []
+      },
+      "minimal_tombstone": {
+        "path": "attachments/raw.bin",
+        "tombstone_form": "deleted-only",
+        "first_receive": "success",
+        "plan_changes": [],
+        "receive_status": "success",
+        "receive_failed": [],
+        "file_after_tombstone": true,
+        "export_status": "success",
+        "export_mentions_file": false,
+        "export_deleted_assets": []
+      }
+    },
+    "3_kp_delete_round_trip": {
+      "tombstone_identity": "row/knowledge_points/[\"kp-1\"]",
+      "counts_before": {
+        "a": {
+          "knowledge_points": 1,
+          "problems": 1,
+          "problem_attempts": 1,
+          "practice_runs": 1
+        },
+        "b": {
+          "knowledge_points": 1,
+          "problems": 1,
+          "problem_attempts": 1,
+          "practice_runs": 1
+        }
+      },
+      "b_receive_status": "success",
+      "counts_b_after_delete": {
+        "knowledge_points": 0,
+        "problems": 1,
+        "problem_attempts": 1,
+        "practice_runs": 1
+      },
+      "b_export_status": "success",
+      "b_export_has_kp_tombstone": false,
+      "b_export_deleted_assets": [
+        "row/problems/[\"prob-1\"]"
+      ],
+      "b_export_has_attempts": true,
+      "b_export_has_practice_runs": true,
+      "a_round_trip_status": "success",
+      "a_round_trip_failed": [],
+      "counts_a_after_round_trip": {
+        "knowledge_points": 1,
+        "problems": 1,
+        "problem_attempts": 1,
+        "practice_runs": 1
+      }
+    },
+    "3b_local_delete_export": {
+      "initial_export": "success",
+      "post_delete_export": "success",
+      "post_delete_has_kp_row": false,
+      "post_delete_deleted_assets": [],
+      "post_delete_has_problem": true
+    }
+  }
+}

@@ -10,6 +10,8 @@ from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
+from workbench.data.pool import ensure_course_sync_schema
+
 from workbench import registry
 from workbench.data import content as content_data
 from workbench.data import figure_mirror
@@ -141,20 +143,85 @@ def _installation_origin(*, read_only=False):
     return value["origin"]
 
 
-def _state(root, course, *, read_only=False):
+def _state(root, course, *, read_only=False, pool=None):
     path = Path(root) / ".lessonkit/course-sync/state.json"
-    if path.exists():
-        state = _read_json(path)
+    checkpoint = None
+    if pool is not None and _table_exists(pool.connect(), "course_sync_checkpoint"):
+        checkpoint = pool.connect().execute(
+            "SELECT state_json FROM course_sync_checkpoint WHERE singleton=1").fetchone()
+    if checkpoint is not None or path.exists():
+        state = json.loads(checkpoint[0]) if checkpoint is not None else _read_json(path)
         if not isinstance(state, dict) or not isinstance(state.get("course"), dict) \
                 or state["course"].get("id") != course:
             raise ValueError("course exchange state has a different course identity")
         if not isinstance(state.get("row_identities"), dict) or not isinstance(state.get("base"), dict):
             raise ValueError("invalid course exchange identity mappings or base")
+        if pool is not None and _table_exists(pool.connect(), "course_sync_units"):
+            pending = []
+            for unit in pool.connect().execute("SELECT * FROM course_sync_units ORDER BY identity"):
+                state["base"][unit["identity"]] = json.loads(unit["asset_json"])
+                state["row_identities"].update(json.loads(unit["mappings_json"]))
+                if unit["pending_json"]:
+                    pending.append(json.loads(unit["pending_json"]))
+            if pending:
+                state["pending_files"] = pending
         state["origin"] = _installation_origin(read_only=read_only)
         return state
     return {"course": {"id": course, "origin": None if read_only else "course-" + str(uuid4())},
             "origin": _installation_origin(read_only=read_only), "row_identities": {}, "base": {},
             "initialized": False}
+
+
+def _checkpoint(connection, state):
+    ensure_course_sync_schema(connection)
+    snapshot = {key: value for key, value in state.items() if key != "pending_files"}
+    connection.execute(
+        "INSERT INTO course_sync_checkpoint(singleton,state_json) VALUES(1,?) "
+        "ON CONFLICT(singleton) DO UPDATE SET state_json=excluded.state_json",
+        (json.dumps(snapshot, ensure_ascii=False),))
+    connection.execute("DELETE FROM course_sync_units WHERE pending_json IS NULL")
+
+
+def _unit_checkpoint(connection, acknowledged, mappings, pending=None):
+    for identity, asset in acknowledged.items():
+        intent = pending if pending and pending["identity"] == identity else None
+        connection.execute(
+            "INSERT INTO course_sync_units(identity,asset_json,mappings_json,pending_json) "
+            "VALUES(?,?,?,?) ON CONFLICT(identity) DO UPDATE SET "
+            "asset_json=excluded.asset_json,mappings_json=excluded.mappings_json,"
+            "pending_json=excluded.pending_json",
+            (identity, json.dumps(asset, ensure_ascii=False),
+             json.dumps(mappings, ensure_ascii=False),
+             json.dumps(intent, ensure_ascii=False) if intent else None))
+
+
+def _save_state(pool, state):
+    with pool.transaction(immediate=True):
+        _checkpoint(pool.connect(), state)
+    _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
+
+
+def _complete_pending_files(pool, state, identities=None):
+    failed, remaining = [], []
+    for change in state.get("pending_files", []):
+        identity = change["identity"]
+        if identities is not None and identity not in identities:
+            remaining.append(change)
+            continue
+        try:
+            _write_file(pool.root, change)
+        except (OSError, ValueError) as exc:
+            remaining.append(change)
+            failed.append({"identity": identity, "code": "publication_pending", "message": str(exc)})
+            continue
+        # A crash before this commit replays the same atomic replacement/deletion.
+        with pool.transaction(immediate=True):
+            pool.connect().execute("UPDATE course_sync_units SET pending_json=NULL WHERE identity=?", (identity,))
+    if remaining:
+        state["pending_files"] = remaining
+    else:
+        state.pop("pending_files", None)
+    return failed
 
 
 def _database_projection(pool, state):
@@ -167,6 +234,7 @@ def _database_projection(pool, state):
     try:
         names = {row[0] for row in snapshot.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
+        names.difference_update({"course_sync_checkpoint", "course_sync_units"})
         unknown = names - TABLES
         if unknown:
             raise ValueError("unregistered course tables: " + ", ".join(sorted(unknown)))
@@ -265,12 +333,13 @@ def _portable_integer_references(assets, state):
         asset["depends_on"] = sorted(dependencies - {identity})
 
 
-def _managed_files(pool, assets):
+def _managed_files(pool, assets, pending=None):
+    pending = pending or {}
     root = pool.root
     files = set()
     for name in ("goals.json", "course-preferences.json"):
         path = root / ".lessonkit" / name
-        if path.exists():
+        if path.exists() and path.relative_to(root).as_posix() not in pending:
             value = _read_json(path)
             if name == "goals.json" and (not isinstance(value, list)
                                          or not all(isinstance(item, dict) for item in value)):
@@ -290,6 +359,8 @@ def _managed_files(pool, assets):
         figure_mirror.validate_references(pool.course, [logical], logical)
         source, _layout = figure_mirror._workspace_source(pool, logical)
         if source is None:
+            if ".lessonkit/figures/" + logical in pending:
+                continue
             raise ValueError(f"missing referenced figure: {logical}")
         files.add(source)
     config_path = root / ".lessonkit/course-sync/config.json"
@@ -301,6 +372,8 @@ def _managed_files(pool, assets):
         for name in paths:
             path = _relative(root, name)
             if not path.exists():
+                if name in pending:
+                    continue
                 raise ValueError(f"missing managed course path: {name}")
             if path.is_dir():
                 files.update(item for item in path.rglob("*") if item.is_file())
@@ -317,11 +390,15 @@ def _managed_files(pool, assets):
 
 def _projection(pool, state):
     assets, inventory = _database_projection(pool, state)
-    for relative, path in _managed_files(pool, assets):
+    pending = {change["asset"]["content"]["path"]: change
+               for change in state.get("pending_files", [])}
+    for relative, path in _managed_files(pool, assets, pending):
         assets["file/" + relative] = {
             "kind": "file", "content": {"path": relative, "encoding": "base64",
                                          "data": base64.b64encode(path.read_bytes()).decode("ascii")},
             "depends_on": []}
+    for relative, change in pending.items():
+        assets["file/" + relative] = change["asset"]
     _execution_projection(assets, state)
     return assets, inventory
 
@@ -400,7 +477,8 @@ def export_course(pool, workspace, destination):
     """Export a closed committed projection, rejecting unknown or missing assets."""
     destination = Path(destination).resolve()
     with course_lock(pool.root):
-        state = _state(pool.root, pool.course)
+        state = _state(pool.root, pool.course, pool=pool)
+        publication_errors = _complete_pending_files(pool, state)
         assets, inventory = _projection(pool, state)
         # Establish the initial shared image once. Merely exporting subsequent
         # edits is not evidence that another installation has received them.
@@ -419,11 +497,11 @@ def export_course(pool, workspace, destination):
                               for item in previous_manifest["assets"]}
         # Persist source identities before publishing anything another device can
         # receive. A failed first export must retain the same course lineage.
-        _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
+        _save_state(pool, state)
         # An unchanged projection keeps its export generation, so a repeated
         # export of the same content does not manufacture a new commit.
         export_id = ("export-" + str(uuid4()) if previous_assets != assets
-                     else previous_manifest.get("export_id") or "export-" + str(uuid4()))
+                     else (previous_manifest or {}).get("export_id") or "export-" + str(uuid4()))
         descriptors = []
         written = 0
         for number, (identity, asset) in enumerate(sorted(assets.items()), 1):
@@ -442,7 +520,7 @@ def export_course(pool, workspace, destination):
         if changed:
             _atomic_json(destination / "manifest.json", manifest)
         mirror_errors = _write_readable_files(destination, assets)
-        cleanup_errors = list(mirror_errors)
+        cleanup_errors = list(mirror_errors) + publication_errors
         live_paths = {item["path"] for item in descriptors}
         for relative in sorted(set(previous_paths.values()) - live_paths):
             path = _relative(destination, relative)
@@ -458,7 +536,7 @@ def export_course(pool, workspace, destination):
             except OSError as exc:
                 cleanup_errors.append({"path": relative, "message": str(exc)})
         state["last_export"] = {"id": export_id, "assets": assets}
-        _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
+        _save_state(pool, state)
         return {"status": "partial" if cleanup_errors else "success",
                 "course": state["course"], "origin": state["origin"],
                 "export_id": export_id, "assets": len(assets), "tables": inventory,
@@ -498,16 +576,31 @@ def _write_readable_files(destination, assets):
     return errors
 
 
+def _database_guard(pool):
+    connection = pool.connect()
+    return [id(connection), connection.execute("PRAGMA data_version").fetchone()[0],
+            connection.total_changes]
+
+
+def _check_database_guard(pool, expected):
+    if expected is not None and _database_guard(pool) != expected:
+        raise ValueError("course changed after inspection; inspect again before applying")
+
+
 def inspect_exchange(pool, workspace, source):
     """Inspect a package and target schema without writing course/registry state."""
     if not pool.db_path.is_file():
         raise ValueError("target course database does not exist")
+    database_guard = _database_guard(pool)
     package = read_exchange(source)
     if package["course"]["id"] != pool.course:
         raise ValueError("exchange package belongs to a different course")
-    state = _state(pool.root, pool.course, read_only=True)
+    state = _state(pool.root, pool.course, read_only=True, pool=pool)
     local, inventory = _projection(pool, state)
     errors = list(package["errors"])
+    errors.extend({"identity": item["identity"], "code": "publication_pending",
+                   "message": "a committed local file still needs publication"}
+                  for item in state.get("pending_files", []))
     schema = {item["table"]: item for item in inventory}
     incoming = dict(package["assets"])
     for identity, asset in list(incoming.items()):
@@ -523,11 +616,20 @@ def inspect_exchange(pool, workspace, source):
             errors.append({"identity": identity, "code": "invalid_asset",
                            "message": "row does not match the target course schema"})
             del incoming[identity]
+    invalid_headers = {error["identity"].rsplit("/item/", 1)[0] for error in errors
+                       if isinstance(error.get("identity"), str)
+                       and error["identity"].startswith("execution/") and "/item/" in error["identity"]}
+    for identity in sorted(invalid_headers):
+        if identity in incoming:
+            del incoming[identity]
+            errors.append({"identity": identity, "code": "invalid_dependency",
+                           "message": "the execution contains an invalid item"})
     base = _common_base(state, local, package, errors)
     plan = planning.plan_exchange(base, local, incoming)
     errors.extend(plan["errors"])
     association_required = bool(local) and state["course"]["origin"] != package["course"]["origin"]
     return {"course": package["course"], "local": local, "incoming": incoming,
+            "database_guard": database_guard,
             "source": str(Path(source).resolve()),
             "base": base, "tables": inventory, "errors": errors, "plan": plan,
             "changes": plan["changes"], "outgoing": plan["outgoing"],
@@ -730,19 +832,31 @@ def apply_exchange(pool, workspace, inspection, choices=None):
     changes, kept, unresolved = _side_choices(plan, choices)
     supported, unsupported = _supported_units(changes)
     with course_lock(pool.root):
+        database_guard = list(inspection["database_guard"]) if inspection.get("database_guard") else None
+        _check_database_guard(pool, database_guard)
         state_path = pool.root / ".lessonkit/course-sync/state.json"
-        unassigned = not state_path.exists()
-        state = _state(pool.root, pool.course)
+        unassigned = (not state_path.exists() and not _table_exists(pool.connect(), "course_sync_checkpoint"))
+        state = _state(pool.root, pool.course, pool=pool)
         _adopt_course_origin(state, inspection, choices, unassigned=unassigned)
-        _atomic_json(state_path, state)
+        state["initialized"] = True
+        _save_state(pool, state)
+        publication_errors = _complete_pending_files(pool, state)
         connection = pool.connect()
+        if database_guard is not None:
+            database_guard[2] = connection.total_changes
         index = _identity_index(connection, state)
         local_assets = inspection.get("local") or {}
-        headers, executions = _execution_units(supported, local_assets)
         ordered, blocked = _dependency_order(supported)
+        headers, executions = _execution_units(ordered, local_assets)
+        invalid_headers = {change["identity"].rsplit("/item/", 1)[0] for change in supported
+                           if change["identity"] in blocked and change["asset"]["kind"] == "execution_item"}
+        blocked.update(invalid_headers)
         failed = [{"identity": identity, "code": "invalid_dependency",
                    "message": "the unit depends on an unavailable asset"}
                   for identity in sorted(blocked)]
+        failed.extend(error for error in inspection.get("errors", [])
+                      if error.get("code") != "publication_pending")
+        failed.extend(publication_errors)
         failed.extend({"identity": identity, "code": "unsupported_kind",
                        "message": "this receiver cannot write that asset yet"}
                       for identity in sorted(unsupported))
@@ -750,10 +864,16 @@ def apply_exchange(pool, workspace, inspection, choices=None):
         failed_identities = {item["identity"] for item in failed}
         for change in ordered:
             identity = change["identity"]
+            if identity in failed_identities:
+                continue
             if change["asset"]["kind"] == "execution_item" \
                     and identity.rsplit("/item/", 1)[0] in headers:
                 # Written with its execution header, which owns the whole record.
-                state["base"][identity] = change["asset"]
+                header = identity.rsplit("/item/", 1)[0]
+                if header in failed_identities:
+                    failed.append({"identity": identity, "code": "invalid_dependency",
+                                   "message": "the execution header did not apply"})
+                    failed_identities.add(identity)
                 continue
             unavailable = [key for key in change["asset"].get("depends_on", [])
                            if key in failed_identities]
@@ -762,28 +882,57 @@ def apply_exchange(pool, workspace, inspection, choices=None):
                                "message": f"a dependency did not apply: {unavailable[0]}"})
                 failed_identities.add(identity)
                 continue
+            unit_state = {**state, "row_identities": dict(state["row_identities"])}
+            before_index = dict(index)
+            acknowledged = {identity: change["asset"]}
+            pending = None
             try:
                 with pool.transaction(immediate=True):
+                    _check_database_guard(pool, database_guard)
                     if identity in headers:
-                        _write_execution(pool, connection, state, index, identity,
+                        _write_execution(pool, connection, unit_state, index, identity,
                                          change["asset"], executions.get(identity, {}))
                     elif change["asset"]["kind"] == "execution_item":
                         _write_execution_item(connection, index, identity, change["asset"])
+                    elif change["asset"]["kind"] == "file":
+                        _file_payload(pool.root, change)
+                        pending = change
                     else:
-                        _write_unit(pool, connection, state, index, change)
-                    # The acknowledgement and the record mapping are written
-                    # before the commit they describe: a retry then sees either
-                    # both or neither, and a mapping without its row is ignored
-                    # because the index only lists rows that exist.
-                    state["base"][identity] = change["asset"]
-                    _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
+                        _write_unit(pool, connection, unit_state, index, change)
+                    if identity in headers:
+                        for item in ordered:
+                            if item["asset"]["kind"] == "execution_item" \
+                                    and item["identity"].rsplit("/item/", 1)[0] == identity:
+                                acknowledged[item["identity"]] = item["asset"]
+                    mappings = {key: value for key, value in unit_state["row_identities"].items()
+                                if state["row_identities"].get(key) != value}
+                    _unit_checkpoint(connection, acknowledged, mappings, pending)
             except Exception as exc:  # one unit never blocks independent ones
+                connection.rollback()
+                if database_guard is not None:
+                    database_guard[2] = connection.total_changes
+                index = before_index
                 failed.append({"identity": identity, "code": "apply_failed", "message": str(exc)})
+                failed_identities.add(identity)
                 continue
+            if database_guard is not None:
+                database_guard[2] = connection.total_changes
+            state["row_identities"] = unit_state["row_identities"]
+            state["base"].update(acknowledged)
+            if pending:
+                state.setdefault("pending_files", []).append(pending)
+                pending_errors = _complete_pending_files(pool, state, {identity})
+                if database_guard is not None:
+                    database_guard[2] = connection.total_changes
+                if pending_errors:
+                    failed.extend(pending_errors)
+                    failed_identities.add(identity)
+                    continue
             applied.append(identity)
         # A deleted question or knowledge point queues its Paper file write in
         # the same way its writer does; publish those intents after committing.
         paper_progress.flush_files(pool)
+        _atomic_json(state_path, state)
         status = "conflict" if unresolved else ("partial" if failed else "success")
         return {"status": status, "course": state["course"], "origin": state["origin"],
                 "applied": applied, "kept": kept, "failed": failed,
@@ -1010,9 +1159,6 @@ def _now(connection):
 
 def _write_unit(pool, connection, state, index, change):
     asset = change["asset"]
-    if asset["kind"] == "file":
-        _write_file(pool.root, change)
-        return
     if asset["kind"] != "row":
         raise ValueError(f"unsupported asset kind: {asset['kind']}")
     identity = change["identity"]
@@ -1139,7 +1285,7 @@ def _update_row(connection, table, row, where):
         tuple(row[name] for name in assignments) + tuple(row[name] for name in where))
 
 
-def _write_file(root, change):
+def _file_payload(root, change):
     content = change["asset"]["content"]
     root = Path(root).resolve()
     target = _relative(root, content.get("path"))
@@ -1147,10 +1293,15 @@ def _write_file(root, change):
     if any(part in {"jobs", ".git", "course-sync"} for part in relative.parts) \
             or target.name in {".env", ".credentials.yaml"}:
         raise ValueError(f"path is not a portable course asset: {relative.as_posix()}")
+    data = None if change["action"] == "delete" else base64.b64decode(content["data"], validate=True)
+    return target, data
+
+
+def _write_file(root, change):
+    target, data = _file_payload(root, change)
     if change["action"] == "delete":
         target.unlink(missing_ok=True)
         return
-    data = base64.b64decode(content["data"], validate=True)
     target.parent.mkdir(parents=True, exist_ok=True)
     handle, name = tempfile.mkstemp(prefix=target.name + ".", suffix=".tmp", dir=target.parent)
     try:
@@ -1215,6 +1366,16 @@ def read_exchange(source):
                                         or not isinstance(content.get("key"), list)):
             errors.append({"identity": identity, "code": "invalid_asset", "message": "invalid row projection"})
             continue
+        if asset["kind"] in {"execution", "execution_item"}:
+            valid = bool(content)
+            if asset["kind"] == "execution_item":
+                valid = (valid and type(content.get("position")) is int
+                         and content["position"] >= 0
+                         and identity.endswith("/item/" + str(content["position"])))
+            if not valid:
+                errors.append({"identity": identity, "code": "invalid_asset",
+                               "message": "invalid execution projection"})
+                continue
         if asset["kind"] == "file":
             _relative(source, content.get("path"))
             try:
