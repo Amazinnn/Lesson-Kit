@@ -1,5 +1,11 @@
 # 规划交接状态
 
+## 2026-11-07 第三棒：把已审接收修正合入实际源码
+
+独立审查（C05）确认批次事务设计正确，同时复现了四项缺陷；本轮把审查期间冻结的修复草稿合入实际 `workbench/data/course_sync.py`，并补齐审查发现的剩余三项：分组执行头按题目依赖排序、stale 检查失败只报一条 `stale_inspection` 并停止、不完整执行信封按 `invalid_asset` 隔离。同时把 G06 的 `list_remote_files` 接进 CLI，使 Tutor 在 Git 里新增、未改 manifest 的学习文件也能被接收；codec 审查（B06）指出的三条未被测试钉死的规则已补测试。提交 `c2a12260`。
+
+实测：全仓 `PYTHONUTF8=1 pytest tests -q` **1,535 passed（458s）**；`compileall` 全仓；change strict 与 live specs strict 通过；`guard extract-problems --course dmath --chapter ch06` PASS。仍未完成：R06 的操作重放/会话绑定三类、F2 导出与无变化检查性能、真实远端/浏览器/旧课程迁移、独立最终验收。tasks 仍是 2/19，不据此勾选。
+
 ## 2026-11-07 有界事务与性能实测
 
 接收改为128项以内的事务批次，每项保存点隔离失败；文件先发布，再处理依赖数据。最新54项检查通过。完整规模单次接收15.854秒（此前264.865秒），但导出141.822秒、无变化检查58.180秒仍未达标；重复检查已无遗漏附件错误。详见 [事务验证](evidence/expand-file-mediated-course-sync/2026-11-07-07/summary.md)。分组传输、引用、完整验收仍未完成。
