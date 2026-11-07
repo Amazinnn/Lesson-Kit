@@ -83,3 +83,14 @@ A real zero-cost DeepSeek free-model continuation returned a valid new learning 
 ### New-device receive orchestration (2026-11-07)
 
 `course-sync <new-workspace> receive --from <package> --to <new-directory>` validates the package/course identity before creating any target. Data reuses the canonical course initializer; CLI registers the resulting empty course and uses the same inspect/apply path. Existing registered targets reject a mismatching --to path instead of changing the registry. Existing database directories cannot be silently adopted through this creation path. Source and target trees must be separate. Check never initializes or registers. The receive receipt records new registration and any actually required configuration; course media is optional for plain-file handoff. Bootstrap failure remains explicit, with no invented SQL/schema fallback.
+
+### 改卷历史与重复请求（S011，2026-11-07）
+
+改卷生命周期新增的 `retired_paper_items` 属于受管理课程资产，不是本机运行缓存，因此必须与内容同路同步。它的自然键 `(paper_id, sequence)` 在两台机器上会重复，所以：
+
+- 资产身份在表名前加安装来源（`row/retired_paper_items/<installation>/[...]`），两台机器各自的第 1 条不会被视为同一事实；
+- 接收端遇到新身份时按该卷现有最大序号追加，并记录映射，重复接收因此幂等；
+- 保留行里的 `attempt_id` 是历史引用：能解析就转成稳定身份，解析不到就留空并在清单里报 `dangling_history_references`，而不是让整包导出失败，也绝不按相同数字绑定本地 attempt；
+- 接收前目标池可能还没有这张表：检查阶段按接收端自己声明的列校验，真正写入时用既有 ensure 增量建表，不在服务启动自动迁移。
+
+重复请求与快照的边界（S011）：同一请求身份跨机重放要返回原结果、不产生新写入；同身份不同内容仍是真实冲突；历史显示快照保留来源机数字作为不透明值，可操作引用缺失时如实报告。

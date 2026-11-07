@@ -446,6 +446,15 @@ def _maximum_readable_suffix(conn, table, column, marker):
     return max(numbers, default=None)
 
 
+#: Columns of the retained Paper-item history; the exchange validates against this
+#: list before the receiving pool has been migrated to create the table.
+RETIRED_PAPER_ITEM_COLUMNS = (
+    "paper_id", "sequence", "problem_id", "position", "state", "attempt_id",
+    "content_revision", "draft_json", "draft_sequence", "reason", "retired_at",
+)
+RETIRED_PAPER_ITEM_KEYS = ("paper_id", "sequence")
+
+
 def ensure_paper_lifecycle_schema(conn):
     """Create the retained Paper-item history incrementally, on explicit writes only."""
     if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' "

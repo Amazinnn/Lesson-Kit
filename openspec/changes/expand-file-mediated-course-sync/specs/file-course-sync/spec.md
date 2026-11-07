@@ -126,3 +126,41 @@ A newly added ordinary file under the readable files tree SHALL declare a new sa
 
 - **WHEN** a new workspace is received with an explicit new target directory
 - **THEN** package and course identity validation precede creation and registration, and invalid input leaves no target or registration
+
+### Requirement: Retained Paper item history travels with the course
+
+The Paper item history kept for removed questions SHALL be a managed course asset: exported with its Paper, receivable into a target that has not migrated the table yet, and carried on by the next exchange. Two installations SHALL be able to number their own history for the same Paper without one silently replacing the other: the asset identity carries the installation origin, a received row takes the next local sequence, and a repeated reception appends nothing. A historical reference to a fact this course no longer holds SHALL be reported and left empty rather than making the package unexportable, and no local record may be bound merely because its number matches.
+
+#### Scenario: History survives the first hop and the next one
+
+- **WHEN** a Paper with a removed question is exported, received, continued and exported again
+- **THEN** the retained row, its last saved draft and the surviving item states match at every hop
+
+#### Scenario: Two installations append their own history
+
+- **WHEN** both installations already hold a retired item numbered 1 for the same Paper
+- **THEN** both facts persist under the receiver's own numbering and neither row is overwritten
+
+#### Scenario: A historical reference no longer resolves
+
+- **WHEN** a retained row points at an attempt this course no longer holds
+- **THEN** the package still exports, the receipt reports the unresolved reference, and no local attempt is bound in its place
+
+### Requirement: A repeated operation returns its original result
+
+An executed request replayed on another installation SHALL be recognised by its request identity and return the original result without writing again. The same request identity carrying different content SHALL remain a genuine conflict. Historical display data SHALL keep the source installation's numbers as opaque values, while an operational reference that cannot be resolved SHALL be reported instead of being bound to a coincidentally equal local record. A feedback event referenced only by a historical snapshot SHALL NOT block export.
+
+#### Scenario: The same request is replayed after the course moves
+
+- **WHEN** installation B repeats a request executed on A and the course later returns to A
+- **THEN** each replay returns the original receipt and adds no attempt, draft or event
+
+#### Scenario: Different content under the same request identity
+
+- **WHEN** a request identity arrives with different content
+- **THEN** the receiver reports a real conflict instead of replaying
+
+#### Scenario: The referenced feedback was deleted
+
+- **WHEN** a historical snapshot points at a feedback event that no longer exists
+- **THEN** export still completes, reports the unresolved reference, and keeps the snapshot text unchanged

@@ -41,9 +41,16 @@ TABLES = {
     "practice_request_operations", "part_attempt_context", "part_grading_revisions",
     "part_grading_jobs", "content_mirror_state", "content_mirror_log",
     "content_sequences", "ingest_batches", "candidate_problems", "candidate_attempts",
+    "retired_paper_items",
 }
 IDENTITY_TABLES = {"problem_attempts", "feedback_events", "practice_runs",
                    "practice_execution_ids", "content_mirror_log", "question_progress"}
+#: Append-only per-Paper history whose natural key (paper, local sequence) repeats on
+#: two machines. Its identity therefore carries the installation origin, and a
+#: received row takes the next local sequence instead of the sender's number.
+HISTORY_TABLES = {"retired_paper_items"}
+#: References a historical snapshot may hold without making the package unexportable.
+DANGLING_TOLERANT = {"retired_paper_items": {"attempt_id"}}
 INTEGER_REFERENCES = {"attempt_id": "problem_attempts", "execution_id": "practice_execution_ids"}
 REFERENCE_JSON_FIELDS = {
     "practice_runs": {"items_json"},
@@ -275,14 +282,18 @@ def _database_projection(pool, state):
                 local_key = table + "/" + spelling
                 identities = state["row_identities"]
                 if local_key not in identities:
-                    prefix = state["origin"] + "/" if table in IDENTITY_TABLES else ""
+                    prefix = (state["origin"] + "/"
+                              if table in IDENTITY_TABLES or table in HISTORY_TABLES else "")
                     identities[local_key] = "row/" + table + "/" + prefix + spelling
                 identity = identities[local_key]
                 assets[identity] = {"kind": "row", "content": {"table": table, "key": keys, "row": row},
                                     "depends_on": []}
                 if table == "problems" and row.get("deleted_at"):
                     assets[identity]["deleted"] = True
-        _portable_integer_references(assets, state)
+        dangling = _portable_integer_references(assets, state)
+        if dangling:
+            inventory.append({"table": "", "columns": [], "primary_key": [], "rows": 0,
+                              "dangling_history_references": dangling})
         if skipped:
             inventory.append({"table": "", "columns": [], "primary_key": [],
                               "rows": 0, "retired_tables": skipped})
@@ -298,6 +309,8 @@ def _portable_integer_references(assets, state):
         if content["table"] in IDENTITY_TABLES:
             records[(content["table"], content["row"]["id"])] = identity
 
+    dangling = []
+
     def reference(table, value):
         if value is None:
             return None
@@ -307,6 +320,14 @@ def _portable_integer_references(assets, state):
         dependencies.add(identity)
         return identity
 
+    def tolerant_reference(table, value, field):
+        """A historical snapshot keeps its row even when the referenced fact is gone."""
+        try:
+            return reference(table, value)
+        except ValueError:
+            dangling.append({"table": table, "field": field, "value": value})
+            return None
+
     for identity, asset in list(assets.items()):
         dependencies = set()
         content = asset["content"]
@@ -315,8 +336,13 @@ def _portable_integer_references(assets, state):
                                             ensure_ascii=False, separators=(",", ":"))
         if table in IDENTITY_TABLES:
             row["id"] = identity
+        tolerant = DANGLING_TOLERANT.get(table, frozenset())
         for field, target in INTEGER_REFERENCES.items():
-            if field in row:
+            if field not in row:
+                continue
+            if field in tolerant:
+                row[field] = tolerant_reference(target, row[field], field)
+            else:
                 row[field] = reference(target, row[field])
         for field in REFERENCE_JSON_FIELDS.get(table, ()):
             if not row.get(field):
@@ -334,6 +360,7 @@ def _portable_integer_references(assets, state):
             state["row_identities"][local_key] = replacement
             identity = replacement
         asset["depends_on"] = sorted(dependencies - {identity})
+    return dangling
 
 
 def _managed_files(pool, assets, pending=None, tracked=None):
@@ -638,7 +665,7 @@ def inspect_exchange(pool, workspace, source):
         if asset["kind"] != "row" or not asset.get("content"):
             continue
         content = asset["content"]
-        table = schema.get(content["table"])
+        table = schema.get(content["table"]) or _declared_history_table(content["table"])
         if table is None or content["key"] != table["primary_key"] \
                 or not set(content["row"]) <= set(table["columns"]) \
                 or not set(content["key"]) <= set(content["row"]) \
@@ -668,6 +695,15 @@ def inspect_exchange(pool, workspace, source):
             "conflicts": plan["conflicts"], "unchanged": plan["unchanged"],
             "association_required": association_required,
             "export_id": package.get("export_id")}
+
+
+def _declared_history_table(table):
+    """A history table this receiver owns but has not migrated into the pool yet."""
+    if table not in HISTORY_TABLES or table != "retired_paper_items":
+        return None
+    from workbench.data.pool import RETIRED_PAPER_ITEM_COLUMNS, RETIRED_PAPER_ITEM_KEYS
+    return {"table": table, "columns": list(RETIRED_PAPER_ITEM_COLUMNS),
+            "primary_key": list(RETIRED_PAPER_ITEM_KEYS), "rows": 0}
 
 
 def _common_base(state, local, package, errors):
@@ -880,8 +916,13 @@ def apply_exchange(pool, workspace, inspection, choices=None):
         failed = [{"identity": identity, "code": "invalid_dependency",
                    "message": "the unit depends on an unavailable asset"}
                   for identity in sorted(blocked)]
+        advisory = {"publication_pending"}
+        if choices.get("associate"):
+            # An explicit association accepts that the two sides never shared a
+            # base; the planner still reports each content conflict on its own.
+            advisory.add("baseline_mismatch")
         failed.extend(error for error in inspection.get("errors", [])
-                      if error.get("code") != "publication_pending")
+                      if error.get("code") not in advisory)
         failed.extend(publication_errors)
         failed.extend({"identity": identity, "code": "unsupported_kind",
                        "message": "this receiver cannot write that asset yet"}
@@ -1296,6 +1337,11 @@ def _write_unit(pool, connection, state, index, change):
         _delete_row(connection, index, identity)
         return
     table, row = _local_row(asset, index)
+    if table in HISTORY_TABLES:
+        # This receiver owns the history table; a pool that predates it is
+        # migrated here, at the first write, never at start-up.
+        from workbench.data.pool import ensure_paper_lifecycle_schema
+        ensure_paper_lifecycle_schema(connection)
     keys = _primary_key(connection, table)
     if not keys:
         raise ValueError(f"target table has no persistent key: {table}")
@@ -1331,10 +1377,48 @@ def _write_unit(pool, connection, state, index, change):
         row["id"] = existing[1]
         _update_row(connection, table, row, ("id",))
         return
+    if table in HISTORY_TABLES:
+        _write_history(connection, state, change, row)
+        return
     if change["action"] == "create":
         _insert_row(connection, table, row)
         return
     _update_row(connection, table, row, tuple(keys))
+
+
+def _write_history(connection, state, change, row):
+    """Append a received history row under a sequence local to this installation.
+
+    Two machines can both write sequence 3 for one Paper; the identity carries the
+    origin, so the receiver appends its own next number and records that mapping.
+    """
+    from workbench.data.pool import ensure_paper_lifecycle_schema
+    ensure_paper_lifecycle_schema(connection)
+    identity = change["identity"]
+    paper_id = row["paper_id"]
+    local = _history_sequence_of(state, identity)
+    if change["action"] == "update" and local is not None:
+        row["sequence"] = local
+        _update_row(connection, "retired_paper_items", row, ("paper_id", "sequence"))
+        return
+    current = connection.execute(
+        "SELECT COALESCE(MAX(sequence), 0) FROM retired_paper_items WHERE paper_id=?",
+        (paper_id,)).fetchone()[0]
+    row["sequence"] = current + 1
+    _insert_row(connection, "retired_paper_items", row)
+    state["row_identities"]["retired_paper_items/" + json.dumps(
+        [paper_id, row["sequence"]], ensure_ascii=False, separators=(",", ":"))] = identity
+
+
+def _history_sequence_of(state, identity):
+    prefix = "retired_paper_items/"
+    for local_key, mapped in state["row_identities"].items():
+        if mapped == identity and local_key.startswith(prefix):
+            try:
+                return json.loads(local_key[len(prefix):])[1]
+            except (ValueError, IndexError, TypeError):
+                return None
+    return None
 
 
 def _deleted_object_id(identity, content, table):
