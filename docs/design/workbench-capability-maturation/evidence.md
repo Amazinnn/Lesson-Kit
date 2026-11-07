@@ -70,3 +70,6 @@ Q071 现状核查。workbench-ui spec 已规定运行中发送偏好在工作区
 
 
 2026-11-07 回滚行为区分。PRODUCT-MANUAL 第 8 章及内容管理说明同时描述整份清单预检零写入、写入事务失败恢复、显式 ingest rollback 撤销成功批次。workbench/ingest/__init__.py 的 rollback_batch 会检查后续练习/评价及内容改动再决定是否拒绝撤销；同模块多处 conn.rollback 属于写入异常处理。相同中文词覆盖不同操作，Q096 当前未明确取消范围，不能仅按字符串删除 rollback 调用。此轮只作静态核查，未复现所有者实际感到阻断的操作。
+
+
+2026-11-07 审批静态清点。GLOSSARY 包含 Approval Gate 与 Paper Progress-reset Approval；workbench-ui 定义批次回滚审批，ai-teacher-bridge 定义改卷待审批保存及暂停派发；bridge/agent_contracts.py 要求只提议改卷并等待额外点击，bridge/conversations.py 存在 pending_paper_approval、审批投影、派发阻断与 resolve_paper_approval。这些是 S008 的明确契约协调对象。本轮未修改程序，以上路径仍可能要求审批，不将顶层新规则写入误报为运行时退役完成。
