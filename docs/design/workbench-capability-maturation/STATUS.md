@@ -1,5 +1,13 @@
 # 规划交接状态
 
+## 2026-11-08 晚：合并入 main、WP01 收口、8 个 change 归档、WP02 开工
+
+- **合并**：`codex/course-sync` 已两次 fast-forward 并入 `main`（现 `27642b55` + 提交后的 WP01 收口），主检出已 `pip install -e .` 重装，`lesson-kit` 与默认守护进程的服务来源都回到主检出。`main` 领先 `origin/main` **104**，**未推送**（推送需单独授权）。
+- **WP01 23/23 ✓**：本轮新增证据目录 `evidence/expand-file-mediated-course-sync/2026-11-08-accept/`（12 份）。SYNC-04 补真进程硬杀 ×4；顺带修复孤儿 `<name>.<随机>.tmp` 被当资产传播的缺陷。**仍未验证、不可计为通过**：SYNC-06 真实调度触发、真实 GitHub 发布、真实凭据缺失；另有 receive 自身 partial 与多课程 2>3>4 优先级未验。**WP01 暂不归档**，等 SYNC-06 处置决定。
+- **已归档 8 个 change**：align-runtime-source-with-installed-code、remove-micro-quiz-error-reason、workbench-v1-baseline-convergence、source-preserving-live-markdown、part-grading-legacy-pool-fallback、improve-agent-context-and-skills、cluster-flat-knowledge-graph-levels、complete-live-display-preferences（最后一个已被 live 吸收，比对后用 `--skip-specs`）。live specs **22/22**。两个 delta 缺陷（`graph-free-force-field`、`import-attempts-into-paper-progress`）已补回缺失的现行场景，全仓 MODIFIED delta 扫描 0 缺失。
+- **WP02 已开工**：2.1 知识点组合查询 + CLI（`data … search kp --knowledge-type/--chapter`、`data … related problem`），DATA-01 p95 2.2ms；2.3 前半=`knowledge_points.chapter` 增量迁移 + 回填（`ensure_knowledge_chapter_schema`）。**未做**：2.2 提炼复用、2.3 消费者改写与跨章移动、2.4 独立有效单元、2.5 退役批次 undo、2.6 20 个标注案例。
+- **待所有者拍板**：GAP-01 删除传播——只有 `problems` 有本地墓碑，删闪卡/知识点/学习文件后下一次导出永久失败且无 CLI 入口记录显式删除（A 写墓碑 / B 导出时报待确认）。详见 `evidence/expand-file-mediated-course-sync/2026-11-08-accept/2-1-coverage-table.md` §4（共 14 条 GAP，另 GAP-12 本机新增列导出侧不报错与 `FILE_CONTRACT.md:827` 冲突）。
+
 ## 2026-11-08 P4、FS-08 与交接
 
 - **FS-08 恢复已实现**：`content.restore` + `data <ws> restore problem <id>`。恢复后内容与历史重新可读，**不会**自动回到任何试卷或执行；移除事实留在 `retired_paper_items`；重复恢复报 `already_current` 零写入。测试 `test_restoring_an_archived_question_keeps_it_out_of_its_papers`；FILE_CONTRACT / PRODUCT-MANUAL / L2 已同步。
