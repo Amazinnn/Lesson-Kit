@@ -7,6 +7,7 @@ import re
 import sqlite3
 import tempfile
 from contextlib import contextmanager
+from collections import ChainMap
 from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
@@ -60,8 +61,7 @@ def _atomic_json(path, value):
     handle, name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
     try:
         with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as stream:
-            json.dump(value, stream, ensure_ascii=False, indent=2)
-            stream.write("\n")
+            stream.write(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
         os.replace(name, path)
     finally:
         Path(name).unlink(missing_ok=True)
@@ -202,7 +202,7 @@ def _save_state(pool, state):
 
 
 def _complete_pending_files(pool, state, identities=None):
-    failed, remaining = [], []
+    failed, remaining, published = [], [], []
     for change in state.get("pending_files", []):
         identity = change["identity"]
         if identities is not None and identity not in identities:
@@ -214,9 +214,11 @@ def _complete_pending_files(pool, state, identities=None):
             remaining.append(change)
             failed.append({"identity": identity, "code": "publication_pending", "message": str(exc)})
             continue
-        # A crash before this commit replays the same atomic replacement/deletion.
+        published.append((identity,))
+    # A crash before this commit replays the same atomic replacements/deletions.
+    if published:
         with pool.transaction(immediate=True):
-            pool.connect().execute("UPDATE course_sync_units SET pending_json=NULL WHERE identity=?", (identity,))
+            pool.connect().executemany("UPDATE course_sync_units SET pending_json=NULL WHERE identity=?", published)
     if remaining:
         state["pending_files"] = remaining
     else:
@@ -836,7 +838,7 @@ def _identity_key(identity):
 
 
 def apply_exchange(pool, workspace, inspection, choices=None):
-    """Apply the incoming units of one inspection; every unit commits on its own."""
+    """Apply independent units with savepoints and bounded durable chunks."""
     if not isinstance(inspection, dict):
         raise ValueError("an inspection result is required")
     plan = inspection.get("plan") if isinstance(inspection.get("plan"), dict) else inspection
@@ -878,73 +880,96 @@ def apply_exchange(pool, workspace, inspection, choices=None):
                       for identity in sorted(unsupported))
         applied = []
         failed_identities = {item["identity"] for item in failed}
-        for change in ordered:
-            identity = change["identity"]
-            if identity in failed_identities:
-                continue
-            if change["asset"]["kind"] == "execution_item" \
-                    and identity.rsplit("/item/", 1)[0] in headers:
-                # Written with its execution header, which owns the whole record.
-                header = identity.rsplit("/item/", 1)[0]
-                if header in failed_identities:
-                    failed.append({"identity": identity, "code": "invalid_dependency",
-                                   "message": "the execution header did not apply"})
-                    failed_identities.add(identity)
-                continue
-            unavailable = [key for key in change["asset"].get("depends_on", [])
-                           if key in failed_identities]
-            if unavailable:
-                failed.append({"identity": identity, "code": "invalid_dependency",
-                               "message": f"a dependency did not apply: {unavailable[0]}"})
-                failed_identities.add(identity)
-                continue
-            unit_state = {**state, "row_identities": dict(state["row_identities"])}
-            before_index = dict(index)
-            acknowledged = {identity: change["asset"]}
-            pending = None
+        grouped_ack = {header: {} for header in headers}
+        for item in ordered:
+            if item["asset"]["kind"] == "execution_item":
+                header = item["identity"].rsplit("/item/", 1)[0]
+                if header in grouped_ack:
+                    grouped_ack[header][item["identity"]] = item["asset"]
+        independent = [item for item in ordered if not (
+            item["asset"]["kind"] == "execution_item" and
+            item["identity"].rsplit("/item/", 1)[0] in headers)]
+        for chunk in _receive_chunks(independent):
+            chunk_ack, chunk_mappings, chunk_index, chunk_pending = {}, {}, {}, []
+            chunk_applied = []
             try:
                 with pool.transaction(immediate=True):
                     _check_database_guard(pool, database_guard)
-                    if identity in headers:
-                        _write_execution(pool, connection, unit_state, index, identity,
-                                         change["asset"], executions.get(identity, {}))
-                    elif change["asset"]["kind"] == "execution_item":
-                        _write_execution_item(connection, index, identity, change["asset"])
-                    elif change["asset"]["kind"] == "file":
-                        _file_payload(pool.root, change)
-                        pending = change
-                    else:
-                        _write_unit(pool, connection, unit_state, index, change)
-                    if identity in headers:
-                        for item in ordered:
-                            if item["asset"]["kind"] == "execution_item" \
-                                    and item["identity"].rsplit("/item/", 1)[0] == identity:
-                                acknowledged[item["identity"]] = item["asset"]
-                    mappings = {key: value for key, value in unit_state["row_identities"].items()
-                                if state["row_identities"].get(key) != value}
-                    _unit_checkpoint(connection, acknowledged, mappings, pending)
-            except Exception as exc:  # one unit never blocks independent ones
+                    for change in chunk:
+                        identity = change["identity"]
+                        if identity in failed_identities:
+                            continue
+                        unavailable = [key for key in change["asset"].get("depends_on", [])
+                                       if key in failed_identities]
+                        if unavailable:
+                            failed.append({"identity": identity, "code": "invalid_dependency",
+                                           "message": f"a dependency did not apply: {unavailable[0]}"})
+                            failed_identities.add(identity)
+                            continue
+                        mappings, index_delta = {}, {}
+                        unit_state = {**state, "row_identities": ChainMap(mappings, chunk_mappings, state["row_identities"])}
+                        unit_index = ChainMap(index_delta, chunk_index, index)
+                        acknowledged = {identity: change["asset"], **grouped_ack.get(identity, {})}
+                        pending = None
+                        connection.execute("SAVEPOINT course_sync_unit")
+                        try:
+                            if identity in headers:
+                                _write_execution(pool, connection, unit_state, unit_index, identity,
+                                                 change["asset"], executions.get(identity, {}))
+                            elif change["asset"]["kind"] == "execution_item":
+                                _write_execution_item(connection, unit_index, identity, change["asset"])
+                            elif change["asset"]["kind"] == "file":
+                                _file_payload(pool.root, change)
+                                pending = change
+                            else:
+                                _write_unit(pool, connection, unit_state, unit_index, change)
+                            _unit_checkpoint(connection, acknowledged, mappings, pending)
+                        except Exception as exc:
+                            connection.execute("ROLLBACK TO course_sync_unit")
+                            connection.execute("RELEASE course_sync_unit")
+                            failed.append({"identity": identity, "code": "apply_failed", "message": str(exc)})
+                            failed_identities.add(identity)
+                            continue
+                        connection.execute("RELEASE course_sync_unit")
+                        chunk_mappings.update(mappings)
+                        chunk_index.update(index_delta)
+                        chunk_ack.update(acknowledged)
+                        if pending:
+                            chunk_pending.append(pending)
+                        chunk_applied.extend(acknowledged)
+            except Exception as exc:
                 connection.rollback()
+                # No row, mapping, intent or acknowledgement in this chunk committed.
+                for identity in chunk_applied:
+                    failed.append({"identity": identity, "code": "apply_failed", "message": str(exc)})
+                    failed_identities.add(identity)
+                if not chunk_applied:
+                    for change in chunk:
+                        identity = change["identity"]
+                        if identity not in failed_identities:
+                            failed.append({"identity": identity, "code": "apply_failed", "message": str(exc)})
+                            failed_identities.add(identity)
                 if database_guard is not None:
                     database_guard[2] = connection.total_changes
-                index = before_index
-                failed.append({"identity": identity, "code": "apply_failed", "message": str(exc)})
-                failed_identities.add(identity)
                 continue
+            state["row_identities"].update(chunk_mappings)
+            state["base"].update(chunk_ack)
+            index.update(chunk_index)
+            if chunk_pending:
+                state.setdefault("pending_files", []).extend(chunk_pending)
+                pending_errors = _complete_pending_files(pool, state, {item["identity"] for item in chunk_pending})
+                failed.extend(pending_errors)
+                failed_identities.update(item["identity"] for item in pending_errors)
+            applied.extend(identity for identity in chunk_applied if identity not in failed_identities)
             if database_guard is not None:
                 database_guard[2] = connection.total_changes
-            state["row_identities"] = unit_state["row_identities"]
-            state["base"].update(acknowledged)
-            if pending:
-                state.setdefault("pending_files", []).append(pending)
-                pending_errors = _complete_pending_files(pool, state, {identity})
-                if database_guard is not None:
-                    database_guard[2] = connection.total_changes
-                if pending_errors:
-                    failed.extend(pending_errors)
-                    failed_identities.add(identity)
-                    continue
-            applied.append(identity)
+        for header, items in grouped_ack.items():
+            if header in failed_identities:
+                for identity in items:
+                    if identity not in failed_identities:
+                        failed.append({"identity": identity, "code": "invalid_dependency",
+                                       "message": "the execution header did not apply"})
+                        failed_identities.add(identity)
         # A deleted question or knowledge point queues its Paper file write in
         # the same way its writer does; publish those intents after committing.
         paper_progress.flush_files(pool)
@@ -957,6 +982,19 @@ def apply_exchange(pool, workspace, inspection, choices=None):
                               for item in unresolved],
                 "base_size": len(state["base"]),
                 "local": {"applied": len(applied)}, "remote": None}
+
+
+def _receive_chunks(ordered):
+    """Publish file intents before any following row can depend on their bytes."""
+    chunk = []
+    for change in ordered:
+        if chunk and (len(chunk) == 128 or
+                      (change["asset"]["kind"] == "file") != (chunk[-1]["asset"]["kind"] == "file")):
+            yield chunk
+            chunk = []
+        chunk.append(change)
+    if chunk:
+        yield chunk
 
 
 def _supported_units(changes):

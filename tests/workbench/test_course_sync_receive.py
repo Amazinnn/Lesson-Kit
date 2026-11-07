@@ -737,3 +737,85 @@ def test_minimal_file_tombstone_is_receivable_and_reexportable(pair, tmp_path):
     assert not (right.root / ".lessonkit/practice-sets/ps-001.json").exists()
     publish(right, tmp_path / "reply")
     assert read_exchange(tmp_path / "reply")["assets"][identity]["deleted"]
+
+
+def test_receive_commits_bounded_chunks_instead_of_every_row(pair,tmp_path,monkeypatch):
+    from workbench.data import course_sync
+    left,right=pair
+    left.connect().executemany("INSERT INTO knowledge_points (kp_id,body) VALUES (?,?)",[(f"bulk-{i}","body") for i in range(300)])
+    left.commit();publish(left,tmp_path/"bundle")
+    actual=right.transaction;commits=0
+    @contextmanager
+    def counted(*args,**kwargs):
+        nonlocal commits
+        with actual(*args,**kwargs):
+            yield
+        commits+=1
+    monkeypatch.setattr(right,"transaction",counted)
+    result=receive(right,tmp_path/"bundle")[1]
+    assert result["status"]=="success",result["failed"]
+    assert len(rows(right,"knowledge_points"))==301
+    assert commits<15,commits
+
+
+def test_failed_unit_discards_its_side_effects_but_commits_neighbor(pair,tmp_path,monkeypatch):
+    from workbench.data import course_sync
+    left,right=pair;publish(left,tmp_path/"bundle")
+    original=course_sync._write_unit
+    def reject(pool,connection,state,index,change):
+        content=change["asset"].get("content") or {}
+        if content.get("table")=="knowledge_points":
+            connection.execute("INSERT INTO knowledge_points(kp_id,body) VALUES ('leaked','bad')")
+            raise ValueError("unit failed after first write")
+        return original(pool,connection,state,index,change)
+    monkeypatch.setattr(course_sync,"_write_unit",reject)
+    result=receive(right,tmp_path/"bundle")[1]
+    assert result["status"]=="partial"
+    assert rows(right,"knowledge_points")==[]
+    assert len(rows(right,"problem_attempts"))==1
+    assert len(rows(right,"problems"))==1
+
+
+def test_file_publication_failure_blocks_dependent_execution_in_later_chunk(pair,tmp_path,monkeypatch):
+    from workbench.data import course_sync
+    left,right=pair;running_paper(left);publish(left,tmp_path/"bundle")
+    original=course_sync._write_file
+    def blocked(root,change):
+        if change["asset"]["content"]["path"].endswith("ps-001.json"):
+            raise PermissionError("Paper file locked")
+        return original(root,change)
+    monkeypatch.setattr(course_sync,"_write_file",blocked)
+    result=receive(right,tmp_path/"bundle")[1]
+    assert result["status"]=="partial"
+    assert rows(right,"active_practice")==[]
+    assert len(rows(right,"problem_attempts"))==1
+    monkeypatch.setattr(course_sync,"_write_file",original)
+    assert receive(right,tmp_path/"bundle")[1]["status"]=="success"
+    assert len(rows(right,"active_practice"))==1
+
+
+def test_middle_chunk_commit_failure_keeps_prior_history_and_retry_deduplicates(pair,tmp_path,monkeypatch):
+    left,right=pair
+    left.connect().executemany("INSERT INTO problem_attempts VALUES (?,?,?)",[(i,"math-prob-1",f"answer-{i}") for i in range(2,302)])
+    left.commit();publish(left,tmp_path/"bundle")
+    actual=right.transaction;rejected=False
+    @contextmanager
+    def reject_middle(*args,**kwargs):
+        nonlocal rejected
+        with actual(*args,**kwargs):
+            yield
+            count=right.connect().execute("SELECT count(*) FROM problem_attempts").fetchone()[0]
+            if not rejected and count>=200:
+                rejected=True
+                raise sqlite3.OperationalError("middle chunk commit failed")
+    monkeypatch.setattr(right,"transaction",reject_middle)
+    result=receive(right,tmp_path/"bundle")[1]
+    assert result["status"]=="partial"
+    assert 0<len(rows(right,"problem_attempts"))<301
+    assert result["applied"]
+    monkeypatch.setattr(right,"transaction",actual)
+    assert receive(right,tmp_path/"bundle")[1]["status"]=="success"
+    attempts=rows(right,"problem_attempts")
+    assert len(attempts)==301
+    assert len({row["answer_text"] for row in attempts})==301
+    assert receive(right,tmp_path/"bundle")[1]["applied"]==[]
