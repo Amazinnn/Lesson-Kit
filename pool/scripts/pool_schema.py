@@ -608,6 +608,32 @@ def _widen_problem_attempts_status_check(conn):
     return changes
 
 
+def _chapter_token(value: str) -> str:
+    for token in str(value or "").split("-"):
+        if len(token) > 2 and token.startswith("ch") and token[2:].isdigit():
+            return token
+    return ""
+
+
+def ensure_knowledge_chapter_schema(conn: sqlite3.Connection) -> List[str]:
+    """Give knowledge points their own chapter ownership, backfilled from the id.
+
+    Only the initial chapter is inferred, and only from an id that carries one;
+    an id without a chapter token keeps NULL rather than guessing.
+    """
+    if not table_exists(conn, "knowledge_points"):
+        return []
+    changes = ensure_columns(conn, "knowledge_points", [("chapter", "TEXT")])
+    rows = conn.execute(
+        "SELECT kp_id FROM knowledge_points WHERE chapter IS NULL").fetchall()
+    for (kp_id,) in rows:
+        chapter = _chapter_token(kp_id)
+        if chapter:
+            conn.execute("UPDATE knowledge_points SET chapter=? WHERE kp_id=?", (chapter, kp_id))
+            changes.append(f"knowledge_points.chapter:{kp_id}")
+    return changes
+
+
 def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     """Apply the workbench review-schedule and feedback-event schema idempotently."""
     changes: List[str] = []
@@ -1047,4 +1073,5 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         execution_id = conn.execute("INSERT INTO practice_execution_ids DEFAULT VALUES").lastrowid
         conn.execute("UPDATE active_practice SET execution_id=? WHERE singleton=1", (execution_id,))
         changes.append("active_practice.execution-identity")
+    changes.extend(ensure_knowledge_chapter_schema(conn))
     return changes
