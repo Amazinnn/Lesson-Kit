@@ -64,3 +64,6 @@ Q071 现状核查。workbench-ui spec 已规定运行中发送偏好在工作区
 
 
 2026-11-07 新建知识点路径核查。workbench/ingest/__init__.py 的 content-bundle 预检接受 knowledge_points，新项需有效章节、唯一非空 key 及非空 knowledge_item，可由现有逻辑分配可读 ID。同批题目可通过本地 key 引用新知识点。knowledge_type 允许缺失，提供时须属于 KP_TYPES。该静态证据说明已有入库载体，不能据此认定 Agent 生成内容的正确性、来源核对或正常入口端到端能力已经验收。FILE_CONTRACT 的 content-bundle 契约为后续协调入口，尚未变更持久字段或执行实际入库。
+
+
+2026-11-07 经验与独立知识点边界。workbench/data/experience.py 在 kp_experiences 中按 kp_id 维护一份可选总结，题目引用由 kp_experience_problems 保存，更新使用 expected revision。bridge/conversations.py 已提示在持续授权下读取、合并去重并记录经验。该路径依附既有知识点，不能单独满足 Q086 从练习提炼独立知识点的需求。此处只核查静态结构与提示词，不宣称真实 Agent 已能自动选择合适的总结粒度或创建时机。
