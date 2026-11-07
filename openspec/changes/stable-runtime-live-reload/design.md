@@ -1,9 +1,9 @@
 ## Context
 The installed entry imports its editable checkout. service.repo_root follows __file__, daemon state has no source identity, and the HTTP process has no reload mechanism.
 ## Goals / Non-Goals
-Immediate main-checkout use with safe source/asset reload; no implicit worktree switching, schema migration, data rewrite or interruption of Agent work.
+Immediate use of the installed checkout with safe source/asset reload; no implicit switching to an unrelated checkout, schema migration, data rewrite or interruption of Agent work.
 ## Decisions
-Resolve default source using Git common directory from the installed package (primary checkout), fallback to package root when not in a source checkout. Explicit --project-root overrides only runtime commands. Spawn using target cwd AND PYTHONPATH to avoid displaying one source while importing another.
+Serve the installed package root, which is the code the CLI imports (default source rule superseded by `align-runtime-source-with-installed-code`; the Git common-directory hop to the primary checkout is withdrawn). Explicit --project-root overrides only runtime commands. Spawn using target cwd AND PYTHONPATH to avoid displaying one source while importing another.
 Use stdlib metadata snapshots of workbench/**/*.py, workbench/server/static and frontend/editable-graph/dist. Snapshot additions/deletions detect rollback too; ignore __pycache__. Debounce before validation/restart. Frontend sources need existing npm build/watch; backend does not invoke npm.
 A stable supervisor owns the daemon PID; a worker owns the HTTP listener. Metadata exposes both source and actual worker identity plus generation/pending/error. Legacy daemon identity is unverified, never fabricated. Scope reload signalling to owned processes. Stop must terminate owned worker and supervisor safely on Windows.
 Bridge admission and HTTP in-flight mutation coordination must be integrated before restart: hold the existing Bridge lock during idle decision/admission closure, respect queued/approval/action work, prevent new mutating requests, drain existing handlers, then shut down the worker. Do not use a polling zero-active observation alone. Broken-source validation keeps last usable worker with visible error and only retries for a changed snapshot.

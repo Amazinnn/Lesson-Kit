@@ -19,6 +19,7 @@
 | CR13 | V3.1 有默认展示、确认卡、宿主降级和五种掌握词 | 最小展示、无审批、无未批准 fallback，沿用持久语义 | WP01/WP06；协议对照和 Agent 契约；不直接添加状态枚举 |
 | CR15 | figure gate 存量规范要求哈希命名，与项目禁止哈希冲突 | 新入口可读顺序命名及源字节核对；旧名称作为不透明路径兼容 | WP02；knowledge-figures delta、FILE_CONTRACT、所有命中 writer，禁止新哈希计算 |
 | CR14 | 活跃 change 可能已部分实现但未验收 | 以分支/代码/运行身份核对重叠，再协调 delta | 所有包；json-content-repository-sync、adaptive-paper-content-lifecycle、agent-chat-simplify、显示/渲染及运行 change |
+| CR16 | 实现与 PRODUCT-MANUAL、ARCHITECTURE 把默认运行时来源写成"安装来源的主 Git checkout"；未归档 `stable-runtime-live-reload` delta 同样把它写成目标 | 默认服务安装代码所在的 checkout（CLI 实际 import 的 `workbench`），linked worktree 服务自身；`--project-root` 仍是显式覆盖 | `align-runtime-source-with-installed-code`；review-workbench delta（新增 Runtime source selection）、runtime-live-reload delta、PRODUCT-MANUAL、ARCHITECTURE、GLOSSARY |
 
 ## 解决步骤
 

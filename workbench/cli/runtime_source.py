@@ -1,26 +1,16 @@
-"""Runtime checkout selection and read-only implementation snapshots."""
+"""Runtime source selection and read-only implementation snapshots."""
 from pathlib import Path
 
 
 def project_root(explicit=None, *, installed=None):
+    """The checkout holding the installed code; --project-root previews another."""
     source = Path(installed or Path(__file__).resolve().parents[2]).resolve()
-    if explicit is not None:
-        root = Path(explicit).expanduser().resolve()
-        if not (root / "workbench" / "cli").is_dir():
-            raise ValueError(f"not a lesson-kit source directory: {root}")
-        return root
-    marker = source / ".git"
-    if marker.is_file():
-        text = marker.read_text(encoding="utf-8").strip()
-        if text.startswith("gitdir: "):
-            gitdir = (source / text[8:]).resolve()
-            common = gitdir / "commondir"
-            if common.is_file():
-                shared = (gitdir / common.read_text(encoding="utf-8").strip()).resolve()
-                primary = shared.parent
-                if shared.name == ".git" and (primary / "workbench" / "cli").is_dir():
-                    return primary
-    return source
+    if explicit is None:
+        return source
+    root = Path(explicit).expanduser().resolve()
+    if not (root / "workbench" / "cli").is_dir():
+        raise ValueError(f"not a lesson-kit source directory: {root}")
+    return root
 
 
 def snapshot(root):

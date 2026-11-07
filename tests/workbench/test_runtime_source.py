@@ -1,15 +1,20 @@
 from pathlib import Path
+import pytest
 from workbench.cli import runtime_source
 
-def test_linked_checkout_defaults_to_primary_and_explicit_override(tmp_path):
+def test_installed_worktree_is_served_and_explicit_override_wins(tmp_path):
     main=tmp_path/'main'; linked=tmp_path/'preview'
     (main/'.git/worktrees/preview').mkdir(parents=True)
     (main/'workbench/cli').mkdir(parents=True)
     (linked/'workbench/cli').mkdir(parents=True)
     (linked/'.git').write_text('gitdir: '+str(main/'.git/worktrees/preview'))
     (main/'.git/worktrees/preview/commondir').write_text('../..')
-    assert runtime_source.project_root(installed=linked)==main.resolve()
+    assert runtime_source.project_root(installed=linked)==linked.resolve()
     assert runtime_source.project_root(linked,installed=main)==linked.resolve()
+
+def test_explicit_path_must_be_a_lesson_kit_source(tmp_path):
+    (tmp_path/'workbench/cli').mkdir(parents=True)
+    with pytest.raises(ValueError): runtime_source.project_root(tmp_path/'missing',installed=tmp_path)
 
 def test_snapshot_detects_edit_delete_rollback_and_ignores_runtime_data(tmp_path):
     code=tmp_path/'workbench/cli/x.py';code.parent.mkdir(parents=True);code.write_text('a')

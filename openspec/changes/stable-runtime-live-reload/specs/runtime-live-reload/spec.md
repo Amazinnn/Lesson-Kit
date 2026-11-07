@@ -1,11 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Explicit and stable runtime source
-Dashboard, daemon start and serve SHALL default to the primary Git checkout of the installed source, independent of course cwd or linked worktree cwd. Explicit `--project-root PATH` SHALL override the runtime source without changing course resolution or reinstalling the package. Children SHALL actually import that source. Daemon status, dashboard and doctor SHALL report verified source, PID, port and reload state. Service reuse SHALL require matching identity, not PID liveness alone. Unknown legacy identity or source mismatch SHALL be diagnosed without killing an unrelated or busy service.
-
-#### Scenario: Editable install in a worktree
-- **WHEN** the installed package resides in a linked worktree and dashboard runs in a course folder
-- **THEN** the service imports the primary checkout and reports its path
+Explicit `--project-root PATH` SHALL override the default runtime source selected by the `review-workbench` runtime source rule without changing course resolution or reinstalling the package. Children SHALL actually import that source. Daemon status, dashboard and doctor SHALL report verified source, PID, port and reload state. Service reuse SHALL require matching identity, not PID liveness alone. Unknown legacy identity or source mismatch SHALL be diagnosed without killing an unrelated or busy service.
 
 #### Scenario: Explicit preview
 - **WHEN** a source path and isolated port are specified

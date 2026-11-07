@@ -321,6 +321,11 @@ _Avoid_：把做题记录当复习页或练习方式、再开别的页面
 _Avoid_：Heartbeat 后台服务（不做）、任务计划程序、开机自启
 出处：ADR 0022；review-workbench spec「Background workbench service」
 
+### 运行时来源 / Runtime Source
+`lesson-kit dashboard`、`daemon start`、`serve` 实际 import 并服务的代码 checkout——安装的 `workbench` 包所在仓库根。默认就用这一份：课程工作目录与 Git worktree 归属都不改变它，editable 装在 worktree 里就服务该 worktree。`--project-root PATH` 为本次运行换一份源码，仍要求是 lesson-kit 源码目录，且不改写默认来源与课程解析。`daemon status`、`doctor`、`/api/runtime` 报告的来源必须就是实际服务的来源。
+_Avoid_：主检出（primary checkout，默认来源不再看它）、当前课程目录（不决定运行时来源）、换来源要重装
+出处：review-workbench spec「Runtime source selection」；2026-11-08 align-runtime-source-with-installed-code
+
 ### 工作台命令 / lesson-kit Command
 本项目的唯一命令名，模块形式 `python -m workbench.cli.main` 等价。`lesson-kit init` 注册工作区；`lesson-kit dashboard` 确保服务在跑并打开浏览器，**不新增页面**。
 _Avoid_：`lesson-kit`（另一个同名程序是 Weights & Biases，与本项目无关）、`lessonkit.py init`（根 CLI，语义不同：写 `.lessonkit/state.yaml`）
