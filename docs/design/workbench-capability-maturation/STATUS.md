@@ -1,5 +1,11 @@
 # 规划交接状态
 
+## 2026-11-07 Codex 接回核对
+
+源码核对到 `codex/course-sync` 的 `5d3b5cef`。第二棒已补齐接收、执行重建、CLI/Git/定时任务入口、Tutor 交接和偏好浏览器接线。本轮组合检查 69 passed，偏好 Node 12 passed。原 main 仍未接收这些实现。
+
+新复现了接收提交边界缺陷。确认文件先于 SQLite commit 发布，模拟 commit 前失败后，数据库仍为旧内容，而重试已把新内容误认为已接收，并规划反向传出旧值。必须先修复这一持久一致性问题，再进行完整同步验收。记录见 [接回核对与复现](evidence/expand-file-mediated-course-sync/2026-11-07-03/progress-audit.md)。完整 F2、免费 LLM、真实浏览器/远端/系统任务和独立验收仍待完成。
+
 ## 2026-11-07 接力第二棒（Codex 暂停后）
 
 实际实现仍在 `D:\.codex\worktrees\course-sync\lesson-kit` 的 `codex/course-sync`，原 main 工作区未接收。本轮完成 `3c15a893`（学习偏好浏览器消费与 surface/L2/GLOSSARY/手册/动作图登记）、`cae8215d`（接收端：共同基线=本机接收确认，`apply_exchange` 逐单元提交、失败隔离、显式删除）、`18d3abca`（执行重建：active 运行与 parked 检查点、单项补丁、generation tombstone）与 `6b5988d3`（课程交换 CLI：export/receive/check/sync/status/schedule、回执与退出码 0/2/3/4、Git 编排、每小时任务与冲突通知去重）。接力前 Node 脏检查已全绿；全仓 pytest 1,399 项通过（353s），live specs strict 21/21 通过。
