@@ -6,7 +6,7 @@
 
 ## 2. 实现与逐单元检查
 
-- [ ] 2.1 从实际 schema、注册目录及浏览器保存值生成覆盖表，对 data-exchange-matrix 每行登记字段、writer、consumer、引用、删除和旧格式。F1/F4 中每类均有样本，未知类型不得静默略过。
+- [x] 2.1 从实际 schema、注册目录及浏览器保存值生成覆盖表，对 data-exchange-matrix 每行登记字段、writer、consumer、引用、删除和旧格式。F1/F4 中每类均有样本，未知类型不得静默略过。（证据 `…/2026-11-08-accept/2-1-coverage-table.md`：33 表/242 字段逐字段写明 writer/consumer/是否随包/删除语义/旧格式，矩阵逐类对照；**报出 14 条 GAP**，最严重为 GAP-01「删除传播」——只有 `problems` 有本地墓碑，删闪卡/知识点/学习文件后下一次导出永久失败且无 CLI 入口记录显式删除）
 - [x] 2.2 在 workbench/domain/course_sync.py 实现 plan_exchange 的纯比较，先覆盖无变化、单侧、同改一致、双侧、明确删除/缺文件、历史并集和按题草稿冲突。通过 tests/workbench/test_course_sync.py 的表驱动反例。
 - [ ] 2.3 在 workbench/data/course_sync.py 复用现有查询导出完整manifest、正文与附件，保存课程来源和记录来源映射。F1 逐字段和字节核对，再在 F2 计时。
 - [x] 2.4 实现预检、注册新课程、身份疑点输入、独立单元接收及中断续办；按同一操作身份重试。每个数据库/文件发布边界注入失败，证明无悬空引用和重复作答。（预检/注册新课程：F1 一次接收；身份疑点：F3 同名异源需显式 associate；独立单元：`test_bad_execution_item_does_not_block_independent_content`；文件发布失败续办：`test_file_publication_failure_has_read_only_inspection_and_resumes`；进程级中断与重试：`…/2026-11-08-accept/3-2-sync-04-process-kill.md`，真子进程硬杀 ×4 后计数一致、无重复作答、无缺失/多余文件；顺带修复孤儿 `.tmp` 被当资产传播的缺陷 + 回归用例）

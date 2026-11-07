@@ -156,6 +156,41 @@ def search(pool, entity, query):
     return hits
 
 
+def knowledge_query(pool, *, types=(), chapter=None, text=None):
+    """Knowledge points filtered by type and chapter, searched across the
+    declared text fields plus their experience summary (every keyword, AND)."""
+    experiences = {row[0]: row[1] for row in
+                   pool.connect().execute("SELECT kp_id, content FROM kp_experiences")}
+    wanted = {str(value).casefold() for value in types if value}
+    words = facets.keyword_words(text or "")
+    hits = []
+    for item in list_items(pool, "kp"):
+        if wanted and str(item.get("knowledge_type") or "").casefold() not in wanted:
+            continue
+        if chapter and chapter not in str(item.get("kp_id") or "").split("-"):
+            continue
+        if words:
+            fields = (item.get("knowledge_item"), item.get("graph_label"), item.get("body"),
+                      item.get("source_location"), experiences.get(item.get("kp_id")))
+            haystack = "\n".join(str(part) for part in fields if part).casefold()
+            if not facets.matches_all(haystack, words):
+                continue
+        hits.append(item)
+    return hits
+
+
+def related_problems(pool, kp_ids):
+    """Problems associated with any of the given knowledge points, each once."""
+    wanted = {str(value) for value in kp_ids if value}
+    if not wanted:
+        return []
+    found = {}
+    for problem in list_items(pool, "problem"):
+        if wanted & {str(value) for value in (problem.get("kp_ids") or [])}:
+            found[problem["problem_id"]] = problem
+    return [found[key] for key in sorted(found)]
+
+
 def history(pool, entity, object_id):
     conn = pool.connect()
     if entity == "problem":

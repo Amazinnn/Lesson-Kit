@@ -1,0 +1,13 @@
+{
+  "queries": 100,
+  "kps": 512,
+  "problems": 2024,
+  "query_p50": 0.0015,
+  "query_p95": 0.0022,
+  "query_max": 0.0033,
+  "related_runs": 25,
+  "related_p95": 0.0161,
+  "threshold_seconds": 1.0,
+  "verdict": "PASS",
+  "sample_hits": 0
+}

@@ -725,7 +725,14 @@ def cmd_data(args):
         elif args.action == "list":
             result = content.list_items(pool, args.entity)
         elif args.action == "search":
-            result = content.search(pool, args.entity, args.target)
+            if args.entity == "kp" and (args.knowledge_type or args.chapter):
+                result = content.knowledge_query(
+                    pool, types=args.knowledge_type, chapter=args.chapter, text=args.target)
+            else:
+                result = content.search(pool, args.entity, args.target)
+        elif args.action == "related":
+            result = content.related_problems(
+                pool, [part.strip() for part in (args.target or "").split(",") if part.strip()])
         elif args.action == "history":
             result = content.history(pool, args.entity, args.target)
         elif args.action == "create":
@@ -1224,14 +1231,17 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("name")
     p.add_argument(
         "action",
-        choices=["get", "list", "search", "history", "create", "update", "delete", "restore",
-                 "state", "audit", "check", "apply"],
+        choices=["get", "list", "search", "related", "history", "create", "update", "delete",
+                 "restore", "state", "audit", "check", "apply"],
     )
     p.add_argument("entity", nargs="?", choices=["kp", "problem", "relation"])
     p.add_argument("target", nargs="?")
     p.add_argument("value", nargs="?", choices=["needs_work", "review", "mastered"])
     p.add_argument("--input")
     p.add_argument("--check", action="append", choices=content_audit.CHECKS)
+    p.add_argument("--knowledge-type", action="append", default=[],
+                   help="narrow a kp search to existing knowledge_type values")
+    p.add_argument("--chapter", help="narrow a kp search to one chapter token, e.g. ch06")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_data)
 
