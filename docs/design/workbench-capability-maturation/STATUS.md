@@ -1,5 +1,13 @@
 # 规划交接状态
 
+## 2026-11-08 深夜：GAP-01 关闭，WP02 2.1/2.3 完成（2/15）
+
+- **GAP-01 已修**（`82aa5e7b`）：删除知识点时在交换状态里记录删除，导出据此产出显式墓碑；接收端照常删除，重复接收为空操作。缺文件仍**不**授权删除。证据 `evidence/expand-file-mediated-course-sync/2026-11-08-accept/gap-01-resolved.md`。闪卡无独立删除入口、学习文件仍无写端删除，均记为边界。
+- **WP02 2.3 完成**（同提交 + 证据 `evidence/mature-course-content-operations/2026-11-08-chapter/`）：`knowledge_points.chapter` 增量迁移与整段回填；读取口径「列优先、NULL 回退 ID」落在 `Pool.kps`/`Pool.chapters`/列表分组/typed query/create/ingest 两处；新增 `data move kp <id> --chapter chNN`，只改列、ID 不变，关系/经验/透镜/文件往返都有用例。冻结层（`pool/scripts`、`pipeline/scripts`）按所有者决定不动，作为已知边界写入证据。
+- **E3 盘点纠错**：原先的回填取任意 `chNN` token，会把 `dmath-source-ch03-kp-001` 写成 `ch03`；已改为整段解析（`07f5efa0`）。
+- **环境提醒**：editable 安装当前指向 worktree（开发期需要），收工前要 `cd 主检出 && pip install -e . --no-deps` 还原，否则 `lesson-kit` 继续服务 worktree。
+- **下一步**：WP02 2.5（退役成功批次 undo）→ 2.4（拆独立有效单元）→ 2.2（提炼复用）→ 2.6（20 个标注案例）。
+
 ## 2026-11-08 夜：所有者四项拍板（下一段按此执行）
 
 1. **WP02 2.3 消费者改写只做 workbench 层**：采用「`chapter` 列优先、NULL 回退 ID」；`pool/scripts/` 与 `pipeline/scripts/` 的旧视图仍按 ID 推章，作为**已知边界**写进文档，不为它改冻结层的行为契约。E3 盘点共 65 处消费者（50 处"必须改"），其中冻结层占一半——本次明确不动。
