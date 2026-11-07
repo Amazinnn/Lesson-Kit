@@ -1,5 +1,11 @@
 # 规划交接状态
 
+## 2026-11-07 接力第二棒（Codex 暂停后）
+
+实际实现仍在 `D:\.codex\worktrees\course-sync\lesson-kit` 的 `codex/course-sync`，原 main 工作区未接收。本轮完成 `3c15a893`（学习偏好浏览器消费与 surface/L2/GLOSSARY/手册/动作图登记）和 `cae8215d`（接收端：共同基线=本机接收确认，`apply_exchange` 逐单元提交、失败隔离、显式删除、拒绝未支持单元）。接力前 Node 脏检查已全绿；接收端定向 71 项 pytest 通过。
+
+仍未完成：执行重建（active/parked）、CLI/Git 编排与每小时计划任务、Tutor 交接与免费 LLM 回写、benchmarks 与发布级验收。`tasks.md` 2.3–2.10、3.1–3.6 保持未勾选，只有实际证据才能勾选。继续顺序见交接文档末尾的「接力记录」。
+
 ## 2026-11-07 实现暂停
 
 用户因 Codex 额度要求暂停并移交其他 Agent。实际实现位于 `D:\.codex\worktrees\course-sync\lesson-kit` 的 `codex/course-sync`，原 main 工作区尚未接收实现。当前仅 WP01 在推进，完整同步 CLI 与接收端尚未交付。
