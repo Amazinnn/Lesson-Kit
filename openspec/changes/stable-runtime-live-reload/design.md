@@ -9,7 +9,7 @@ A stable supervisor owns the daemon PID; a worker owns the HTTP listener. Metada
 Bridge admission and HTTP in-flight mutation coordination must be integrated before restart: hold the existing Bridge lock during idle decision/admission closure, respect queued/approval/action work, prevent new mutating requests, drain existing handlers, then shut down the worker. Do not use a polling zero-active observation alone. Broken-source validation keeps last usable worker with visible error and only retries for a changed snapshot.
 Browser polls read-only runtime metadata. A source/asset generation change triggers draft-safe refresh; stash all unsubmitted fields under per-page session storage and restore only matching surfaces. Never emit submit/send on restore. An update pending/error notice is visible. Route ownership and CLI/API docs are reconciled.
 ## Risks / Trade-offs
-Primary checkout discovery requires a non-bare Git source installation; installed wheels fall back to package root. No new watcher dependency or hashes. No native frontend bundling inference. Long-running Agent work deliberately delays reload.
+Installed-package-root discovery works for any editable install; installed wheels serve the package root. No new watcher dependency or hashes. No native frontend bundling inference. Long-running Agent work deliberately delays reload.
 ## Implementation plan
 1. TDD source selection, validation and metadata snapshot primitives.
 2. Wire runtime commands, target imports, supervisor identity/status and legacy diagnostics.

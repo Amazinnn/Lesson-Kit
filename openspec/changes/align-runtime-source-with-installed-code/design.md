@@ -52,8 +52,11 @@
 | `openspec/changes/stable-runtime-live-reload/specs/runtime-live-reload/spec.md` | ADDED requirement 把"默认 primary checkout"写成目标，含"Editable install in a worktree → imports the primary checkout"场景 | 撤下被取代的首句与该场景；保留显式覆盖、子进程导入、身份报告、拒绝猜测杀进程等条款 |
 | `docs/PRODUCT-MANUAL.md` §工作台运行与自动更新 | 写"默认使用安装来源的主 Git checkout" | 改为安装代码所在 checkout，并保留覆盖说明 |
 | `docs/ARCHITECTURE.md` §Stable runtime lifecycle | 同上 | 同步一句 |
-| `docs/GLOSSARY.md` | 无"运行时来源"条目 | 新增术语条目（先定义后使用） |
+| `docs/GLOSSARY.md` | 已有一条 `Runtime Source（运行来源）`，写的是"默认取安装源码所属 Git 主工作区"；与本次目标冲突，且分散在文件末尾 | 合并为唯一条目「运行时来源 / Runtime Source」，改写为安装代码所在 checkout，保留 `_Avoid_` 与出处 |
 | `docs/design/…/contract-reconciliation.md` | 无该项 | 新增 CR16 行 |
+| `docs/design/…/STATUS.md`、`HANDOFF-2026-11-08.md` | 多处把"默认解析主检出"写成现状（§1.3、§6、§7、§11） | 就地改写或标注"已于 2026-11-08 撤销"，历史记录不重写 |
+| `docs/ACTION-GRAPH.md` | 2026-10-30 条目写"default primary source" | 新增 2026-11-08 条目说明默认值变更；历史行不动 |
+| `openspec/changes/stable-runtime-live-reload/design.md` Risks | 仍写"Primary checkout discovery requires…" | 改为安装包根发现 |
 
 不修改 live spec 文件本身：按 OpenSpec 流程由归档同步。
 

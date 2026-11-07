@@ -14,7 +14,8 @@
 
 - [x] 3.1 `docs/PRODUCT-MANUAL.md` §工作台运行与自动更新：默认来源改为安装代码所在 checkout，说明 worktree 安装、显式覆盖与旧服务需先 `daemon stop`。（已改；"来源或端口不匹配时先安全停止旧服务"原句保留覆盖旧服务场景）
 - [x] 3.2 `docs/ARCHITECTURE.md` §Stable runtime lifecycle：同步默认来源语句。（已改）
-- [x] 3.3 `docs/design/workbench-capability-maturation/HANDOFF-2026-11-08.md` §7/§11 的 RELEASE-02 剩余项按实际结果更新（不改历史结论，只记本轮状态）。（新增 §14 补记，原文不动）
+- [x] 3.3 `docs/design/workbench-capability-maturation/HANDOFF-2026-11-08.md` §7/§11 的 RELEASE-02 剩余项按实际结果更新（不改历史结论，只记本轮状态）。（新增 §14 补记；§1.3/§6/§7/§11/§14 的旧结论补注"已于 2026-11-08 撤销"）
+- [x] 3.4 全仓残留声明复查（独立只读扫描）：`docs/GLOSSARY.md` 原有重复条目「Runtime Source（运行来源）」写旧默认、`STATUS.md` 与 `HANDOFF` 多处把旧规则写成现状、`stable-runtime-live-reload/design.md` 的 Risks 段、`docs/ACTION-GRAPH.md` 的 2026-10-30 记录。（7 条 STALE 全部处置：GLOSSARY 合并为唯一条目；STATUS/HANDOFF 改写或标注撤销；design Risks 改为安装包根发现；ACTION-GRAPH 新增 2026-11-08 条目）
 
 ## 4. 验证
 
