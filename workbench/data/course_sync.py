@@ -392,17 +392,22 @@ def export_course(pool, workspace, destination):
             state["base"] = assets
             state["initialized"] = True
         previous_assets, previous_paths = {}, {}
+        previous_manifest = None
         if (destination / "manifest.json").exists():
             previous = read_exchange(destination)
+            previous_manifest = _read_json(destination / "manifest.json")
             if previous["course"] != state["course"]:
                 raise ValueError("destination package belongs to a different course origin")
             previous_assets = previous["assets"]
-            previous_paths = {item["identity"]: item["path"] for item in
-                              _read_json(destination / "manifest.json")["assets"]}
+            previous_paths = {item["identity"]: item["path"]
+                              for item in previous_manifest["assets"]}
         # Persist source identities before publishing anything another device can
         # receive. A failed first export must retain the same course lineage.
         _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
-        export_id = "export-" + str(uuid4())
+        # An unchanged projection keeps its export generation, so a repeated
+        # export of the same content does not manufacture a new commit.
+        export_id = ("export-" + str(uuid4()) if previous_assets != assets
+                     else previous_manifest.get("export_id") or "export-" + str(uuid4()))
         descriptors = []
         written = 0
         for number, (identity, asset) in enumerate(sorted(assets.items()), 1):
@@ -417,7 +422,9 @@ def export_course(pool, workspace, destination):
         manifest = {"format_version": FORMAT_VERSION, "course": state["course"],
                     "origin": state["origin"], "export_id": export_id,
                     "assets": descriptors, "base": state["base"], "tables": inventory}
-        _atomic_json(destination / "manifest.json", manifest)
+        changed = previous_manifest != manifest
+        if changed:
+            _atomic_json(destination / "manifest.json", manifest)
         live_paths = {item["path"] for item in descriptors}
         cleanup_errors = []
         for relative in sorted(set(previous_paths.values()) - live_paths):
@@ -438,7 +445,8 @@ def export_course(pool, workspace, destination):
         return {"status": "partial" if cleanup_errors else "success",
                 "course": state["course"], "origin": state["origin"],
                 "export_id": export_id, "assets": len(assets), "tables": inventory,
-                "written": written, "reused": len(assets) - written, "cleanup_errors": cleanup_errors,
+                "written": written, "reused": len(assets) - written,
+                "manifest_changed": changed, "cleanup_errors": cleanup_errors,
                 "destination": str(destination), "local": {"exported": True}, "remote": None}
 
 

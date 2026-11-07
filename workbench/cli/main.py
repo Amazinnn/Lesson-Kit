@@ -951,13 +951,14 @@ def cmd_doctor(args):
 
 
 def build_parser(prog="lesson-kit"):
-    from workbench.cli import content_bundle, evidence, experience, mirror, papers
+    from workbench.cli import content_bundle, course_sync, evidence, experience, mirror, papers
 
     parser = argparse.ArgumentParser(prog=prog,
                                      description="lesson-kit workbench CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
     for name, module in (
+        ("course-sync", course_sync),
         ("evidence", evidence), ("experience", experience),
         ("mirror", mirror), ("papers", papers),
     ):

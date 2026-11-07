@@ -144,6 +144,8 @@ Paper 操作补充（2026-10-19；2026-10-29 增补 append）：练习页只管�
 | 修改外观偏好（主题偏好 / 阅读字面 / 动效偏好 / 声音偏好） | UI 工作台设置视图 | 人 | 浏览器 `localStorage`（`wb_settings_<工作区>`，**按工作区、跨工作区独立**）；不写池、不产生学习记录 | **已实现**（同上） |
 | 切换主题（暖纸 / 夜纸，走台灯转场） | UI 工作台设置视图 / 顶栏段三「夜纸」开关（同一份偏好，两个入口） | 人 | 浏览器 `localStorage` 的 `theme` 字段 + `<html data-theme>`；不写池 | **已实现**（新增，2026-10-22；默认跟随系统，显式选择优先 —— A-11；2026-10-24 增顶栏入口，workbench-v1-baseline-convergence 4ef7d435） |
 | 修改学习偏好（显示评价 / 显示来源 / 提交粒度 / 揭晓时机） | UI 设置页与试卷开始页；同一次显式改动写入浏览器镜像与课程已确认投影 | 人 | 浏览器 `localStorage`（交互镜像）+ `.lessonkit/course-preferences.json`（课程已确认投影，随课程文件交换）；不写池、不构成学习事实 | **已实现**（2026-11-07，expand-file-mediated-course-sync WP01；接收端已确认值优先，新试卷按已确认揭晓时机起步，进行中的执行保持冻结） |
+| 交换与接收整门课程（export / receive / check / sync） | CLI `lesson-kit course-sync <工作区> …`；Git 仓库是可选媒介 | 人 + Agent | 课程交换包（manifest + 逐资产 envelope）、`.lessonkit/course-sync/state.json`（共同基线与记录身份）、`.lessonkit/course-sync/last-receipt.json`；不写 Provider 作业 | **已实现**（2026-11-07；逐单元提交、显式删除、冲突需选侧、回执与退出码 0/2/3/4） |
+| 安装 / 启停每小时同步任务 | CLI `lesson-kit course-sync <工作区> schedule install\|enable\|disable\|remove` | 人 | `.lessonkit/course-sync/config.json` 的 `media` + Windows 计划任务（`LessonKit Course Sync`） | **已实现**（2026-11-07；任务调用同一 CLI 跑全部已配置课程，未决冲突只通知一次） |
 | 渲染阅读内容（题面 / 知识点正文 / 解析 / Agent 长文） | 练习页 / 知识点页 / 对话栏 | 人 | —（纯呈现，零写入） | 已实现（**改级已完成**：挂载名由 `.rich-text` 改级为 `.wb-reading`；`.rich-text` 剩下的 36 条死 CSS 规则已在 2026-10-22 的别名期收尾时删掉，选择器命中 0） |
 
 外观偏好只表达偏好：主题切换走台灯转场，动效与声音偏好各自独立；左栏原有的
