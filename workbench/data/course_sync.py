@@ -8,7 +8,6 @@ import sqlite3
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
-from urllib.parse import quote
 from uuid import uuid4
 
 from workbench import registry
@@ -183,13 +182,13 @@ def _database_projection(pool, state):
                                     "depends_on": []}
                 if table == "problems" and row.get("deleted_at"):
                     assets[identity]["deleted"] = True
-        _portable_integer_references(assets)
+        _portable_integer_references(assets, state)
         return assets, inventory
     finally:
         snapshot.close()
 
 
-def _portable_integer_references(assets):
+def _portable_integer_references(assets, state):
     records = {}
     for identity, asset in assets.items():
         content = asset["content"]
@@ -201,20 +200,31 @@ def _portable_integer_references(assets):
             return None
         if type(value) is not int or (table, value) not in records:
             raise ValueError(f"unresolved course record reference: {table}/{value}")
-        return records[(table, value)]
+        identity = records[(table, value)]
+        dependencies.add(identity)
+        return identity
 
     def nested(value):
         if isinstance(value, list):
             return [nested(item) for item in value]
         if isinstance(value, dict):
-            return {key: reference(INTEGER_REFERENCES[key], item)
-                    if key in INTEGER_REFERENCES else nested(item)
-                    for key, item in value.items()}
+            result = {}
+            for key, item in value.items():
+                if key in INTEGER_REFERENCES:
+                    result[key] = reference(INTEGER_REFERENCES[key], item)
+                elif key in {"draft", "draft_json", "answer_text", "answer", "choices", "note"}:
+                    result[key] = item
+                else:
+                    result[key] = nested(item)
+            return result
         return value
 
-    for identity, asset in assets.items():
+    for identity, asset in list(assets.items()):
+        dependencies = set()
         content = asset["content"]
         table, row = content["table"], content["row"]
+        local_key = table + "/" + json.dumps([row[key] for key in content["key"]],
+                                            ensure_ascii=False, separators=(",", ":"))
         if table in IDENTITY_TABLES:
             row["id"] = identity
         for field, target in INTEGER_REFERENCES.items():
@@ -227,6 +237,15 @@ def _portable_integer_references(assets):
             converted = nested(value)
             if converted != value:
                 row[field] = json.dumps(converted, ensure_ascii=False, separators=(",", ":"))
+        if any(key in INTEGER_REFERENCES for key in content["key"]):
+            portable_key = json.dumps([row[key] for key in content["key"]],
+                                      ensure_ascii=False, separators=(",", ":"))
+            replacement = "row/" + table + "/" + portable_key
+            del assets[identity]
+            assets[replacement] = asset
+            state["row_identities"][local_key] = replacement
+            identity = replacement
+        asset["depends_on"] = sorted(dependencies - {identity})
 
 
 def _managed_files(pool, assets):
@@ -286,7 +305,78 @@ def _projection(pool, state):
             "kind": "file", "content": {"path": relative, "encoding": "base64",
                                          "data": base64.b64encode(path.read_bytes()).decode("ascii")},
             "depends_on": []}
+    _execution_projection(assets, state)
     return assets, inventory
+
+
+def _execution_projection(assets, state):
+    active = None
+    active_items = []
+    checkpoints = []
+    generations = {}
+    for identity, asset in list(assets.items()):
+        if asset["kind"] != "row":
+            continue
+        content = asset["content"]
+        table, row = content["table"], content["row"]
+        if table == "active_practice":
+            active = dict(row)
+            del assets[identity]
+        elif table == "active_practice_items":
+            active_items.append(dict(row))
+            del assets[identity]
+        elif table == "paper_state":
+            generations[row["paper_id"]] = row["generation"]
+            if row.get("checkpoint_json"):
+                checkpoints.append(json.loads(row["checkpoint_json"]))
+                row["checkpoint_json"] = None
+                asset["depends_on"] = []
+    if active is not None:
+        active.pop("singleton", None)
+        active["kp_ids"] = json.loads(active.pop("kp_ids_json") or "[]")
+        active["items"] = sorted(active_items, key=lambda item: item["position"])
+        checkpoints.append(active)
+    elif active_items:
+        raise ValueError("active practice items have no execution header")
+    for record in checkpoints:
+        header = dict(record)
+        items = header.pop("items")
+        execution_id = header["execution_id"]
+        identity = "execution/" + execution_id
+        if identity in assets:
+            raise ValueError("execution is both selected and parked")
+        metadata = {key: header.pop(key) for key in ("cursor", "updated_at", "progress") if key in header}
+        metadata["selected"] = record is active
+        paper_id = header.get("source_ref")
+        header["paper_id"] = paper_id
+        dependencies = [execution_id]
+        if paper_id:
+            dependencies.append("file/.lessonkit/practice-sets/" + paper_id + ".json")
+        assets[identity] = {"kind": "execution", "content": header,
+                            "depends_on": dependencies, "presentation": metadata}
+        for raw in items:
+            item = dict(raw)
+            item.pop("locked", None)
+            if "draft_json" in item:
+                item["draft"] = json.loads(item.pop("draft_json") or "{}")
+            sequence = item.pop("draft_sequence", 0)
+            item.update(execution_id=execution_id, paper_id=paper_id,
+                        paper_generation=header["paper_generation"])
+            item_dependencies = [identity]
+            if item.get("attempt_id"):
+                item_dependencies.append(item["attempt_id"])
+            key = identity + "/item/" + str(item["position"])
+            if key in assets:
+                raise ValueError("duplicate execution item position")
+            assets[key] = {"kind": "execution_item", "content": item,
+                           "depends_on": item_dependencies, "presentation": {"draft_sequence": sequence}}
+    for identity, old in state["base"].items():
+        if identity in assets or old.get("kind") not in {"execution", "execution_item"}:
+            continue
+        content = old["content"]
+        generation = generations.get(content.get("paper_id"))
+        if generation is not None and generation > content.get("paper_generation", 0):
+            assets[identity] = {**old, "deleted": True}
 
 
 def export_course(pool, workspace, destination):
@@ -314,11 +404,11 @@ def export_course(pool, workspace, destination):
         export_id = "export-" + str(uuid4())
         descriptors = []
         written = 0
-        for identity, asset in sorted(assets.items()):
+        for number, (identity, asset) in enumerate(sorted(assets.items()), 1):
             if previous_assets.get(identity) == asset:
                 relative = previous_paths[identity]
             else:
-                relative = export_id + "/assets/" + quote(identity, safe="/") + ".json"
+                relative = f"{export_id}/assets/{number:06d}.json"
                 _atomic_json(_relative(destination, relative), asset)
                 written += 1
             descriptors.append({"identity": identity, "kind": asset["kind"], "path": relative,
@@ -425,7 +515,7 @@ def read_exchange(source):
         except (ValueError, OSError) as exc:
             errors.append({"identity": identity, "code": "invalid_asset", "message": str(exc)})
             continue
-        if not isinstance(asset, dict) or asset.get("kind") not in {"row", "file"} \
+        if not isinstance(asset, dict) or asset.get("kind") not in {"row", "file", "execution", "execution_item"} \
                 or asset.get("kind") != descriptor.get("kind") \
                 or not isinstance(asset.get("content"), dict) \
                 or type(asset.get("deleted", False)) is not bool \

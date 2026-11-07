@@ -70,10 +70,12 @@ def test_attempt_references_use_record_identity_and_ignore_local_number(course, 
     connection.executescript("""
         CREATE TABLE feedback_events (id INTEGER PRIMARY KEY, attempt_id INTEGER, note TEXT);
         CREATE TABLE practice_request_operations (request_id TEXT PRIMARY KEY, payload TEXT, result TEXT);
+        CREATE TABLE part_attempt_context (attempt_id INTEGER PRIMARY KEY, part_json TEXT);
     """)
     connection.execute("INSERT INTO feedback_events VALUES (1,1,'保持原文')")
     connection.execute("INSERT INTO practice_request_operations VALUES (?,?,?)",
                        ('request-1', '{"attempt_id": 1}', '{"answer_text":"$x=1$", "attempt_id":1}'))
+    connection.execute("INSERT INTO part_attempt_context VALUES (?,?)", (1, '{"title":"原小问"}'))
     pool.commit()
     export_course(pool, workspace, tmp_path / "one")
     first = read_exchange(tmp_path / "one")
@@ -84,6 +86,7 @@ def test_attempt_references_use_record_identity_and_ignore_local_number(course, 
     state_path.write_text(json.dumps(state), encoding='utf-8')
     connection.execute('UPDATE problem_attempts SET id=8 WHERE id=1')
     connection.execute('UPDATE feedback_events SET attempt_id=8')
+    connection.execute('UPDATE part_attempt_context SET attempt_id=8')
     connection.execute('UPDATE practice_request_operations SET payload=?,result=?',
                        ('{"attempt_id": 8}', '{"answer_text":"$x=1$", "attempt_id":8}'))
     pool.commit()
@@ -93,6 +96,9 @@ def test_attempt_references_use_record_identity_and_ignore_local_number(course, 
     attempt = second['assets'][old_identity]['content']['row']
     assert attempt['id'] == old_identity
     assert attempt['answer_text'] == '原始答案\n$x=1$'
+    context = next(asset for asset in second['assets'].values()
+                   if asset['kind'] == 'row' and asset['content']['table'] == 'part_attempt_context')
+    assert context['depends_on'] == [old_identity]
 
 
 def test_dangling_attempt_reference_is_explicit_export_error(course, tmp_path):
