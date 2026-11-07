@@ -59,3 +59,5 @@ S005 检查。已检索规划树全部 Markdown 及 expand-file-mediated-course-
 Q071 现状核查。workbench-ui spec 已规定运行中发送偏好在工作区设置保存且默认 queue，Bridge Conversations.send 已有 queue_action 参数和 queue/interrupt 校验。该问题可由仓库查明，撤销不计数。未执行浏览器验证，不从静态规范和代码推断现有全部发送体验无缺陷。
 
 顶层准则入口核查。docs/design/philosophy.md 为产品及学习理念，ARCHITECTURE §5 为工程约束。ADR 0025–0027 已禁止图谱求解器及渲染器保留并行运行时 fallback，ADR 0007 则记有旧池 related_kp_ids fallback 的历史决定，需按现行字段契约核对实际兼容责任。S006 新规写入 AGENTS 并由架构文档引用；本轮未扫描全部后端 fallback 调用，不宣称已完成存量清理。
+
+2026-11-07 知识点标签核查。主检出 knowledge_points 的契约字段包含 knowledge_type、importance、graph_label，未发现通用 tags 字段及对应知识点标签读写契约。workbench/data/content.py 支持读取/编辑知识点的既有字段；题目 topic_label 已退役，闪卡 topic_label 独立存在。不能把闪卡标签或图谱短名称当成知识点通用标签。此结论基于当前契约与静态路径搜索，未查询真实课程的分类填充情况。
