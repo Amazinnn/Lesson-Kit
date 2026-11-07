@@ -737,6 +737,8 @@ def cmd_data(args):
         elif args.action == "delete":
             content.delete(pool, args.entity, args.target)
             result = {"entity": args.entity, "id": args.target, "action": "deleted"}
+        elif args.action == "restore":
+            result = content.restore(pool, args.entity, args.target)
         elif args.action == "state":
             if args.entity not in ("kp", "problem"):
                 raise ValueError("state is supported only for kp and problem")
@@ -1218,7 +1220,7 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("name")
     p.add_argument(
         "action",
-        choices=["get", "list", "search", "history", "create", "update", "delete",
+        choices=["get", "list", "search", "history", "create", "update", "delete", "restore",
                  "state", "audit", "check", "apply"],
     )
     p.add_argument("entity", nargs="?", choices=["kp", "problem", "relation"])

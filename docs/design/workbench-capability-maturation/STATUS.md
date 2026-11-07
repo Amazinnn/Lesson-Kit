@@ -1,5 +1,13 @@
 # 规划交接状态
 
+## 2026-11-08 P4、FS-08 与交接
+
+- **FS-08 恢复已实现**：`content.restore` + `data <ws> restore problem <id>`。恢复后内容与历史重新可读，**不会**自动回到任何试卷或执行；移除事实留在 `retired_paper_items`；重复恢复报 `already_current` 零写入。测试 `test_restoring_an_archived_question_keeps_it_out_of_its_papers`；FILE_CONTRACT / PRODUCT-MANUAL / L2 已同步。
+- **P4 安装身份**：editable 已切到本 worktree（`workbench.__file__` 指 worktree、`lesson-kit --help` 含 `course-sync`）；默认守护进程仍解析主检出（`runtime_source` 设计如此），`--project-root` 下 `/api/runtime` 的 `source_root` 才是本分支。验收后守护进程已停止，安装还原命令见交接文档 §1.3。
+- **SYNC-06 调度触发仍未验证**：`Register-ScheduledTask` + `Start-ScheduledTask` 后 `LastRunTime` 更新、`LastTaskResult=0`，但动作无回执/无日志；安装/停用/启用/删除与任务命令本身均已验证。
+- tasks 补勾 **3.4 / 3.5**（11/19）。
+- 交接文档：[HANDOFF-2026-11-08.md](HANDOFF-2026-11-08.md)（含未验证项、待决策、复现命令与建议顺序）。
+
 ## 2026-11-08 P3 完整同步验收
 
 按 `NEXT-EXECUTION-PLAN-2026-11-07.md` 的 P3 跑完（P0–P2 已在前一段交付）。夹具全在临时目录，未触碰真实课程，未切换安装。

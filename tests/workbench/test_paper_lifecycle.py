@@ -154,3 +154,27 @@ def test_membership_edit_leaves_learning_evidence_untouched(pool):
              for name in tables}
     assert after == before
     assert run['execution_id']
+
+
+def test_restoring_an_archived_question_keeps_it_out_of_its_papers(pool):
+    """FS-08: content comes back, the Paper does not silently re-add it."""
+    from workbench.data import content
+    paper_id = saved(pool, '卷', [DUPLICATE, KEPT])
+    run = active_practice.start_saved(pool, paper_id, rating_mode='off')
+    content.delete(pool, 'problem', DUPLICATE)
+    pool.commit()
+    assert pool.problem(DUPLICATE) is None
+
+    restored = content.restore(pool, 'problem', DUPLICATE)
+
+    assert restored['action'] == 'restored'
+    assert pool.problem(DUPLICATE) is not None
+    assert [item['item_id'] for item in active_practice.current(pool)['items']] == [KEPT]
+    assert [item['problem_id'] for item in practice_sets.get_saved(
+        pool, paper_id)['plan']['items']] == [KEPT]
+    retired = pool.connect().execute(
+        'SELECT problem_id, reason FROM retired_paper_items WHERE paper_id=?',
+        (paper_id,)).fetchall()
+    assert [tuple(row) for row in retired] == [(DUPLICATE, 'deleted')]
+    assert content.restore(pool, 'problem', DUPLICATE)['action'] == 'already_current'
+    assert run['execution_id']

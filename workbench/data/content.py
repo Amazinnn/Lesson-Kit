@@ -564,6 +564,26 @@ def delete(pool, entity, object_id):
     paper_progress.flush_files(pool)
 
 
+def restore(pool, entity, object_id):
+    """Bring an archived question back to current reads without re-adding it anywhere."""
+    if entity != "problem":
+        raise ValueError("restore is supported only for problems")
+    conn = pool.connect()
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(problems)")}
+    if "deleted_at" not in columns:
+        raise ValueError("this pool has no question archive to restore from")
+    with pool.transaction(immediate=True):
+        row = conn.execute("SELECT deleted_at FROM problems WHERE problem_id=?",
+                           (object_id,)).fetchone()
+        if row is None:
+            raise KeyError(object_id)
+        if row[0] is None:
+            return {"entity": entity, "id": object_id, "action": "already_current"}
+        conn.execute("UPDATE problems SET deleted_at=NULL WHERE problem_id=?", (object_id,))
+    return {"entity": entity, "id": object_id, "action": "restored",
+            "papers_rejoined": False}
+
+
 def _delete_problem(conn, problem_id, pool=None):
     if 'deleted_at' not in {row[1] for row in conn.execute('PRAGMA table_info(problems)')}:
         raise ValueError('migrate the pool before deleting questions with retained history')

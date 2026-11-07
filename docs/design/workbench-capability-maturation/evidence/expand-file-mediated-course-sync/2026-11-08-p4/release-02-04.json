@@ -1,0 +1,31 @@
+{
+  "date": "2026-11-08",
+  "distribution": "lesson-kit 0.1.0 (editable)",
+  "install_switch": {
+    "command": "python -m pip install -e . --no-deps (in the course-sync worktree)",
+    "returncode": 0,
+    "workbench_module": "D:\\.codex\\worktrees\\course-sync\\lesson-kit\\workbench\\__init__.py",
+    "cli_lists_course_sync": true
+  },
+  "runtime": {
+    "default_daemon_source_root": "D:\\Projects\\Academic Workflow\\lesson-kit",
+    "note": "the supervised runtime resolves the primary checkout by design; the installed CLI module is the worktree",
+    "explicit_project_root_source_root": "D:\\.codex\\worktrees\\course-sync\\lesson-kit",
+    "verification": "daemon start --port 3083 --no-reload --project-root <worktree> then GET /api/runtime",
+    "restored_state": "daemon stopped again; before this run it was not running"
+  },
+  "release_03_free_api": {
+    "provider": "opencode",
+    "model": "deepseek-v4.1-flash-free",
+    "calls": 1,
+    "replays": 0,
+    "reported_cost": 0,
+    "evidence": "evidence/expand-file-mediated-course-sync/2026-11-07-09/",
+    "paid_or_local_decision_model_calls": 0
+  },
+  "copy_upgrade_and_backup": {
+    "evidence": "evidence/expand-file-mediated-course-sync/2026-11-07-13/",
+    "migrate_preserved_rows": true,
+    "backup_restore_byte_identical": true
+  }
+}

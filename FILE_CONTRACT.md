@@ -592,7 +592,7 @@ Managed papers live at `.lessonkit/practice-sets/ps-NNN.json`. The existing
 Data writer stores the paper plan and stable ID atomically; the browser list
 reads that same store. Saving does not write learning state or course SQLite.
 
-Corrections target identities explicitly; `save` always creates a new Paper,
+A deleted question is archived, not destroyed: `data restore problem <id>` clears the archive flag so the question is readable again and later exports carry it, while no Paper or unfinished execution silently re-adds it — the removal stays recorded in `retired_paper_items`. Restoring an already current question reports `already_current` with zero writes. Corrections target identities explicitly; `save` always creates a new Paper,
 never an inferred overwrite by title or similar stem. Optional `description`
 is container metadata. Use `papers <workspace> list`, `get <ps-id>`,
 `preview <ps-id> --input <manifest>`, `update <ps-id> --input <manifest>

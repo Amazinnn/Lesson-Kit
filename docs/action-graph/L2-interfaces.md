@@ -87,6 +87,7 @@
 | `papers <workspace> list/get <ps-id>` | 读（缺失题目不隐藏容器，返回独立进度） | Agent |
 | `papers <workspace> preview/update <ps-id> --input <manifest> [--confirmation <preview.json>]` | 显式原卷更新；结构修改须确认精确影响，不启动执行 | Agent |
 | `papers <workspace> append <ps-id> --problem <problem-id>` | 写（卷末追加已有题，保留现有题序/状态/Attempt/草稿与进度；递增结构版本，重复追加幂等；不走改名单/题序重置路径） | Agent |
+| `data <workspace> restore problem <id>` | 从归档恢复被删题目：内容与历史重新可读，不自动回到任何试卷；重复恢复报 `already_current` 且零写入 | Agent |
 | `papers <workspace> delete <ps-id>` | 仅删除容器与未完成状态，不删题目及学习证据 | Agent |
 | `course-sync <workspace> export\|receive\|check\|sync\|status` / `course-sync --all-configured sync` | 整门课程的文件交换与 Git 传输（Git 仓库为可选媒介）；`check` 只读，`receive` 逐单元写入并保留未决冲突；未注册工作区可用 `receive --from 包目录 --to 新目录` 校验后创建并注册，`--keep`/`--choices` 选侧，`--associate` 接受另一来源谱系；统一 JSON 回执与退出码 0/2/3/4 | 人 + Agent |
 | `course-sync <workspace> schedule install\|enable\|disable\|remove` | 安装/启停/删除每小时系统任务（调用同一 CLI 跑全部已配置课程）；媒介配置写入 `.lessonkit/course-sync/config.json` 的 `media` | 人 |
