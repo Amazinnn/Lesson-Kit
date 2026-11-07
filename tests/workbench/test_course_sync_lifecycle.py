@@ -336,3 +336,20 @@ def test_receiving_a_knowledge_point_tombstone_twice_is_idle(devices, tmp_path):
 
     assert inspection["plan"]["changes"] == []
     assert inspection["plan"]["outgoing"] == []
+
+
+def test_a_moved_chapter_survives_the_exchange(devices, tmp_path):
+    """WP02 2.3: a move keeps the id and travels with the course."""
+    from workbench.data import content
+    left, right = devices
+    round_trip(left, right, tmp_path / "hop1")
+
+    content.move_kp(left(), "dmath-ch06-kp-001", "ch09")
+    round_trip(left, right, tmp_path / "hop2")
+
+    row = right().connect().execute(
+        "SELECT chapter FROM knowledge_points WHERE kp_id=?",
+        ("dmath-ch06-kp-001",)).fetchone()
+    assert row[0] == "ch09"
+    assert [item["kp_id"] for item in right().kps("dmath-ch09")] == ["dmath-ch06-kp-001"]
+    assert right().kps("dmath-ch06") == []

@@ -6,9 +6,9 @@
 
 ## 2. 实现与逐单元检查
 
-- [ ] 2.1 修改 data.content 查询和 installed CLI 筛选：type/章/文字组合，经验与来源检索，基础投影及关联题目去重。F2 100次查询验证 DATA-01。
+- [x] 2.1 修改 data.content 查询和 installed CLI 筛选：type/章/文字组合，经验与来源检索，基础投影及关联题目去重。F2 100次查询验证 DATA-01。（证据 `evidence/mature-course-content-operations/2026-11-08-query/2-1-query.md`：`knowledge_query`/`related_problems` + CLI `--knowledge-type/--chapter` 与 `related`；DATA-01 100 次 p95 2.2ms ≤1s；7 用例）
 - [ ] 2.2 复用 ingest content-bundle 提炼模型，先查同义已有点；新增点含条件/公式/步骤并自动给适用原题追加关联。8个标注案例覆盖已有点、新模型与反例。
-- [ ] 2.3 沿 ensure_* 增量迁移添加独立章节归属，回填旧ID初始章，更新所有推章消费者。使用带经验、关系和历史的旧点迁移并文件往返，记录全部引用。
+- [x] 2.3 沿 ensure_* 增量迁移添加独立章节归属，回填旧ID初始章，更新所有推章消费者。使用带经验、关系和历史的旧点迁移并文件往返，记录全部引用。（证据 `evidence/mature-course-content-operations/2026-11-08-chapter/2-3-chapter-ownership.md`：`ensure_knowledge_chapter_schema` 加列+整段回填（多段章 `source-ch03` 已覆盖）；读取口径「列优先、NULL 回退」落在 Pool.kps/chapters、列表分组、knowledge_query、create、ingest 两处；`data move kp --chapter` 只改列、ID 不变，关系/经验/透镜/文件往返均有用例。**按所有者决定只改 workbench 层**，冻结层仍按 ID 推章并记为边界）
 - [ ] 2.4 将 bundle/problem-patch/card/quiz/figure相关应用拆为独立完整单元；修改旧all-or-nothing场景，保持单元一致、批次provenance和重试身份。
 - [ ] 2.5 退役成功批次undo CLI/Agent提示/操作入口，历史 rolled_back 保持可读；用直接修正完成相同修错任务，FLOW-03实际走通。
 - [ ] 2.6 用原文标注20个映射/完整性案例，分别报告结构检查和语义核对。限定章节分类补齐只改有依据项，疑点不进入已核对练习。
