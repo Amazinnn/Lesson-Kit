@@ -1,0 +1,594 @@
+{
+  "kind": "single F2 diagnostic; not p95 acceptance",
+  "phases": {
+    "fixture": 3.617,
+    "export": 125.441,
+    "initial_check": 42.837,
+    "receive": 264.865,
+    "repeat_check": 64.175
+  },
+  "fixture": {
+    "chapters": 20,
+    "knowledge_points": 1000,
+    "problems": 10000,
+    "papers": 100,
+    "attempts": 10000,
+    "unfinished": 30,
+    "learning_files": 500,
+    "attachment_bytes": 104857600
+  },
+  "source_counts": {
+    "knowledge_points": 1000,
+    "knowledge_relations": 0,
+    "questions": 0,
+    "kp_progress": 0,
+    "question_progress": 0,
+    "problem_progress": 0,
+    "learner_signals": 0,
+    "problem_attempts": 10000,
+    "problems": 10000,
+    "content_mirror_state": 0,
+    "content_mirror_log": 0,
+    "review_schedule": 0,
+    "feedback_events": 0,
+    "attempt_operations": 0,
+    "practice_request_operations": 0,
+    "active_practice": 1,
+    "active_practice_items": 100,
+    "practice_runs": 0,
+    "learning_current_state": 0,
+    "content_sequences": 0,
+    "flash_cards": 0,
+    "ingest_batches": 0,
+    "paper_state": 30,
+    "problem_revisions": 0,
+    "practice_execution_ids": 30,
+    "part_grading_revisions": 0,
+    "part_attempt_context": 0,
+    "part_grading_jobs": 0,
+    "kp_experiences": 0,
+    "kp_experience_problems": 0
+  },
+  "export_status": "success",
+  "asset_count": 24790,
+  "inspection_errors": [],
+  "receive_status": "success",
+  "receive_failures": [],
+  "received_counts": {
+    "knowledge_points": 1000,
+    "knowledge_relations": 0,
+    "questions": 0,
+    "kp_progress": 0,
+    "question_progress": 0,
+    "problem_progress": 0,
+    "learner_signals": 0,
+    "problem_attempts": 10000,
+    "problems": 10000,
+    "content_mirror_state": 0,
+    "content_mirror_log": 0,
+    "review_schedule": 0,
+    "feedback_events": 0,
+    "attempt_operations": 0,
+    "practice_request_operations": 0,
+    "active_practice": 1,
+    "active_practice_items": 100,
+    "practice_runs": 0,
+    "learning_current_state": 0,
+    "content_sequences": 0,
+    "flash_cards": 0,
+    "ingest_batches": 0,
+    "paper_state": 30,
+    "problem_revisions": 0,
+    "practice_execution_ids": 30,
+    "part_grading_revisions": 0,
+    "part_attempt_context": 0,
+    "part_grading_jobs": 0,
+    "kp_experiences": 0,
+    "kp_experience_problems": 0
+  },
+  "table_counts_equal": true,
+  "repeat_changes": 0,
+  "repeat_outgoing": 0,
+  "repeat_errors": [
+    {
+      "identity": "file/attachments/original-001.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-002.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-003.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-004.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-005.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-006.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-007.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-008.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-009.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-010.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-011.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-012.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-013.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-014.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-015.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-016.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-017.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-018.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-019.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-020.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-021.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-022.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-023.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-024.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-025.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-026.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-027.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-028.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-029.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-030.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-031.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-032.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-033.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-034.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-035.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-036.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-037.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-038.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-039.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-040.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-041.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-042.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-043.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-044.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-045.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-046.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-047.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-048.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-049.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-050.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-051.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-052.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-053.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-054.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-055.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-056.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-057.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-058.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-059.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-060.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-061.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-062.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-063.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-064.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-065.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-066.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-067.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-068.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-069.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-070.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-071.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-072.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-073.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-074.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-075.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-076.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-077.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-078.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-079.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-080.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-081.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-082.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-083.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-084.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-085.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-086.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-087.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-088.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-089.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-090.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-091.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-092.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-093.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-094.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-095.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-096.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-097.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-098.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-099.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    },
+    {
+      "identity": "file/attachments/original-100.bin",
+      "code": "missing_asset",
+      "message": "tracked asset is absent without an explicit deletion"
+    }
+  ]
+}

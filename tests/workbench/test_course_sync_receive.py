@@ -666,6 +666,7 @@ def test_bad_execution_item_does_not_block_independent_content(pair, tmp_path, m
     asset = json.loads(envelope.read_text(encoding="utf-8"))
     asset["content"] = malformed
     if malformed is None:
+        asset.pop("content")
         asset["deleted"] = True
     envelope.write_text(json.dumps(asset), encoding="utf-8")
     inspected, result = receive(right, bundle)
@@ -673,3 +674,66 @@ def test_bad_execution_item_does_not_block_independent_content(pair, tmp_path, m
     assert result["status"] == "partial"
     assert rows(right, "knowledge_points")[0]["body"] == rows(left, "knowledge_points")[0]["body"]
     assert rows(right, "active_practice") == []
+
+
+def test_received_registered_attachment_is_portable_on_the_next_hop(pair, tmp_path):
+    left, right = pair
+    raw = left.root / "attachments/raw.bin"
+    raw.parent.mkdir()
+    raw.write_bytes(b"raw source\x00\xff")
+    config = left.root / ".lessonkit/course-sync/config.json"
+    config.parent.mkdir(parents=True)
+    config.write_text(json.dumps({"managed_paths": ["attachments"]}), encoding="utf-8")
+    publish(left, tmp_path / "first")
+    assert receive(right, tmp_path / "first")[1]["status"] == "success"
+    assert not (right.root / ".lessonkit/course-sync/config.json").exists()
+    publish(right, tmp_path / "second")
+    package = read_exchange(tmp_path / "second")
+    assert base64.b64decode(package["assets"]["file/attachments/raw.bin"]["content"]["data"]) == raw.read_bytes()
+    third = make_course(tmp_path / "third")
+    try:
+        assert receive(third, tmp_path / "second")[1]["status"] == "success"
+        assert (third.root / "attachments/raw.bin").read_bytes() == raw.read_bytes()
+    finally:
+        third.close()
+
+
+@pytest.mark.parametrize("entity", ["file", "kp"])
+def test_received_tombstone_survives_export_to_an_existing_peer(pair, tmp_path, entity):
+    left, right = pair
+    first = tmp_path / "first"
+    publish(left, first)
+    receive(right, first)
+    manifest = json.loads((first / "manifest.json").read_text(encoding="utf-8"))
+    identity = ("file/.lessonkit/practice-sets/ps-001.json" if entity == "file"
+                else 'row/knowledge_points/["math-kp-1"]')
+    descriptor = next(item for item in manifest["assets"] if item["identity"] == identity)
+    envelope = first / descriptor["path"]
+    asset = json.loads(envelope.read_text(encoding="utf-8"))
+    asset["deleted"] = True
+    envelope.write_text(json.dumps(asset), encoding="utf-8")
+    assert receive(right, first)[1]["status"] == "success"
+    publish(right, tmp_path / "reply")
+    assert read_exchange(tmp_path / "reply")["assets"][identity]["deleted"]
+    inspected, result = receive(left, tmp_path / "reply")
+    assert result["status"] == "success", (inspected["errors"], result["failed"])
+    if entity == "file":
+        assert not (left.root / ".lessonkit/practice-sets/ps-001.json").exists()
+    else:
+        assert rows(left, "knowledge_points") == []
+        assert len(rows(left, "problem_attempts")) == 1
+
+
+def test_minimal_file_tombstone_is_receivable_and_reexportable(pair, tmp_path):
+    left, right = pair
+    bundle = tmp_path / "bundle"
+    publish(left, bundle)
+    receive(right, bundle)
+    identity = "file/.lessonkit/practice-sets/ps-001.json"
+    manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+    descriptor = next(item for item in manifest["assets"] if item["identity"] == identity)
+    (bundle / descriptor["path"]).write_text('{"kind":"file","deleted":true}', encoding="utf-8")
+    assert receive(right, bundle)[1]["status"] == "success"
+    assert not (right.root / ".lessonkit/practice-sets/ps-001.json").exists()
+    publish(right, tmp_path / "reply")
+    assert read_exchange(tmp_path / "reply")["assets"][identity]["deleted"]

@@ -333,8 +333,9 @@ def _portable_integer_references(assets, state):
         asset["depends_on"] = sorted(dependencies - {identity})
 
 
-def _managed_files(pool, assets, pending=None):
+def _managed_files(pool, assets, pending=None, tracked=None):
     pending = pending or {}
+    tracked = tracked or {}
     root = pool.root
     files = set()
     for name in ("goals.json", "course-preferences.json"):
@@ -379,6 +380,14 @@ def _managed_files(pool, assets, pending=None):
                 files.update(item for item in path.rglob("*") if item.is_file())
             else:
                 files.add(path)
+    for asset in tracked.values():
+        if asset.get("kind") != "file" or not asset.get("content"):
+            continue
+        target = _relative(root, asset["content"].get("path"))
+        if target.is_file():
+            files.add(target)
+        elif target.exists():
+            raise ValueError(f"managed course file is not a regular file: {target.relative_to(root)}")
     for path in sorted(files):
         relative = path.relative_to(root).as_posix()
         _relative(root, relative)
@@ -392,7 +401,7 @@ def _projection(pool, state):
     assets, inventory = _database_projection(pool, state)
     pending = {change["asset"]["content"]["path"]: change
                for change in state.get("pending_files", [])}
-    for relative, path in _managed_files(pool, assets, pending):
+    for relative, path in _managed_files(pool, assets, pending, state["base"]):
         assets["file/" + relative] = {
             "kind": "file", "content": {"path": relative, "encoding": "base64",
                                          "data": base64.b64encode(path.read_bytes()).decode("ascii")},
@@ -400,6 +409,9 @@ def _projection(pool, state):
     for relative, change in pending.items():
         assets["file/" + relative] = change["asset"]
     _execution_projection(assets, state)
+    for identity, asset in state["base"].items():
+        if identity not in assets and asset.get("deleted"):
+            assets[identity] = asset
     return assets, inventory
 
 
@@ -480,6 +492,10 @@ def export_course(pool, workspace, destination):
         state = _state(pool.root, pool.course, pool=pool)
         publication_errors = _complete_pending_files(pool, state)
         assets, inventory = _projection(pool, state)
+        missing = sorted(identity for identity, asset in state["base"].items()
+                         if identity not in assets and not asset.get("deleted"))
+        if missing:
+            raise ValueError("managed assets are missing without explicit deletion: " + ", ".join(missing))
         # Establish the initial shared image once. Merely exporting subsequent
         # edits is not evidence that another installation has received them.
         if not state.get("initialized", True):
@@ -1357,8 +1373,21 @@ def read_exchange(source):
                 or not all(isinstance(key, str) and key for key in asset.get("depends_on", [])):
             errors.append({"identity": identity, "code": "invalid_asset", "message": "invalid asset envelope"})
             continue
+        asset = {**asset, "depends_on": asset.get("depends_on", [])}
         content = asset.get("content")
         if content is None:
+            if asset["kind"] in {"execution", "execution_item"}:
+                errors.append({"identity": identity, "code": "invalid_asset",
+                               "message": "execution deletion requires its identifying content"})
+                continue
+            if asset["kind"] == "file":
+                if not identity.startswith("file/"):
+                    errors.append({"identity": identity, "code": "invalid_asset",
+                                   "message": "file deletion requires its relative path"})
+                    continue
+                relative = identity[len("file/"):]
+                _relative(source, relative)
+                asset = {**asset, "content": {"path": relative, "encoding": "base64", "data": ""}}
             assets[identity] = asset
             continue
         if asset["kind"] == "row" and (content.get("table") not in TABLES
