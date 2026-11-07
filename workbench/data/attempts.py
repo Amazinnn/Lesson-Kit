@@ -269,9 +269,16 @@ def correct(pool, attempt_id, payload):
             raise ManifestError(f"correction: {error}")
         item["index"] = 0
         batch = _batch_fingerprint("correct", [item], attempt_id)
+        stored = _operations(pool, request_id)
         replay = _replay(pool, request_id, batch)
         if replay is not None:
             return replay
+        if stored and _correction_already_holds(attempt, item, stored):
+            # The same correction ran on another installation: its fingerprint is
+            # bound to that machine's attempt number, but the recorded effect is
+            # what this request asks for, so the original result is returned and
+            # nothing is written again.
+            return _envelope(request_id, [json.loads(row["result"]) for row in stored])
         operation = linked_operation(pool, attempt_id)
         if operation is None:
             raise ManifestError(
@@ -393,6 +400,19 @@ def _replay(pool, request_id, batch):
         return None
     _require_same_batch(request_id, stored, batch)
     return _envelope(request_id, [json.loads(row["result"]) for row in stored])
+
+
+def _correction_already_holds(attempt, item, stored):
+    """The stored request's effect is already the state of this attempt."""
+    if len(stored) != 1:
+        return False
+    row = stored[0]
+    if row["kind"] != "correct" or row["problem_id"] != item["problem_id"]:
+        return False
+    if row["rating"] != item["rating"]:
+        return False
+    return ((attempt["answer_text"] or "") == (item["answer_text"] or "")
+            and (attempt["note"] or "") == (item["note"] or ""))
 
 
 def correction_conflict(pool, attempt, operation):

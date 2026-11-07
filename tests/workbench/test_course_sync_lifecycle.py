@@ -214,3 +214,72 @@ def test_an_old_course_without_the_history_table_receives_and_repeats(devices, t
     _inspected, second = round_trip(left, right, tmp_path / "hop2")
     assert second["applied"] == []
     assert [row[0] for row in retired(right(), paper_id)] == ["dmath-ch06-prob-002"]
+
+
+def test_a_correction_recorded_elsewhere_replays_its_result(devices, tmp_path):
+    """The same request executed on A repeats on B without a false conflict."""
+    from workbench.data import attempts
+    left, right = devices
+    prepared(left())
+    recorded = attempts.apply(left(), {
+        "request_id": "conv-001-turn-001-record",
+        "items": [{"problem_id": "dmath-ch06-prob-003", "answer_text": "第一次的原文",
+                   "rating": 3}],
+    })
+    attempt_id = recorded["items"][0]["attempt_id"]
+    correction = {"request_id": "conv-001-turn-002-correct",
+                  "answer_text": "更正后的原文", "note": "备注", "rating": 4}
+    first = attempts.correct(left(), attempt_id, correction)
+
+    _inspected, result = round_trip(left, right, tmp_path / "hop1")
+    assert result["status"] == "success", result["failed"]
+
+    before = [tuple(row) for row in right().connect().execute(
+        "SELECT id, problem_id, status, note, answer_text FROM problem_attempts ORDER BY id")]
+    replayed = attempts.correct(right(), attempt_id, correction)
+
+    assert replayed["request_id"] == first["request_id"]
+    assert replayed["items"] == first["items"]
+    assert [tuple(row) for row in right().connect().execute(
+        "SELECT id, problem_id, status, note, answer_text FROM problem_attempts ORDER BY id")] == before
+
+    different = dict(correction, answer_text="另一次更正")
+    with pytest.raises(attempts.ManifestError, match="different content"):
+        attempts.correct(right(), attempt_id, different)
+
+
+def test_a_cached_display_id_never_blocks_export_or_gets_rebound(devices, tmp_path):
+    """A parked snapshot may name a feedback row that no longer exists."""
+    left, right = devices
+    paper_id = practice_sets.create_saved(left(), "卷", [
+        "dmath-ch06-prob-001", "dmath-ch06-prob-002"])["practice_set_id"]
+    run = active_practice.start_saved(left(), paper_id, rating_mode="off")
+    active_practice.mark(left(), 0, "stuck")
+    other = practice_sets.create_saved(left(), "另一卷", ["dmath-ch06-prob-003"])["practice_set_id"]
+    active_practice.start_saved(left(), other, rating_mode="off")   # parks the first run
+
+    state = paper_progress.state(left().connect(), paper_id)
+    record = json.loads(state["checkpoint_json"])
+    record["items"][0]["feedback_event_id"] = 987654
+    left().connect().execute(
+        "UPDATE paper_state SET checkpoint_json=? WHERE paper_id=?",
+        (json.dumps(record, ensure_ascii=False), paper_id))
+    left().commit()
+
+    result = course_sync.export_course(left(), workspace(left()), tmp_path / "hop1")
+
+    assert result["status"] == "success"
+    package = course_sync.read_exchange(tmp_path / "hop1")
+    execution = next(asset for asset in package["assets"].values()
+                     if asset["kind"] == "execution" and
+                     asset["content"].get("paper_id") == paper_id)
+    cached = next(item for item in package["assets"].values()
+                  if item["kind"] == "execution_item" and
+                  item["content"].get("paper_id") == paper_id)
+    assert "feedback_event_id" not in execution["content"]
+    # The snapshot keeps the source number as an opaque display value: it is not
+    # converted into a reference the target could mistake for a writable local row.
+    assert cached["content"].get("feedback_event_id") == 987654
+
+    _inspected, received = round_trip(left, right, tmp_path / "hop2")
+    assert received["status"] == "success", received["failed"]
