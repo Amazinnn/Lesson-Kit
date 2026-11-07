@@ -33,3 +33,9 @@ CR01/CR02：接收先写sidecar再提交SQLite的确认错误已改为同事务�
 附件A→B→C及显式删除再传播已由9e24990c补齐回归；完整规模700文件逐字节一致。尚未结案：嵌套整数引用与请求缓存（R02）、导出及无变化检查F2性能、原生任务完整配置课验证、真实远端/浏览器验收，以及真实Tutor回写发现的新增文件遗漏。当前不得宣称完整课程交换已闭合。
 
 CR01 followup2026-11-07: real free-model Tutor return exposed a new-file gap: FILE_CONTRACT restricted undeclared readable files even though Q006/Q106 require course-file additions. WP01 now specifies explicit creation by a new safe file under files/, preserving absence protection and invalid-envelope isolation. Implementation and replay acceptance pending.
+
+CR02 followup 2026-11-07（R06 审查，证据 `tmp/agent-runs/R06-results.json`）:
+
+- **已修**：`part_grading_jobs` 的 `conversation_id`/`turn_id` 是发送机器的会话名。导入完成态作业时原样写入会把目标机自己的会话标成 internal（学习的会话列表里消失、GET 变 404，R06 实测 `conv-001` 复现）。现接收端丢弃这两个字段，保留 `status`/`error`。
+- **待决策（未实现）**：`attempt_operations` 的 `correct` 指纹按当时本机 attempt id 计算，跨机重放必然不匹配，收到后重放会报“request_id 已用于不同内容”——这是误导性错误而非真实冲突；`apply` 指纹可重算（含 manifest 索引），重放正常；被篡改的指纹目前**不**阻止重放。可选方向：(a) 导出时按来源身份重写指纹（会使同一条记录在往返后被判为变更，需同时改比较口径）；(b) 为操作重放引入与机器无关的稳定键（新身份，属 schema 变更）。两者都超出“接收端小修”，须先定契约。
+- **待决策（未实现）**：`active_practice_items` 的展示缓存 JSON 里嵌的 `attempt_id`/`feedback_event_id` 仍是来源机器的整数；被真实 writer 硬删的 feedback 事件不在导出包里，若把该字段声明为引用，导出会直接拒绝（R06 的 `if_declared` 实测）。浏览器只有 `paper-practice.js` 读取 `feedback_event_id`。方向：导出时剥离这类展示缓存编号，或补上“本地硬删除的显式删除记录”（同 CR05 的删除记录缺口），二者需一并决定。

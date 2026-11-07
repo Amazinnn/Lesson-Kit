@@ -883,3 +883,22 @@ def test_associated_existing_facts_keep_execution_references(pair,tmp_path):
     assert result["status"]=="success",result["failed"]
     assert len(rows(right,"problem_attempts"))==1
     assert rows(right,"active_practice_items")[0]["attempt_id"]==1
+
+
+def test_a_received_grading_job_drops_the_machine_bound_conversation(pair, tmp_path):
+    left, right = pair
+    connection = left.connect()
+    connection.execute("INSERT INTO practice_execution_ids DEFAULT VALUES")
+    connection.execute(
+        "INSERT INTO part_grading_jobs (attempt_id, execution_id, status, error,"
+        " conversation_id, turn_id) VALUES (1, 1, 'completed', NULL, 'conv-001', 'turn-002')")
+    left.commit()
+    publish(left, tmp_path / "bundle")
+
+    _inspected, result = receive(right, tmp_path / "bundle")
+
+    assert result["status"] == "success", result["failed"]
+    job = rows(right, "part_grading_jobs")[0]
+    assert job["status"] == "completed"
+    assert job["conversation_id"] is None
+    assert job["turn_id"] is None

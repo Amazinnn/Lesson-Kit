@@ -1268,8 +1268,13 @@ def _write_unit(pool, connection, state, index, change):
     keys = _primary_key(connection, table)
     if not keys:
         raise ValueError(f"target table has no persistent key: {table}")
-    if table == "part_grading_jobs" and row.get("status") in {"pending", "running"}:
-        raise ValueError("a waiting grading job is not dispatched by an import")
+    if table == "part_grading_jobs":
+        if row.get("status") in {"pending", "running"}:
+            raise ValueError("a waiting grading job is not dispatched by an import")
+        # A conversation and turn belong to the machine that ran them; keeping the
+        # names here would hide the target's own conversation from its learner.
+        row["conversation_id"] = None
+        row["turn_id"] = None
     if table == "problems" and change["action"] != "create":
         _update_problem(connection, row)
         return
