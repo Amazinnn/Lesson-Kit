@@ -17,7 +17,7 @@ from workbench.domain import weak
 from workbench.data import queries
 from workbench.server import api as api_mod
 from workbench.server import experience_api, experience_page
-from workbench.server import pages, agent_resources_api
+from workbench.server import course_preferences_api, pages, agent_resources_api
 
 FRONTEND_DIST = (
     Path(__file__).resolve().parents[2] / "frontend" / "editable-graph" / "dist"
@@ -61,6 +61,8 @@ ROUTES = [
     ("GET", "/api/w/{name}/agent-resources/skills/{skill_id}", agent_resources_api.detail),
     ("PATCH", "/api/w/{name}/agent-resources/skills/{skill_id}", agent_resources_api.enable),
     ("DELETE", "/api/w/{name}/agent-resources/skills/{skill_id}", agent_resources_api.delete),
+    ("GET", "/api/w/{name}/course-preferences", course_preferences_api.get),
+    ("PATCH", "/api/w/{name}/course-preferences", course_preferences_api.update),
 
     ("GET", "/api/runtime", _runtime_owned_route),
     ("POST", "/api/runtime/prepare-reload", _runtime_owned_route),

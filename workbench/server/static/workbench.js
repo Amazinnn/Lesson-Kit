@@ -333,6 +333,90 @@
     });
   }
 
+  /* ---------- confirmed course learning preferences ----------
+   * The four learning preferences are course data, not device state
+   * (DATA_MODEL「Confirmed course learning preferences」).  The record above
+   * stays the interaction mirror; the server projection is what a course
+   * exchange carries and it wins whenever the two disagree.  Reading a
+   * setting never fetches — one hydration per page load answers for all of
+   * them, and only on a surface that shows the preferences.
+   */
+  var PREFERENCES_URL = "/course-preferences";
+  var LEARNING_SETTINGS = [
+    "showRating", "showSource", "submissionGranularity", "revealTiming",
+  ];
+  var confirmedPreferences = null;
+  var preferencesRequest = null;
+
+  function learningMirrorValues() {
+    var values = {};
+    LEARNING_SETTINGS.forEach(function (key) {
+      var value = loadSetting(key, undefined);
+      if (value !== undefined) values[key] = value;
+    });
+    return values;
+  }
+
+  /* Received values are written into the mirror, so every reader of the
+     mirror — including the open practice views — follows the course data. */
+  function adoptConfirmedPreferences(values) {
+    confirmedPreferences = values && typeof values === "object" ? values : {};
+    LEARNING_SETTINGS.forEach(function (key) {
+      if (confirmedPreferences[key] === undefined) return;
+      saveSetting(key, confirmedPreferences[key]);
+    });
+    applyDisplayPreferences();
+    window.dispatchEvent(new Event("lk-submission-granularity"));
+  }
+
+  /* First answer wins: an unreadable server state is not permission to
+     overwrite it later, and a confirmed value is never replaced by the
+     stale mirror this tab still holds. */
+  function hydratePreferences() {
+    if (preferencesRequest) return preferencesRequest;
+    preferencesRequest = api(PREFERENCES_URL).then(function (data) {
+      if (data && data.saved) {
+        adoptConfirmedPreferences(data.values);
+        return confirmedPreferences;
+      }
+      var explicit = learningMirrorValues();
+      if (!Object.keys(explicit).length) {
+        adoptConfirmedPreferences({});
+        return confirmedPreferences;
+      }
+      /* No server projection yet: the explicit browser values are adopted
+         once, through the same writer every other save uses. */
+      return patch(PREFERENCES_URL, explicit).then(function (saved) {
+        adoptConfirmedPreferences(saved && saved.values);
+        return confirmedPreferences;
+      });
+    }).catch(function () {
+      return null;
+    });
+    return preferencesRequest;
+  }
+
+  /* An explicit change goes to the course writer as well as the mirror.  A
+     rejected write is one short report — the mirror keeps the control value
+     as before, but the value is never counted as saved. */
+  function saveLearningSetting(key, value) {
+    saveSetting(key, value);
+    var body = {};
+    body[key] = value;
+    patch(PREFERENCES_URL, body).then(function (saved) {
+      adoptConfirmedPreferences(saved && saved.values);
+    }, function (error) {
+      if (window.alert) {
+        window.alert("学习偏好未保存：" + ((error && error.message) || "服务器不可用"));
+      }
+    });
+  }
+
+  function preferencesSurfaceOpen() {
+    return layout.dataset.page === "settings"
+      || !!document.getElementById("paper-practice");
+  }
+
   /* The sound preference is one field of the same record (`sound`, boolean,
      on by default — decisions.md A-38).  sfx.js reads the very same field, so
      the two never disagree; before the module is there the record itself is
@@ -1254,7 +1338,7 @@
   if (showRatingBox) {
     showRatingBox.checked = showRatingEnabled();
     showRatingBox.addEventListener("change", function () {
-      saveSetting("showRating", showRatingBox.checked);
+      saveLearningSetting("showRating", showRatingBox.checked);
       applyDisplayPreferences();
     });
   }
@@ -1262,8 +1346,18 @@
   if (showSourceBox) {
     showSourceBox.checked = showSourceEnabled();
     showSourceBox.addEventListener("change", function () {
-      saveSetting("showSource", showSourceBox.checked);
+      saveLearningSetting("showSource", showSourceBox.checked);
       applyDisplayPreferences();
+    });
+  }
+  /* The Paper setup's reveal-timing pick is an explicit confirmation too: the
+     chosen mode becomes the course preference the next entry starts from. */
+  var revealTimingSelect = document.getElementById("paper-reveal-timing");
+  if (revealTimingSelect) {
+    revealTimingSelect.addEventListener("change", function () {
+      if (revealTimingSelect.disabled) return;
+      if (revealTimingSelect.value !== "on_submit" && revealTimingSelect.value !== "per_item") return;
+      saveLearningSetting("revealTiming", revealTimingSelect.value);
     });
   }
   /* 另一个标签页改了设置（如设置视图开在另一页）⇒ 这一页当场跟上。 */
