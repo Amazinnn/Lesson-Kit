@@ -6,7 +6,7 @@
 
 实测：全仓 `PYTHONUTF8=1 pytest tests -q` **1,535 passed（458s）**；`compileall` 全仓；change strict 与 live specs strict 通过；`guard extract-problems --course dmath --chapter ch06` PASS。同一轮补做外部 Tutor 验收：真实免费模型（`deepseek-v4.1-flash-free`，1 次调用、成本 0）读真实课程文件产出更新；初次接收因“新增无信封文件”缺陷失败并保留原文，修复后用同一份输出重放（0 次新调用）通过——原始作答不变、新笔记落库、再导出带出。据此勾选 task 2.10，证据见 [Tutor 免费调用与重放](evidence/expand-file-mediated-course-sync/2026-11-07-09/summary.md)；该验收是同一输出的重放，不是第二次 API 往返。
 
-F2 全量诊断（单次，非 p95）：分组布局把导出从 141.8s 降到 **20.2s**、接收 **20.2s**，两者回到门槛内；**无变化检查仍 47.8s，未达 ≤5s**，门槛不降低，达标需要一次显式设计决定（见 [F2 诊断](evidence/expand-file-mediated-course-sync/2026-11-07-10/summary.md)）。
+F2 性能已按门槛复测：`cProfile` 显示检查的 61/99 秒花在重复的 `Path.resolve()` 上，按物理文件去重路径校验并缓存根目录解析后（语义不变），预热后导出 p50 17.27s、**无变化检查 20 次 p50 3.10s / p95 3.32s**、接收 p50 9.68s，三项门槛（30/5/30s）全部达标，终态 `changes=0 errors=[]`。证据见 [F2 复测](evidence/expand-file-mediated-course-sync/2026-11-07-11/summary.md)；单机单会话分布，不构成发布级验收。
 
 仍未完成：R06 的操作重放/会话绑定三类、无变化检查性能、真实远端/浏览器/旧课程迁移、独立最终验收。tasks 3/19。
 

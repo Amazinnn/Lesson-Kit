@@ -52,7 +52,7 @@ def load(source, descriptors, version, relative, read_json):
     if not isinstance(descriptors, list):
         raise ValueError("invalid asset descriptors")
     root = Path(source).resolve()
-    declared, identities, physical = [], set(), {}
+    declared, identities, physical, resolved = [], set(), {}, {}
     for descriptor in descriptors:
         if not isinstance(descriptor, dict) or not isinstance(descriptor.get("identity"), str):
             raise ValueError("invalid asset descriptor")
@@ -62,8 +62,17 @@ def load(source, descriptors, version, relative, read_json):
         if version == FORMAT_VERSION_GROUPED and descriptor.get("member") != identity:
             raise ValueError("invalid grouped asset member")
         identities.add(identity)
-        target = relative(root, descriptor.get("path"))
-        normalized = target.relative_to(root).as_posix()
+        # Grouped assets share one physical file, so the path guard runs once per
+        # file rather than once per asset; resolving a path on Windows costs a
+        # filesystem round trip per component.
+        spelled = descriptor.get("path")
+        cached = resolved.get(spelled) if isinstance(spelled, str) else None
+        if cached is None:
+            target = relative(root, spelled)
+            normalized = target.relative_to(root).as_posix()
+            resolved[spelled] = (target, normalized)
+        else:
+            target, normalized = cached
         key = normalized.casefold()
         if key in physical and (version == FORMAT_VERSION_INDIVIDUAL
                                 or physical[key] != normalized):

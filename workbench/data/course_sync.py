@@ -82,6 +82,20 @@ def _atomic_bytes(path, data):
         Path(name).unlink(missing_ok=True)
 
 
+#: Resolving a root costs a filesystem round trip per call on Windows, and every
+#: managed path in one exchange shares the same root. The mapping is read-only:
+#: the escape and symlink checks below still run for every path.
+_RESOLVED_ROOTS = {}
+
+
+def _resolved_root(root):
+    key = str(root)
+    cached = _RESOLVED_ROOTS.get(key)
+    if cached is None:
+        cached = _RESOLVED_ROOTS[key] = Path(root).resolve()
+    return cached
+
+
 def _relative(root, value):
     if not isinstance(value, str) or not value or "\\" in value or ":" in value:
         raise ValueError(f"unsafe relative path: {value!r}")
@@ -93,7 +107,7 @@ def _relative(root, value):
         raise ValueError(f"unsafe relative path: {value!r}")
     if value in {".", "./"}:
         raise ValueError("path must identify a managed file or directory")
-    root = Path(root).resolve()
+    root = _resolved_root(root)
     target = root / parts
     if not target.resolve().is_relative_to(root):
         raise ValueError(f"path escapes its root: {value!r}")
@@ -1376,7 +1390,7 @@ def _update_row(connection, table, row, where):
 
 def _file_payload(root, change, *, db_path=None):
     content = change["asset"]["content"]
-    root = Path(root).resolve()
+    root = _resolved_root(root)
     target = _relative(root, content.get("path"))
     relative = target.relative_to(root)
     if db_path is not None and target == Path(db_path).resolve():

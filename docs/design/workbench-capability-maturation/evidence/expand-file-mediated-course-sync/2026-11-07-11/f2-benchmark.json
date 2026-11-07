@@ -1,0 +1,79 @@
+{
+  "kind": "repeated F2 measurement, still not an acceptance sign-off",
+  "fixture": {
+    "chapters": 20,
+    "knowledge_points": 1000,
+    "problems": 10000,
+    "papers": 100,
+    "attempts": 10000,
+    "unfinished": 30,
+    "learning_files": 500,
+    "attachment_bytes": 104857600
+  },
+  "runs": {
+    "export": 5,
+    "unchanged": 20,
+    "receive": 5
+  },
+  "phases": {
+    "export": {
+      "runs": 5,
+      "samples": [
+        17.268,
+        16.683,
+        17.306,
+        16.915,
+        17.267
+      ],
+      "p50": 17.267,
+      "p95": 17.268,
+      "max": 17.306
+    },
+    "unchanged": {
+      "runs": 20,
+      "samples": [
+        3.226,
+        3.189,
+        3.031,
+        3.189,
+        3.12,
+        3.05,
+        3.034,
+        3.323,
+        3.081,
+        3.174,
+        3.019,
+        3.156,
+        3.028,
+        3.084,
+        3.096,
+        3.038,
+        3.159,
+        3.316,
+        3.006,
+        3.101
+      ],
+      "p50": 3.099,
+      "p95": 3.316,
+      "max": 3.323
+    },
+    "receive": {
+      "runs": 5,
+      "samples": [
+        10.164,
+        9.728,
+        9.488,
+        9.676,
+        9.309
+      ],
+      "p50": 9.676,
+      "p95": 9.728,
+      "max": 10.164
+    }
+  },
+  "final": {
+    "changes": 0,
+    "outgoing": 0,
+    "errors": []
+  }
+}
