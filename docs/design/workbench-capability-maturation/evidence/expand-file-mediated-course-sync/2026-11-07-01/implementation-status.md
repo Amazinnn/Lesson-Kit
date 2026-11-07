@@ -35,3 +35,7 @@ The read-only real legacy database backup copy exported 469 assets and reread wi
 Repeated export no longer advances the shared base. Read-only inspect validates course identity, target primary keys and columns while retaining independent valid assets. It does not initialize installation metadata or course state. Baseline mismatch is explicitly blocked pending complete common-baseline/acknowledgement handling. Focused planner/projection/preflight checks total 26 passed. This is internal foundation, not task 2.4 completion.
 
 At 11:32 the user chose to retain the existing two DeepSeek workers and wait for successful recovery probes before further dispatch. The second six-call probe again returned five 200 responses followed by a 429. No provider substitution or new implementation worker is authorized by that answer.
+
+## Incremental package publication
+
+Unchanged envelopes reuse their published paths, changed envelopes publish before manifest replacement, and obsolete preceding-manifest envelopes are cleaned only after publication. Focused Data tests now total 18 passed, with no-change/replaced-envelope and previous-manifest failure preservation checks. The earlier outstanding normal generation accumulation is resolved; unreferenced files from an interrupted unpublished generation still need an explicit recovery policy.

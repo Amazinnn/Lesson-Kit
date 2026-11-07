@@ -300,24 +300,54 @@ def export_course(pool, workspace, destination):
         if not state.get("initialized", True):
             state["base"] = assets
             state["initialized"] = True
+        previous_assets, previous_paths = {}, {}
+        if (destination / "manifest.json").exists():
+            previous = read_exchange(destination)
+            if previous["course"] != state["course"]:
+                raise ValueError("destination package belongs to a different course origin")
+            previous_assets = previous["assets"]
+            previous_paths = {item["identity"]: item["path"] for item in
+                              _read_json(destination / "manifest.json")["assets"]}
         # Persist source identities before publishing anything another device can
         # receive. A failed first export must retain the same course lineage.
         _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
         export_id = "export-" + str(uuid4())
         descriptors = []
+        written = 0
         for identity, asset in sorted(assets.items()):
-            relative = export_id + "/assets/" + quote(identity, safe="/") + ".json"
-            _atomic_json(_relative(destination, relative), asset)
+            if previous_assets.get(identity) == asset:
+                relative = previous_paths[identity]
+            else:
+                relative = export_id + "/assets/" + quote(identity, safe="/") + ".json"
+                _atomic_json(_relative(destination, relative), asset)
+                written += 1
             descriptors.append({"identity": identity, "kind": asset["kind"], "path": relative,
                                 "depends_on": asset["depends_on"]})
         manifest = {"format_version": FORMAT_VERSION, "course": state["course"],
                     "origin": state["origin"], "export_id": export_id,
                     "assets": descriptors, "base": state["base"], "tables": inventory}
         _atomic_json(destination / "manifest.json", manifest)
+        live_paths = {item["path"] for item in descriptors}
+        cleanup_errors = []
+        for relative in sorted(set(previous_paths.values()) - live_paths):
+            path = _relative(destination, relative)
+            try:
+                path.unlink(missing_ok=True)
+                parent = path.parent
+                while parent != destination:
+                    try:
+                        parent.rmdir()
+                    except OSError:
+                        break
+                    parent = parent.parent
+            except OSError as exc:
+                cleanup_errors.append({"path": relative, "message": str(exc)})
         state["last_export"] = {"id": export_id, "assets": assets}
         _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
-        return {"status": "success", "course": state["course"], "origin": state["origin"],
+        return {"status": "partial" if cleanup_errors else "success",
+                "course": state["course"], "origin": state["origin"],
                 "export_id": export_id, "assets": len(assets), "tables": inventory,
+                "written": written, "reused": len(assets) - written, "cleanup_errors": cleanup_errors,
                 "destination": str(destination), "local": {"exported": True}, "remote": None}
 
 

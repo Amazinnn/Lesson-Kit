@@ -161,6 +161,26 @@ def test_inspection_refuses_unestablished_common_base(course, tmp_path):
     assert any(error['code'] == 'baseline_mismatch' for error in result['errors'])
 
 
+def test_repeat_export_reuses_unchanged_files_and_cleans_replaced_envelopes(course, tmp_path):
+    pool, workspace = course
+    bundle = tmp_path / 'bundle'
+    first = export_course(pool, workspace, bundle)
+    before = {path.relative_to(bundle): path.read_bytes() for path in bundle.rglob('*.json')
+              if path.name != 'manifest.json'}
+    second = export_course(pool, workspace, bundle)
+    assert second['written'] == 0
+    assert second['reused'] == first['assets']
+    assert before == {path.relative_to(bundle): path.read_bytes() for path in bundle.rglob('*.json')
+                      if path.name != 'manifest.json'}
+    pool.connect().execute("UPDATE knowledge_points SET body='只改一项'")
+    pool.commit()
+    third = export_course(pool, workspace, bundle)
+    assert third['written'] == 1
+    assert third['reused'] == first['assets'] - 1
+    assert len(list(bundle.rglob('*.json'))) == first['assets'] + 1
+    assert read_exchange(bundle)['errors'] == []
+
+
 def test_unknown_table_is_explicitly_rejected(course, tmp_path):
     pool, workspace = course
     pool.connect().execute("CREATE TABLE unexpected_data (id TEXT)")
