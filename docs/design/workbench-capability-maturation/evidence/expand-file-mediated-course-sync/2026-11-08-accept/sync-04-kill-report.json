@@ -1,0 +1,143 @@
+{
+  "fixture": "F1 complete small course + 120 extra learning files",
+  "steps": {
+    "fixture": {
+      "counts": {
+        "knowledge_points": 12,
+        "problems": 24,
+        "flash_cards": 6,
+        "knowledge_relations": 6,
+        "problem_attempts": 12,
+        "kp_experiences": 4,
+        "active_practice": 0,
+        "paper_state": 0,
+        "retired_paper_items": 0,
+        "distinct_attempts": 12,
+        "attempt_min": 1,
+        "attempt_max": 12
+      },
+      "learning_files": 128
+    },
+    "sync-04-export-kill": {
+      "baseline_seconds": 1.41,
+      "kill": {
+        "killed": true,
+        "delay": 0.705,
+        "seconds": 0.72,
+        "exit": 1,
+        "tail": []
+      },
+      "retry": {
+        "exit": 0,
+        "seconds": 1.4
+      },
+      "retry_tail": "success: 204 项资产 → C:\\Users\\yanwei\\AppData\\Local\\Temp\\p3-kill-0bd5owsq\\export-killed",
+      "manifest_course": {
+        "id": "dmath",
+        "origin": "course-45822eb1-4ed4-4c84-8c3a-c2f59d84f13b"
+      },
+      "assets": 204
+    },
+    "sync-04-receive-baseline": {
+      "exit": 0,
+      "seconds": 1.55
+    },
+    "sync-04-receive-kill-30": {
+      "fraction": 0.3,
+      "kill": {
+        "killed": true,
+        "delay": 0.465,
+        "seconds": 0.47,
+        "exit": 1,
+        "tail": []
+      },
+      "retry_exit": 0,
+      "retry_seconds": 1.45,
+      "table_counts_equal": true,
+      "attempts_duplicated": false,
+      "missing_files": [],
+      "extra_files": [],
+      "counts": {
+        "knowledge_points": 12,
+        "problems": 24,
+        "flash_cards": 6,
+        "knowledge_relations": 6,
+        "problem_attempts": 12,
+        "kp_experiences": 4,
+        "active_practice": 0,
+        "paper_state": 0,
+        "retired_paper_items": 0,
+        "distinct_attempts": 12,
+        "attempt_min": 1,
+        "attempt_max": 12
+      }
+    },
+    "sync-04-receive-kill-60": {
+      "fraction": 0.6,
+      "kill": {
+        "killed": true,
+        "delay": 0.93,
+        "seconds": 0.94,
+        "exit": 1,
+        "tail": []
+      },
+      "retry_exit": 0,
+      "retry_seconds": 1.5,
+      "table_counts_equal": true,
+      "attempts_duplicated": false,
+      "missing_files": [],
+      "extra_files": [],
+      "counts": {
+        "knowledge_points": 12,
+        "problems": 24,
+        "flash_cards": 6,
+        "knowledge_relations": 6,
+        "problem_attempts": 12,
+        "kp_experiences": 4,
+        "active_practice": 0,
+        "paper_state": 0,
+        "retired_paper_items": 0,
+        "distinct_attempts": 12,
+        "attempt_min": 1,
+        "attempt_max": 12
+      }
+    },
+    "sync-04-receive-kill-90": {
+      "fraction": 0.9,
+      "kill": {
+        "killed": true,
+        "delay": 1.395,
+        "seconds": 1.41,
+        "exit": 1,
+        "tail": []
+      },
+      "retry_exit": 0,
+      "retry_seconds": 1.74,
+      "table_counts_equal": true,
+      "attempts_duplicated": false,
+      "missing_files": [],
+      "extra_files": [],
+      "counts": {
+        "knowledge_points": 12,
+        "problems": 24,
+        "flash_cards": 6,
+        "knowledge_relations": 6,
+        "problem_attempts": 12,
+        "kp_experiences": 4,
+        "active_practice": 0,
+        "paper_state": 0,
+        "retired_paper_items": 0,
+        "distinct_attempts": 12,
+        "attempt_min": 1,
+        "attempt_max": 12
+      }
+    }
+  },
+  "work": "C:\\Users\\yanwei\\AppData\\Local\\Temp\\p3-kill-0bd5owsq",
+  "verdict": {
+    "all_counts_equal": true,
+    "no_duplicate_attempts": true,
+    "no_missing_or_extra_files": true,
+    "all_retries_succeeded": true
+  }
+}

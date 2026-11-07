@@ -1538,6 +1538,12 @@ def _write_file(root, change):
         target.unlink(missing_ok=True)
         return
     target.parent.mkdir(parents=True, exist_ok=True)
+    # A publication killed between write and replace leaves "<name>.<random>.tmp";
+    # the course folder scan counts every file, so an orphan would travel as an asset.
+    prefix = target.name + "."
+    for entry in target.parent.iterdir():
+        if entry.is_file() and entry.name.startswith(prefix) and entry.name.endswith(".tmp"):
+            entry.unlink(missing_ok=True)
     handle, name = tempfile.mkstemp(prefix=target.name + ".", suffix=".tmp", dir=target.parent)
     try:
         with os.fdopen(handle, "wb") as stream:

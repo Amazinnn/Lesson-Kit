@@ -555,6 +555,22 @@ def test_file_publication_failure_has_read_only_inspection_and_resumes(pair, tmp
         assert target.read_bytes() == (left.root / relative).read_bytes()
 
 
+def test_publication_clears_a_temp_left_by_a_killed_writer(tmp_path):
+    from workbench.data import course_sync
+
+    target = tmp_path / ".lessonkit" / "learning" / "note-01.md"
+    target.parent.mkdir(parents=True)
+    (target.parent / (target.name + ".deadbeef.tmp")).write_bytes(b"half written")
+    change = {"action": "create",
+              "asset": {"kind": "file", "content": {
+                  "path": ".lessonkit/learning/note-01.md",
+                  "encoding": "base64",
+                  "data": base64.b64encode(b"# note\n").decode()}}}
+    course_sync._write_file(tmp_path, change)
+    assert target.read_bytes() == b"# note\n"
+    assert [path.name for path in target.parent.iterdir()] == ["note-01.md"]
+
+
 def test_invalid_file_never_enters_a_committed_checkpoint(pair, tmp_path):
     from workbench.data import course_sync
 
