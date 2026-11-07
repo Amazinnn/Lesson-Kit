@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-07",
+  "identity": {
+    "installed_distribution": "lesson-kit 0.1.0 (editable)",
+    "editable_source_root": "D:\\Projects\\Academic Workflow\\lesson-kit",
+    "installed_checkout_branch": "main @ c5a9c642",
+    "python": "3.14.3",
+    "runtime": "no daemon running, so no /api/runtime source_root to read",
+    "implication": "the installed `lesson-kit` command serves main, not this branch; this branch was not installed"
+  },
+  "copy_upgrade": {
+    "source_pool": "D:\\Projects\\Academic Workflow\\lesson-kit\\pool\\dmath.db",
+    "source_unchanged": true,
+    "migrate_returncode": 0,
+    "migrate_output": "Migrated C:\\Users\\yanwei\\AppData\\Local\\Temp\\release02-__tg5soj\\dmath.db:\n  - course_sync_checkpoint\n  - course_sync_units",
+    "preexisting_tables_kept": true,
+    "tables_added": [
+      "course_sync_checkpoint",
+      "course_sync_units"
+    ],
+    "rows_before": 482,
+    "rows_after_preexisting": 482,
+    "problem_columns_added": []
+  },
+  "backup_restore": {
+    "restore_bytes_equal": true,
+    "restore_counts_equal_original": true
+  },
+  "switch": "not performed: branch not merged, runtime not started, active courses untouched"
+}
