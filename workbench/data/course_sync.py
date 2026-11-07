@@ -26,6 +26,11 @@ from workbench.domain import course_sync_references as references
 FORMAT_VERSION = 1
 #: Plain copies of managed files inside the package, the Tutor-readable view.
 READABLE_DIR = "files"
+#: Retired ingest-candidate staging tables: known so a legacy pool exports, never carried.
+RETIRED_TABLES = {"candidate_problems", "candidate_attempts"}
+#: Columns the owning contracts deleted; a legacy row keeps the value in its own pool,
+#: never in the exchange (DATA_MODEL "已删除字段").
+RETIRED_COLUMNS = {"problems": frozenset({"topic_label"})}
 TABLES = {
     "knowledge_points", "knowledge_relations", "problems", "flash_cards",
     "questions", "question_progress", "kp_progress", "problem_progress",
@@ -35,7 +40,7 @@ TABLES = {
     "problem_revisions", "practice_execution_ids", "attempt_operations",
     "practice_request_operations", "part_attempt_context", "part_grading_revisions",
     "part_grading_jobs", "content_mirror_state", "content_mirror_log",
-    "content_sequences", "ingest_batches", "candidate_problems",
+    "content_sequences", "ingest_batches", "candidate_problems", "candidate_attempts",
 }
 IDENTITY_TABLES = {"problem_attempts", "feedback_events", "practice_runs",
                    "practice_execution_ids", "content_mirror_log", "question_progress"}
@@ -239,6 +244,11 @@ def _database_projection(pool, state):
         unknown = names - TABLES
         if unknown:
             raise ValueError("unregistered course tables: " + ", ".join(sorted(unknown)))
+        # Legacy pools still carry the retired ingest-candidate staging tables.
+        # FILE_CONTRACT declares them out of the model, so they are skipped rather
+        # than exported into a schema that no longer has them; the inventory says so.
+        skipped = sorted(names & RETIRED_TABLES)
+        names = names - RETIRED_TABLES
         if "paper_state" in names:
             pending = snapshot.execute("SELECT paper_id FROM paper_state "
                                        "WHERE pending_json IS NOT NULL OR pending_delete=1").fetchall()
@@ -252,10 +262,14 @@ def _database_projection(pool, state):
                 raise ValueError(f"course table has no persistent key: {table}")
             rows = snapshot.execute(f'SELECT * FROM "{table}" ORDER BY '
                                     + ",".join(f'"{key}"' for key in keys)).fetchall()
+            dropped = RETIRED_COLUMNS.get(table, frozenset())
+            if dropped:
+                columns = [row for row in columns if row["name"] not in dropped]
             inventory.append({"table": table, "columns": [row["name"] for row in columns],
-                              "primary_key": keys, "rows": len(rows)})
+                              "primary_key": keys, "rows": len(rows),
+                              "retired_columns": sorted(dropped)})
             for source in rows:
-                row = dict(source)
+                row = {name: value for name, value in dict(source).items() if name not in dropped}
                 key = [row[name] for name in keys]
                 spelling = json.dumps(key, ensure_ascii=False, separators=(",", ":"))
                 local_key = table + "/" + spelling
@@ -269,6 +283,9 @@ def _database_projection(pool, state):
                 if table == "problems" and row.get("deleted_at"):
                     assets[identity]["deleted"] = True
         _portable_integer_references(assets, state)
+        if skipped:
+            inventory.append({"table": "", "columns": [], "primary_key": [],
+                              "rows": 0, "retired_tables": skipped})
         return assets, inventory
     finally:
         snapshot.close()

@@ -380,3 +380,39 @@ def test_layout_transition_never_overwrites_files_of_published_generation(course
         export_course(pool,workspace,target)
     assert snapshot=={name:(target/name).read_bytes() for name in physical}
     assert read_exchange(target)["assets"]==before["assets"]
+
+
+def test_a_retired_staging_table_is_skipped_and_reported(course, tmp_path):
+    """A legacy pool exports, and the omission is visible rather than silent."""
+    pool, workspace = course
+    pool.connect().executescript(
+        "CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY, body TEXT);"
+        "INSERT INTO candidate_problems VALUES ('c-1','旧候选');"
+        "CREATE TABLE candidate_attempts (id INTEGER PRIMARY KEY, candidate_id TEXT);"
+        "INSERT INTO candidate_attempts VALUES (1,'c-1');")
+    pool.commit()
+
+    result = export_course(pool, workspace, tmp_path / 'bundle')
+    package = read_exchange(tmp_path / 'bundle')
+
+    assert result['status'] == 'success'
+    assert not any('candidate' in identity for identity in package['assets'])
+    skipped = [table for table in package['tables'] if table.get('retired_tables')]
+    assert skipped and skipped[0]['retired_tables'] == ['candidate_attempts', 'candidate_problems']
+
+
+def test_a_retired_problem_column_is_dropped_from_the_projection(course, tmp_path):
+    """`problems.topic_label` is deleted by DATA_MODEL, so it never travels."""
+    pool, workspace = course
+    pool.connect().execute("ALTER TABLE problems ADD COLUMN topic_label TEXT")
+    pool.connect().execute("UPDATE problems SET topic_label='旧标签'")
+    pool.commit()
+
+    export_course(pool, workspace, tmp_path / 'bundle')
+    package = read_exchange(tmp_path / 'bundle')
+
+    problem = next(asset for asset in package['assets'].values()
+                   if asset['kind'] == 'row' and asset['content']['table'] == 'problems')
+    assert 'topic_label' not in problem['content']['row']
+    assert problem['content']['row']['problem_text'] == '原题'
+    assert any(table.get('retired_columns') == ['topic_label'] for table in package['tables'])
