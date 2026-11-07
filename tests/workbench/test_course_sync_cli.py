@@ -252,40 +252,52 @@ def test_a_rejected_push_reports_local_completion_without_remote_success(
 def test_schedule_install_records_media_and_registers_one_task(
         workspace, tmp_path, capsys, monkeypatch):
     calls = []
-
-    class Completed:
-        returncode = 0
-        stdout = b"SUCCESS"
-        stderr = b""
-
-    def fake_run(args, **kwargs):
-        calls.append(args)
-        return Completed()
-
-    monkeypatch.setattr(course_sync.subprocess, "run", fake_run)
-    code = cli("math", "schedule", "install", "--repo", str(tmp_path / "repo"),
-               "--path", "sync")
+    binding = {"executable": sys.executable, "arguments": course_sync.course_sync_task.ARGUMENTS,
+               "working_directory": str(Path(course_sync.__file__).resolve().parents[2])}
+    monkeypatch.setattr(course_sync.course_sync_task, "preflight", lambda source: binding)
+    monkeypatch.setattr(course_sync.course_sync_task, "manage", lambda *args: calls.append(args) or subprocess.CompletedProcess([],0,b"OK",b""))
+    code = cli("math", "schedule", "install", "--repo", str(tmp_path / "repo"), "--path", "sync")
     receipt = json.loads(capsys.readouterr().out)
-
     assert code == 0
-    assert receipt["action"] == "install"
-    config = json.loads((workspace / ".lessonkit/course-sync/config.json")
-                        .read_text(encoding="utf-8"))
+    assert receipt["runtime"] == binding
+    config = json.loads((workspace / ".lessonkit/course-sync/config.json").read_text(encoding="utf-8"))
     assert config["media"]["repo"] == str(tmp_path / "repo")
     assert config["media"]["package"] == "sync"
-    assert calls[0][:4] == ["schtasks", "/TN", course_sync.TASK_NAME, "/Create"]
-    assert "--all-configured" in " ".join(calls[0])
-
+    assert calls[0][0] == "install"
     assert cli("math", "schedule", "disable") == 0
-    assert "/DISABLE" in calls[-1]
+    assert calls[-1][0] == "disable"
     assert cli("math", "schedule", "remove") == 0
-    assert "/Delete" in calls[-1]
+    assert calls[-1][0] == "remove"
+
+
+def test_failed_schedule_install_does_not_save_media(workspace,tmp_path,capsys,monkeypatch):
+    monkeypatch.setattr(course_sync.course_sync_task,"preflight",lambda source:{"executable":sys.executable,"arguments":"args","working_directory":str(source)})
+    monkeypatch.setattr(course_sync.course_sync_task,"manage",lambda *a:subprocess.CompletedProcess([],1,b"",b"failed"))
+    assert cli("math","schedule","install","--repo",str(tmp_path/"repo"),"--path","sync") == 4
+    assert not (workspace/".lessonkit/course-sync/config.json").exists()
+
+
+def test_schedule_rejects_partial_media_and_empty_global_install(workspace,capsys,monkeypatch):
+    def no_task(*args):
+        pytest.fail("invalid media must not reach Task Scheduler")
+    monkeypatch.setattr(course_sync.course_sync_task,"manage",no_task)
+    assert cli("math","schedule","install","--repo","only-repo") == 2
+    assert cli("schedule","install") == 2
+
+
+def test_toast_timeout_does_not_lose_sync_result(monkeypatch):
+    monkeypatch.setattr(course_sync.sys,"platform","win32")
+    def timeout(*args,**kwargs):
+        raise subprocess.TimeoutExpired(args[0],15)
+    monkeypatch.setattr(course_sync.subprocess,"run",timeout)
+    assert course_sync._toast("title","message") is False
 
 
 def test_all_configured_aggregates_each_course_exit_code(
         workspace, tmp_path, capsys, monkeypatch):
     repo = _repo(tmp_path)
     monkeypatch.setattr(course_sync, "_toast", lambda title, message: True)
+    monkeypatch.setattr(course_sync.course_sync_task, "manage", lambda *a: subprocess.CompletedProcess([],0,b"",b""))
     cli("math", "schedule", "install", "--repo", str(repo), "--path", "sync")
     capsys.readouterr()
     from workbench import registry
@@ -408,3 +420,9 @@ def test_sync_receives_tutor_edits_from_readable_git_files(workspace, tmp_path, 
     receipt = json.loads(capsys.readouterr().out)
     assert code == 0, receipt
     assert learning.read_text(encoding="utf-8") == "Tutor update"
+
+
+def test_task_output_uses_native_encoding(monkeypatch):
+    monkeypatch.setattr(course_sync.locale,"getencoding",lambda:"cp936")
+    result=subprocess.CompletedProcess([],0,"成功".encode("cp936"),b"")
+    assert course_sync._text(result)=="成功"

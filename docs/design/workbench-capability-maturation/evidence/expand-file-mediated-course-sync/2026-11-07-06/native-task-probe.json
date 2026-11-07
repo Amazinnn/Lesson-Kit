@@ -1,0 +1,43 @@
+{
+  "kind": "isolated real native task lifecycle; no real course configuration",
+  "unintended_test_task": {
+    "created": "2026-11-07T14:43:25",
+    "command": "\"D:\\Python\\python.exe\"",
+    "arguments": "-m workbench.cli.main course-sync --all-configured sync",
+    "removed": true
+  },
+  "runtime": {
+    "executable": "D:\\Python\\python.exe",
+    "arguments": "-m workbench.cli.main course-sync --all-configured sync",
+    "working_directory": "D:\\.codex\\worktrees\\course-sync\\lesson-kit"
+  },
+  "actions": [
+    {
+      "action": "install",
+      "exit": 0,
+      "output": "\ufffd\u0279\ufffd: \ufffd\u0279\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\u01bb\ufffd\ufffd\ufffd\ufffd\ufffd \"LessonKit Sync Acceptance 144f95ad-579e-47b2-a334-0e50ef62e365\"\ufffd\ufffd\r\n"
+    },
+    {
+      "action": "install",
+      "exit": 0,
+      "output": "\ufffd\u0279\ufffd: \ufffd\u0279\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\u01bb\ufffd\ufffd\ufffd\ufffd\ufffd \"LessonKit Sync Acceptance 144f95ad-579e-47b2-a334-0e50ef62e365\"\ufffd\ufffd\r\n"
+    },
+    {
+      "action": "disable",
+      "exit": 0,
+      "output": "\ufffd\u0279\ufffd: \ufffd\ufffd\ufffd\ufffd\ufffd\u02fc\u01bb\ufffd\ufffd\ufffd\ufffd\ufffd \"LessonKit Sync Acceptance 144f95ad-579e-47b2-a334-0e50ef62e365\" \ufffd\u0132\ufffd\ufffd\ufffd\ufffd\ufffd\r\n"
+    },
+    {
+      "action": "enable",
+      "exit": 0,
+      "output": "\ufffd\u0279\ufffd: \ufffd\ufffd\ufffd\ufffd\ufffd\u02fc\u01bb\ufffd\ufffd\ufffd\ufffd\ufffd \"LessonKit Sync Acceptance 144f95ad-579e-47b2-a334-0e50ef62e365\" \ufffd\u0132\ufffd\ufffd\ufffd\ufffd\ufffd\r\n"
+    }
+  ],
+  "run_exit": 0,
+  "execution": {
+    "exit": 0,
+    "cwd": "D:\\.codex\\worktrees\\course-sync\\lesson-kit",
+    "source": "D:\\.codex\\worktrees\\course-sync\\lesson-kit\\workbench\\__init__.py"
+  },
+  "cleanup_exit": 0
+}

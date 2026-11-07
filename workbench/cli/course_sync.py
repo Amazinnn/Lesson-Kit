@@ -9,6 +9,7 @@ a side, 4 partial completion or transport failure — with 2 winning over 3 over
 
 import argparse
 import json
+import locale
 import os
 import subprocess
 import sqlite3
@@ -18,7 +19,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from workbench import registry
-from workbench.bridge import git_sync
+from workbench.bridge import git_sync, course_sync_task
 from workbench.data import course_sync as exchange
 from workbench.data import tutor_handoff
 
@@ -34,8 +35,7 @@ def build_parser(prog="lesson-kit course-sync"):
         description="exchange a whole course through files, Git and an hourly task",
     )
     parser.add_argument("name", nargs="?", help="registered Lesson Kit workspace")
-    parser.add_argument("action", choices=[
-        "export", "receive", "check", "sync", "status", "schedule"])
+    parser.add_argument("action", nargs="?", metavar="{export,receive,check,sync,status,schedule}")
     parser.add_argument("schedule_action", nargs="?",
                         choices=["install", "enable", "disable", "remove"])
     parser.add_argument("--to", help="package directory to write (export)")
@@ -65,6 +65,12 @@ def main(argv=None, prog="lesson-kit course-sync"):
 
 def run(args):
     try:
+        if args.action is None and args.name in {"export", "receive", "check", "sync", "status", "schedule"}:
+            args.name, args.action = None, args.name
+        if args.name == "schedule" and args.action in {"install", "enable", "disable", "remove"}:
+            args.name, args.schedule_action, args.action = None, args.action, "schedule"
+        if args.action not in {"export", "receive", "check", "sync", "status", "schedule"}:
+            raise _InputError("a course-sync action is required")
         if args.action == "schedule":
             return _schedule(args)
         if args.all_configured:
@@ -425,57 +431,76 @@ def _toast(title, message):
     )
     if sys.platform != "win32":
         return False
-    completed = subprocess.run(
-        ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
-        env=dict(os.environ, LK_TOAST_TITLE=title, LK_TOAST_MESSAGE=message),
-        stdin=subprocess.DEVNULL, capture_output=True, check=False, timeout=15,
-        **git_sync.hidden_launch_kwargs())
+    try:
+        completed = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            env=dict(os.environ, LK_TOAST_TITLE=title, LK_TOAST_MESSAGE=message),
+            stdin=subprocess.DEVNULL, capture_output=True, check=False, timeout=15,
+            **git_sync.hidden_launch_kwargs())
+    except (OSError, subprocess.TimeoutExpired):
+        return False
     return completed.returncode == 0
 
 
+def _configured_media(media):
+    if not media.get("repo") and not media.get("package"):
+        return False
+    if not media.get("repo") or not media.get("package"):
+        raise _InputError("configured synchronization needs both repo and package")
+    return True
+
+
 def _schedule(args):
-    """Install or manage the hourly task that runs every configured course."""
+    """Manage the hourly task with an explicit source and working directory."""
     action = args.schedule_action
     if action is None:
         raise _InputError("schedule needs install, enable, disable or remove")
-    media = None
+    media, root = None, None
     if args.name:
         pool, workspace = _open(args.name)
         try:
-            media = _media(pool.root)
+            root = pool.root
+            media = _media(root)
             if any((args.package, args.path, args.repo, args.branch)):
                 media = {**media, **{key: value for key, value in {
                     "package": args.package or args.path, "repo": args.repo,
                     "branch": args.branch, "remote": args.remote}.items() if value}}
-                _save_media(pool.root, media)
-            if action == "install" and not media.get("repo") and not media.get("package"):
+            if action == "install" and not _configured_media(media):
                 raise _InputError("install needs --repo and --path, or saved media")
         finally:
             pool.close()
-    command = f'"{sys.executable}" -m workbench.cli.main course-sync {TASK_COMMAND}'
-    completed = _schtasks(action, command)
+    elif action == "install":
+        configured = False
+        for workspace in registry.list_workspaces():
+            pool, _ = _open(workspace["name"])
+            try:
+                configured = _configured_media(_media(pool.root)) or configured
+            finally:
+                pool.close()
+        if not configured:
+            raise _InputError("install needs at least one course with configured media")
+    source = Path(__file__).resolve().parents[2]
+    binding = course_sync_task.preflight(source) if action == "install" else {
+        "executable": sys.executable, "arguments": course_sync_task.ARGUMENTS,
+        "working_directory": str(source)}
+    command = subprocess.list2cmdline([binding["executable"]]) + " " + binding["arguments"]
+    try:
+        completed = course_sync_task.manage(action, TASK_NAME, source)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(json.dumps({"status": "failed", "action": action, "task": TASK_NAME,
+                          "runtime": binding, "errors": [str(exc)]}, ensure_ascii=False))
+        return 4
+    if completed.returncode == 0 and action == "install" and root is not None:
+        _save_media(root, media)
     receipt = {"status": "success" if completed.returncode == 0 else "failed",
                "action": action, "task": TASK_NAME, "command": command,
-               "media": media, "output": _text(completed)}
+               "runtime": binding, "media": media, "output": _text(completed)}
     print(json.dumps(receipt, ensure_ascii=False, indent=2))
     return 0 if completed.returncode == 0 else 4
 
 
-def _schtasks(action, command):
-    if sys.platform != "win32":
-        raise _InputError("the hourly task uses the built-in Windows Task Scheduler")
-    base = ["schtasks", "/TN", TASK_NAME]
-    if action == "install":
-        args = base + ["/Create", "/SC", "HOURLY", "/TR", command, "/F"]
-    elif action == "remove":
-        args = base + ["/Delete", "/F"]
-    else:
-        args = base + ["/Change", "/ENABLE" if action == "enable" else "/DISABLE"]
-    return subprocess.run(args, stdin=subprocess.DEVNULL, capture_output=True, check=False)
-
-
 def _text(completed):
-    return (completed.stdout + completed.stderr).decode("utf-8", "replace").strip()
+    return (completed.stdout + completed.stderr).decode(locale.getencoding(), "replace").strip()
 
 
 def _run_every_course(args):
@@ -485,7 +510,7 @@ def _run_every_course(args):
         try:
             pool, opened = _open(workspace["name"])
             media = _media(pool.root)
-            if not media.get("repo") and not media.get("package"):
+            if not _configured_media(media):
                 continue
             codes[workspace["name"]] = _dispatch(args, pool, opened, media, emit=False)
         except (ValueError, OSError, RuntimeError, sqlite3.Error) as exc:
