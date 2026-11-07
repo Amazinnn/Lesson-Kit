@@ -1713,6 +1713,8 @@ def _paper_update_preview(pool, conversation_id, turn_id, workspace_name,
         "order_changed": set(current_ids) == set(problem_ids) and current_ids != problem_ids,
         "structure_changed": preview["structure_changed"],
         "resets_progress": preview["resets_progress"],
+        "preserved_items": preview["preserved_items"],
+        "removed_items": preview["removed_items"],
         "completed_items": preview["completed_items"],
         "draft_items": preview["draft_items"],
     }

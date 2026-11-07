@@ -400,8 +400,17 @@ def preview_update(pool, practice_set_id, **fields):
                         execution_id=(checkpoint or {}).get('execution_id'),
                         progress=[dict(position=i['position'], state=i['state'],
                                        attempt_id=i.get('attempt_id'), draft=i.get('draft')) for i in items])
+    wanted = [item['problem_id'] for item in next_plan['items']]
+    held = {item['item_id'] for item in items if item.get('item_type') == 'problem'}
+    preserved = sum(1 for problem_id in wanted if problem_id in held)
+    added = sum(1 for problem_id in wanted if problem_id not in held)
+    removed = sum(1 for item in items
+                  if item.get('item_type') == 'problem' and item['item_id'] not in set(wanted))
     return dict(practice_set_id=practice_set_id, generation=current['generation'],
-                structure_changed=changed, resets_progress=bool(changed and checkpoint),
+                structure_changed=changed,
+                # A membership edit keeps the run unless nothing survives it.
+                resets_progress=bool(changed and checkpoint and not preserved),
+                preserved_items=preserved, added_items=added, removed_items=removed,
                 completed_items=sum(i['state'] != 'pending' for i in items),
                 draft_items=sum(bool(i.get('draft')) for i in items), confirmation=confirmation)
 
@@ -414,7 +423,8 @@ def update_saved(pool, practice_set_id, *, confirmation=None, **fields):
         if preview['structure_changed']:
             if confirmation != preview['confirmation']:
                 raise ValueError('confirm the current Paper update preview before changing its items')
-            paper_progress.reset(pool, practice_set_id)
+            paper_progress.reconcile_membership(
+                pool, practice_set_id, [item['problem_id'] for item in next_plan['items']])
         if next_plan == current['plan']:
             return current
         raw = dict(practice_set_id=practice_set_id, created_at=current['created_at'],

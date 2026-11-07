@@ -120,6 +120,104 @@ def reset(pool, paper_id):
         _delete(pool)
 
 
+def reconcile_membership(pool, paper_id, problem_ids, reason="membership"):
+    """Rewrite one Paper's execution by question identity, keeping survivors.
+
+    A membership or order edit no longer throws the unfinished run away: every
+    surviving question keeps its state, attempt link, draft and sequence, an added
+    or replaced identity starts pending, and a removed item moves into the retained
+    history instead of disappearing with the run.
+    """
+    from workbench.data import active_practice
+    from workbench.data.pool import ensure_paper_lifecycle_schema
+    conn = pool.connect()
+    ensure_state(conn, paper_id)
+    ensure_paper_lifecycle_schema(conn)
+    wanted = [str(problem_id) for problem_id in problem_ids]
+    record = _live_or_parked(pool, paper_id)
+    if record is None:
+        return {"preserved": 0, "added": len(wanted), "removed": 0, "execution_id": None}
+    live = record.get("source_ref") == paper_id and active_practice.current(pool, resolve=False)
+    live = bool(live and live.get("execution_id") == record.get("execution_id"))
+    generation = state(conn, paper_id)["generation"] + 1
+    old_items = [item for item in record.get("items") or []
+                 if item.get("item_type") == "problem"]
+    known = {item["item_id"]: item for item in old_items}
+    kept = [problem_id for problem_id in wanted if problem_id in known]
+    added = [problem_id for problem_id in wanted if problem_id not in known]
+    removed = [item for item in old_items if item["item_id"] not in set(wanted)]
+    cursor = _reconciled_cursor(old_items, wanted, int(record.get("cursor") or 0))
+    items = []
+    for position, problem_id in enumerate(wanted):
+        source = known.get(problem_id)
+        if source is None:
+            items.append({"position": position, "item_type": "problem", "item_id": problem_id,
+                          "direction": "", "state": "pending", "attempt_id": None,
+                          "content_revision": revision(conn, problem_id),
+                          "draft": {}, "draft_sequence": 0})
+            continue
+        items.append({**source, "position": position})
+    for item in removed:
+        _retire_item(conn, paper_id, item, reason)
+    record = {**record, "items": items, "cursor": cursor, "paper_generation": generation}
+    conn.execute('UPDATE paper_state SET generation=? WHERE paper_id=?', (generation, paper_id))
+    if items:
+        if live:
+            active_practice._delete(pool)
+            active_practice._restore(pool, record)
+        else:
+            conn.execute('UPDATE paper_state SET checkpoint_json=? WHERE paper_id=?',
+                         (json.dumps(record, ensure_ascii=False), paper_id))
+    else:
+        # Nothing survives, so there is no unfinished run to keep; every removed
+        # item is already in the retained history.
+        if live:
+            active_practice._delete(pool)
+        conn.execute('UPDATE paper_state SET checkpoint_json=NULL WHERE paper_id=?', (paper_id,))
+    return {"preserved": len(kept), "added": len(added), "removed": len(removed),
+            "execution_id": record.get("execution_id")}
+
+
+def _live_or_parked(pool, paper_id):
+    from workbench.data import active_practice
+    active = active_practice.current(pool, resolve=False)
+    if active and active.get("source_ref") == paper_id:
+        return active
+    parked = state(pool.connect(), paper_id)["checkpoint_json"]
+    return json.loads(parked) if parked else None
+
+
+def _reconciled_cursor(old_items, wanted, cursor):
+    """Keep the cursor on its question; otherwise the next, then previous survivor."""
+    if not wanted:
+        return 0
+    position = max(0, min(cursor, len(old_items) - 1)) if old_items else 0
+    anchor = old_items[position]["item_id"] if old_items else None
+    if anchor in wanted:
+        return wanted.index(anchor)
+    for item in old_items[position + 1:]:
+        if item["item_id"] in wanted:
+            return wanted.index(item["item_id"])
+    for item in reversed(old_items[:position]):
+        if item["item_id"] in wanted:
+            return wanted.index(item["item_id"])
+    return 0
+
+
+def _retire_item(conn, paper_id, item, reason):
+    sequence = conn.execute(
+        'SELECT COALESCE(MAX(sequence), 0) + 1 FROM retired_paper_items WHERE paper_id=?',
+        (paper_id,)).fetchone()[0]
+    conn.execute(
+        'INSERT INTO retired_paper_items (paper_id, sequence, problem_id, position, state,'
+        ' attempt_id, content_revision, draft_json, draft_sequence, reason)'
+        ' VALUES (?,?,?,?,?,?,?,?,?,?)',
+        (paper_id, sequence, item["item_id"], item.get("position", 0), item.get("state", "pending"),
+         item.get("attempt_id"), item.get("content_revision"),
+         json.dumps(item.get("draft") or {}, ensure_ascii=False),
+         item.get("draft_sequence", 0), reason))
+
+
 def queue_file(pool, paper_id, record):
     conn = pool.connect()
     ensure_state(conn, paper_id)

@@ -446,6 +446,32 @@ def _maximum_readable_suffix(conn, table, column, marker):
     return max(numbers, default=None)
 
 
+def ensure_paper_lifecycle_schema(conn):
+    """Create the retained Paper-item history incrementally, on explicit writes only."""
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' "
+                    "AND name='retired_paper_items'").fetchone():
+        return []
+    conn.execute(
+        """
+        CREATE TABLE retired_paper_items (
+            paper_id         TEXT NOT NULL,
+            sequence         INTEGER NOT NULL,
+            problem_id       TEXT NOT NULL,
+            position         INTEGER NOT NULL,
+            state            TEXT NOT NULL,
+            attempt_id       INTEGER,
+            content_revision INTEGER,
+            draft_json       TEXT,
+            draft_sequence   INTEGER NOT NULL DEFAULT 0,
+            reason           TEXT,
+            retired_at       TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (paper_id, sequence)
+        )
+        """
+    )
+    return ["retired_paper_items"]
+
+
 def ensure_course_sync_schema(conn):
     """Create device-local course exchange bookkeeping incrementally."""
     changes = []

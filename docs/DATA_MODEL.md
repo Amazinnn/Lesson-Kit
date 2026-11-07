@@ -273,6 +273,7 @@ CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 
 | `active_practice_items.content_revision` | 该题作答内容版本 | Data 修题 / 提交校验 |
 | `active_practice_items.draft_json/draft_sequence` | 文本/选择输入及 `stuck`、`reference_viewed` 执行标记与单调顺序；迟到写入拒绝，本身不是学习事实 | 浏览器经 Data 保存 / 恢复 |
 | `problem_revisions.problem_id/revision` | 作答语义版本，缺行等价 1 | 共用 Data 更新规则 / 提交校验 |
+| `retired_paper_items`（`paper_id, sequence`） | 被移出某卷的题目：位置、状态、attempt 关联、内容版本、最后确认草稿、原因与时间；只增不改，重启后仍可回看。它是题目的历史归属，不是学习证据 | Data 改名单（`paper_progress.reconcile_membership`）/ 记录页与队列回看 |
 | `practice_runs.execution_id/paper_generation` | 归档执行及结构版本；旧 execution_id 可为空 | Data 归档 / 反馈校验 |
 | `active_practice.reveal_timing` | 普通题轮次的 `per_item` 或 `on_submit` 答案展示方式，开始后固定；NULL 为旧轮次兼容语义 | Data 执行器 / 练习页恢复 |
 | `practice_runs.reveal_timing` | 已结束轮次的答案展示方式快照，NULL 为历史兼容 | Data 归档 / 答卷读取 |
@@ -304,7 +305,9 @@ CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 
 
 绑定只改 Paper 执行状态与 `attempt_id` 链接；`problem_progress`、`learning_current_state`、`learner_signals`、`review_schedule` 只在导入带 `rating` 时按既有评分规则改变。无 `rating` 的导入不改变学习投影。目标题已有 answered/stuck 时，追加新 Attempt 并重绑该位置；旧 Attempt 不删除、不改写。导入清空待提交 answer/choices 与 stuck 标记，保留 `reference_viewed` 事实。
 
-`papers append` 在卷末追加一条 pending item，使 `paper_state.generation` 递增，并同步活动执行或暂停检查点的 `paper_generation`；现有题目状态、Attempt 链接和草稿不变。它是独立的补给动作，不走“手工改名单/题序重置进度”路径。
+`papers append` 在卷末追加一条 pending item，使 `paper_state.generation` 递增，并同步活动执行或暂停检查点的 `paper_generation`；现有题目状态、Attempt 链接和草稿不变。它是独立的补给动作。
+
+手工改名单或题序按**题目身份**协调：存活题的状态、attempt 关联、草稿与顺序原样跟随新位置，新增/替代题从 pending 开始，被移除的题写入 `retired_paper_items` 而不随整卷丢失；游标先跟自己那道题，否则落到后一道存活题，再否则前一道；结构版本递增一次。仅当整卷一道也不剩时才清空该卷未完成执行，已移除项仍在历史表里。学习证据、已完成轮次与其他卷不受影响。
 
 完成仍跟随执行模式：legacy 执行在导入补齐最后一题时按既有规则归档 completed；`per_item` / `on_submit` 仍等待学习者显式交卷。`paper_generation` 变化会使携带旧 generation 的浏览器写入按既有 stale 规则被拒绝，必须重新加载。
 

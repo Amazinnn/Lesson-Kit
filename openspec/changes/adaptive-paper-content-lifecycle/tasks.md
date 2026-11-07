@@ -20,8 +20,8 @@
 
 ## 4. Paper 自适应与归档
 
-- [ ] 4.1 实现基于题目身份的名单/题序协调，保留存活项状态、草稿、Attempt 关联、展示方式与执行 ID；只初始化新增/替代项。
-- [ ] 4.2 同步 active/parked 状态、游标、结构版本及 pending 文件意图，保留被移除项历史；覆盖迟到输入、重复请求、提交后中断和部分文件发布恢复。
+- [x] 4.1 实现基于题目身份的名单/题序协调，保留存活项状态、草稿、Attempt 关联、展示方式与执行 ID；只初始化新增/替代项。（`paper_progress.reconcile_membership`；`tests/workbench/test_paper_lifecycle.py` 覆盖存活状态/草稿/Attempt、新增题 pending、空卷）
+- [x] 4.2 同步 active/parked 状态、游标、结构版本及 pending 文件意图，保留被移除项历史；覆盖迟到输入、重复请求、提交后中断和部分文件发布恢复。（active 与 parked 同一变换、光标规则、generation 递增、`retired_paper_items` 保留；迟到写入/重复请求/发布失败恢复沿用既有用例并已按新语义更新）
 - [ ] 4.3 实现 Paper 归档/恢复及空执行表达：归档保留定义和检查点，恢复协调最新替代/可用性，不恢复归档题，不制造完成或奖励。
 - [ ] 4.4 将整卷重做保持为独立显式动作；saved Paper 重练使用当前名单，已完成轮次不重开，临时 Paper 历史重放明确报告不可用项。
 
@@ -41,8 +41,8 @@
 
 ## 7. 文档同步与确定性验证
 
-- [ ] 7.1 同 PR 同步受影响主 specs、DATA_MODEL、ARCHITECTURE、FILE_CONTRACT、PRODUCT-MANUAL、ACTION-GRAPH、GLOSSARY 和交接记录；明确新增/退役动作及继承/历史/当前展示边界。
-- [ ] 7.2 运行相关 Python/Node 集中测试及严格 OpenSpec 校验，记录夹具验证、跳过项、真实环境未验收状态；提供可恢复的实现交接。
+- [x] 7.1 同 PR 同步受影响主 specs、DATA_MODEL、ARCHITECTURE、FILE_CONTRACT、PRODUCT-MANUAL、ACTION-GRAPH、GLOSSARY 和交接记录；明确新增/退役动作及继承/历史/当前展示边界。（本轮同步 DATA_MODEL 的 `retired_paper_items` 与协调规则、FILE_CONTRACT 的预览/确认语义、PRODUCT-MANUAL 的改卷说明、ACTION-GRAPH 的改级条目；本段未触及 ARCHITECTURE/GLOSSARY）
+- [x] 7.2 运行相关 Python/Node 集中测试及严格 OpenSpec 校验，记录夹具验证、跳过项、真实环境未验收状态；提供可恢复的实现交接。（全仓 `PYTHONUTF8=1 pytest tests -q` 1,547 passed；`openspec validate adaptive-paper-content-lifecycle --strict` 与 live specs strict 通过；夹具为临时工作区，真实课程与浏览器未验收）
 
 ## 8. 独立接受与发布边界
 

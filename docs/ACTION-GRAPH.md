@@ -395,3 +395,5 @@ flowchart LR
 - 2026-11-07 课程交换 CLI（expand-file-mediated-course-sync / WP01 续）：新增 `lesson-kit course-sync <工作区> export|receive|check|sync|status|schedule` 与 `--all-configured sync`。回执顶层 `status` 为 success/partial/conflict/failed，退出码 0 完整成功、2 输入或格式错误、3 待选侧、4 部分完成或传输失败（2 > 3 > 4）；`local` 与 `remote` 分开报告，推送被拒不得冒充远端成功。Git 仓库是可选媒介，任务只 stage 包内受管理路径。新增 L2 两条命令与 L3 两条动作；未决冲突只通知一次并去重；不新增学习动作、不改池内容。
 
 - 2026-11-07 课程交换首次接收（expand-file-mediated-course-sync / WP01 续）：既有 receive 增加未注册工作区的 `--to` 创建与注册编排，复用规范建库入口；先校验包再创建，已注册目标只允许同目录。提交边界异常保存本次部分结果并要求检查落盘状态；未新增审批动作。
+
+- 2026-11-07 改卷生命周期首段（adaptive-paper-content-lifecycle）：**改级**「改名单 / 改题序」——由「整卷重置未完成进度」改为按题目身份协调：存活题的状态、attempt 关联与草稿跟随新位置，新增或替换题从 pending 开始，被移除题写入保留历史 `retired_paper_items`；游标先跟原题、否则顺延到后一道再前一道存活题；结构版本递增一次；只有整卷一道不剩时才清空该卷执行。预览新增 `preserved_items/added_items/removed_items`，`resets_progress` 只在无存活项时为真；确认仍是并发 expected-state 守卫，不是额外审批。学习证据、已完成轮次与其他卷不变。DATA_MODEL、FILE_CONTRACT、PRODUCT-MANUAL 与 change delta 同步。

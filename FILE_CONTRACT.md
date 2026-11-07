@@ -598,10 +598,16 @@ is container metadata. Use `papers <workspace> list`, `get <ps-id>`,
 `preview <ps-id> --input <manifest>`, `update <ps-id> --input <manifest>
 --confirmation <preview.json>`, or `delete <ps-id>`. Preview/update accept an
 explicit item list and/or metadata. Metadata and effective no-op updates retain
-progress. Changing membership/order requires the current preview's confirmation
-object: target order, structure generation and exact unfinished states/drafts.
-If those change, obtain and confirm a fresh preview. Updates retain the ID and
-do not start practice. Question corrections use `data update problem <existing-id>`
+progress. A membership/order edit reconciles the unfinished run by question
+identity: surviving items keep state, attempt link, draft and draft sequence,
+added or replacement questions start pending, removed items move into the
+retained item history, and the run is cleared only when nothing survives. It
+requires the current preview's confirmation object (target order, structure
+generation and exact unfinished states/drafts), which is an expected-state
+guard rather than a second approval; if those change, obtain and confirm a
+fresh preview. The preview reports `preserved_items`, `added_items`,
+`removed_items` and `resets_progress` (true only when no item survives).
+Updates retain the ID and do not start practice. Question corrections use `data update problem <existing-id>`
 or `problem-patch`; changing answering type does not allocate a new question ID.
 An explicit `append <ps-id> --problem <problem-id>` adds one existing problem at
 the end without resetting existing item states, attempt links, drafts, or

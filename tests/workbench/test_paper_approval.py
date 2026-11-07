@@ -169,7 +169,9 @@ class PaperApprovalTests(unittest.TestCase):
             "dmath-ch06-prob-002", "dmath-ch06-prob-001",
         ])
         self.assertTrue(approval["order_changed"])
-        self.assertTrue(approval["resets_progress"])
+        # A reorder keeps the run, so it is no longer an impact that resets progress.
+        self.assertFalse(approval["resets_progress"])
+        self.assertEqual(approval["preserved_items"], 2)
         self.assertEqual(approval["completed_items"], 1)
         self.assertEqual(approval["draft_items"], 1)
         self.assertNotIn("confirmation", approval)
@@ -275,7 +277,11 @@ class PaperApprovalTests(unittest.TestCase):
         self.assertEqual(duplicate["approval"]["status"], "approved")
         self.assertEqual(self.practice_sets.get_saved(
             self.pool, paper["practice_set_id"])["updated_at"], updated_at)
-        self.assertIsNone(self.active_practice.current(self.pool))
+        # The approved reorder keeps the unfinished run and its draft.
+        current = self.active_practice.current(self.pool)
+        self.assertEqual([item["item_id"] for item in current["items"]],
+                         [second_id, first_id])
+        self.assertEqual(current["items"][0]["draft"], changed_draft)
         self.assertEqual([tuple(row) for row in self.pool.connect().execute(
             "SELECT problem_id, status, note FROM problem_attempts ORDER BY id")], history_before)
         self.assertEqual(self.practice_sets.get_saved(

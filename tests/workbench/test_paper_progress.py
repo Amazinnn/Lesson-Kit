@@ -264,12 +264,17 @@ def test_metadata_preserves_progress_structure_requires_confirmed_preview(pool):
     assert active_practice.current(pool)['execution_id'] == run['execution_id']
     before = evidence(pool)
     preview = practice_sets.preview_update(pool, a, problem_ids=[R, Q])
-    assert preview['resets_progress'] and preview['completed_items'] == 1
+    assert preview['structure_changed'] and not preview['resets_progress']
+    assert preview['preserved_items'] == 2 and preview['completed_items'] == 1
     with pytest.raises(ValueError, match='confirm'):
         practice_sets.update_saved(pool, a, problem_ids=[R, Q])
     assert active_practice.current(pool)['items'][0]['item_id'] == Q
     practice_sets.update_saved(pool, a, problem_ids=[R, Q], confirmation=preview['confirmation'])
-    assert active_practice.current(pool) is None
+    # A reorder keeps the run: both items survive with their own state.
+    current = active_practice.current(pool)
+    assert current['execution_id'] == run['execution_id']
+    assert [item['item_id'] for item in current['items']] == [R, Q]
+    assert current['items'][1]['state'] == 'stuck'
     assert practice_sets.get_saved(pool, a)['practice_set_id'] == a
     assert evidence(pool) == before
 
@@ -332,7 +337,12 @@ def test_paper_file_publication_failure_recovers_without_losing_progress_rules(p
         practice_sets.update_saved(pool, a, problem_ids=[R], confirmation=preview['confirmation'])
     monkeypatch.setattr(practice_sets, '_atomic_json', original)
     assert [i['problem_id'] for i in practice_sets.get_saved(pool, a)['plan']['items']] == [R]
-    assert active_practice.current(pool) is None
+    # The surviving question keeps the run; the removed one is retained as history.
+    current = active_practice.current(pool)
+    assert [item['item_id'] for item in current['items']] == [R]
+    retired = pool.connect().execute(
+        'SELECT problem_id, state FROM retired_paper_items WHERE paper_id=?', (a,)).fetchall()
+    assert [row[0] for row in retired] == [Q]
 
 
 def test_draft_sequence_and_preview_token_reject_late_writes(pool):
