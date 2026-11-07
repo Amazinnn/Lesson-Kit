@@ -109,7 +109,7 @@ def _position(connection):
         record["items"] = [dict(row) for row in connection.execute(
             "SELECT * FROM active_practice_items ORDER BY position")]
         record["mode"] = "当前进行中"
-    else:
+    elif _has(connection, "paper_state"):
         parked = connection.execute(
             "SELECT paper_id, generation, checkpoint_json FROM paper_state "
             "WHERE checkpoint_json IS NOT NULL LIMIT 1").fetchone()
@@ -128,6 +128,19 @@ def _position(connection):
                                   if record.get("source_label") else ""),
              f"- 位置：第 {cursor + 1} 题 / 共 {len(items)} 题",
              f"- 揭晓时机：{record.get('reveal_timing') or '未记录'}", ""]
+    lines += ["## 参考答案披露事实", ""]
+    revealed = []
+    for item in items:
+        draft = item.get("draft")
+        if draft is None:
+            draft = json.loads(item.get("draft_json") or "{}")
+        if draft.get("reference_viewed"):
+            revealed.append(f"- `{item['item_id']}`（已查看参考答案）")
+        for part_id, part in (draft.get("parts") or {}).items():
+            if part.get("reference_viewed"):
+                revealed.append(f"- `{item['item_id']}` / `{part_id}`（已查看参考答案）")
+    lines += revealed or ["（没有已记录的披露事实）"]
+    lines.append("")
     pending = [item for item in items if item.get("state") == "pending"]
     lines += ["## 未答项", ""]
     if pending:
