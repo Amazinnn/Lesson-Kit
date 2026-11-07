@@ -8,11 +8,11 @@
 
 - [x] 2.1 从实际 schema、注册目录及浏览器保存值生成覆盖表，对 data-exchange-matrix 每行登记字段、writer、consumer、引用、删除和旧格式。F1/F4 中每类均有样本，未知类型不得静默略过。（证据 `…/2026-11-08-accept/2-1-coverage-table.md`：33 表/242 字段逐字段写明 writer/consumer/是否随包/删除语义/旧格式，矩阵逐类对照；**报出 14 条 GAP**，最严重为 GAP-01「删除传播」——只有 `problems` 有本地墓碑，删闪卡/知识点/学习文件后下一次导出永久失败且无 CLI 入口记录显式删除）
 - [x] 2.2 在 workbench/domain/course_sync.py 实现 plan_exchange 的纯比较，先覆盖无变化、单侧、同改一致、双侧、明确删除/缺文件、历史并集和按题草稿冲突。通过 tests/workbench/test_course_sync.py 的表驱动反例。
-- [ ] 2.3 在 workbench/data/course_sync.py 复用现有查询导出完整manifest、正文与附件，保存课程来源和记录来源映射。F1 逐字段和字节核对，再在 F2 计时。
+- [x] 2.3 在 workbench/data/course_sync.py 复用现有查询导出完整manifest、正文与附件，保存课程来源和记录来源映射。F1 逐字段和字节核对，再在 F2 计时。（证据 `…/2026-11-08-accept/2-3-f1-field-and-byte-check.md`：99 identity / 1,704 叶子字段 / 30 表 1,106 字段值 / 23 文件 2,100,096 B 四跳字节 / 10 张引用图 / 14 条记录身份，**实质差异 0**；3 条预期差异逐条说明。F2 计时见 `../2026-11-08-p3/f2-timing.json`）
 - [x] 2.4 实现预检、注册新课程、身份疑点输入、独立单元接收及中断续办；按同一操作身份重试。每个数据库/文件发布边界注入失败，证明无悬空引用和重复作答。（预检/注册新课程：F1 一次接收；身份疑点：F3 同名异源需显式 associate；独立单元：`test_bad_execution_item_does_not_block_independent_content`；文件发布失败续办：`test_file_publication_failure_has_read_only_inspection_and_resumes`；进程级中断与重试：`…/2026-11-08-accept/3-2-sync-04-process-kill.md`，真子进程硬杀 ×4 后计数一致、无重复作答、无缺失/多余文件；顺带修复孤儿 `.tmp` 被当资产传播的缺陷 + 回归用例）
 - [x] 2.5 将目标、范围、资料索引、总结、误解和续接文件全部登记并接收 CRUD；定义无原生会话也可读取的 Tutor handoff，原始答案/揭晓/未答项完整。（证据 `…/2026-11-08-accept/2-5-learning-files-and-handoff.md`：登记范围逐类、CRUD 逐项对应用例与真 CLI 步骤、handoff 四项完整性；边界：写端无删除学习文件命令，删除以显式墓碑表达，spec 只要求接收端支持）
 - [x] 2.6 为浏览器学习偏好建立已确认保存的课程投影和接收消费路径。A→B 后真实练习验证提交粒度和揭晓时机，未确认浏览器输入不得冒充已保存。（证据 `…/2026-11-08-accept/2-6-browser-preferences.md`：8 条 Node 用例逐项映射；A→B 真实浏览器链路见 P3 端口 3099 的显示评价/新卷揭晓时机/进行中卷冻结三断言；被拒保存不计已确认）
-- [ ] 2.7 新增 workbench/cli/course_sync.py 并在 main.py/surface.py 注册 export/receive/check/sync/status/schedule。按 design 的 JSON/status/退出码契约测试一次导出、一次接收、无手改版本的单侧更新。
+- [x] 2.7 新增 workbench/cli/course_sync.py 并在 main.py/surface.py 注册 export/receive/check/sync/status/schedule。按 design 的 JSON/status/退出码契约测试一次导出、一次接收、无手改版本的单侧更新。（证据 `…/2026-11-08-accept/2-7-cli-receipts.md`：20 条命令回执字段全体命中；退出码 0/2/3/4 四档实测；`local`/`remote` 分离；持久回执 `last-receipt.json` 与进程退出码一致。**未验：receive 自身 partial、多课程混合优先级（2>3>4）**）
 - [x]  新增 workbench/bridge/git_sync.py，参数数组调用显式cwd的系统git，只stage受管理路径；以临时bare仓库覆盖push拒绝、真实分叉和无变化，再以专用远端回读验证。
 - [x] 2.9 系统任务按每小时、全部已配置课程调用同一CLI，提供安装/更新/启停/删除。实测手动并发、某课程受阻、凭据缺失和一次冲突通知。（计划任务安装/停用/启用/删除已验证，调度触发未验证。证据 `…/2026-11-08-accept/2-9-scheduled-task.md`：逐项映射用例 + 真实 Windows 任务结果；**调度触发与真实凭据缺失按未运行登记，不计通过**）
 - [x] 2.10 用免费真实LLM在独立对话读取课程文件，输出更新后CLI接收并反向交换；保存输入输出与实际落库，不能只给模拟器日志。证据：`evidence/expand-file-mediated-course-sync/2026-11-07-09/`（真实免费调用 1 次，初次接收失败原文保留；修复后以同一份输出重放，0 次新调用，原始作答不变、新笔记落库、再导出带出）。
@@ -31,4 +31,4 @@
 - [x] 4.1 把 `retired_paper_items` 纳入完整资产矩阵：身份带安装来源、attempt 引用转换、接收端分配本地序号、多跳传递与重复接收幂等。（实现 `workbench/data/course_sync.py`；`tests/workbench/test_course_sync_lifecycle.py` 覆盖首跳/次跳/同号并存/重复接收）
 - [x] 4.2 历史快照中不可解析的引用如实报告且不阻断导出；不按相同编号绑定本地记录。（导出清单 `dangling_history_references`；同上测试）
 - [x] 4.3 跨机重复请求识别并返回原结果；同请求不同内容仍为真实冲突；历史显示快照与可操作引用分离。（`attempts._correction_already_holds`：指纹绑在本机 attempt 号上的 `correct` 在目标机按「效果已成立」返回原结果且零写入；不同内容仍是真实冲突；显示缓存编号保留为不透明值、不重绑，见 `tests/workbench/test_course_sync_lifecycle.py`）
-- [ ] 4.4 LIFE-SYNC 全矩阵（active/parked、首尾/游标题移除、全移除、中断重试、旧库无表接收）与真实入口验收。（证据 `…/2026-11-08-accept/4-4-life-sync.md`：六行逐条映射到用例，中断重试由 SYNC-04 硬杀覆盖，真实入口含 CLI/浏览器/免费 LLM；保留意见：未对 Git 提交本身做硬杀、仅 Windows 验证。**该项待 2.7 CLI 回执证据落定后一并勾**）
+- [x] 4.4 LIFE-SYNC 全矩阵（active/parked、首尾/游标题移除、全移除、中断重试、旧库无表接收）与真实入口验收。（证据 `…/2026-11-08-accept/4-4-life-sync.md`：六行逐条映射到用例，中断重试由 SYNC-04 硬杀覆盖，真实入口含 CLI 回执（`2-7-cli-receipts.md`）/浏览器/免费 LLM；保留意见：未对 Git 提交本身做硬杀、仅 Windows 验证）
