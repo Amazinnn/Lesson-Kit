@@ -39,3 +39,5 @@ CR02 followup 2026-11-07（R06 审查，证据 `tmp/agent-runs/R06-results.json`
 - **已修**：`part_grading_jobs` 的 `conversation_id`/`turn_id` 是发送机器的会话名。导入完成态作业时原样写入会把目标机自己的会话标成 internal（学习的会话列表里消失、GET 变 404，R06 实测 `conv-001` 复现）。现接收端丢弃这两个字段，保留 `status`/`error`。
 - **待决策（未实现）**：`attempt_operations` 的 `correct` 指纹按当时本机 attempt id 计算，跨机重放必然不匹配，收到后重放会报“request_id 已用于不同内容”——这是误导性错误而非真实冲突；`apply` 指纹可重算（含 manifest 索引），重放正常；被篡改的指纹目前**不**阻止重放。可选方向：(a) 导出时按来源身份重写指纹（会使同一条记录在往返后被判为变更，需同时改比较口径）；(b) 为操作重放引入与机器无关的稳定键（新身份，属 schema 变更）。两者都超出“接收端小修”，须先定契约。
 - **待决策（未实现）**：`active_practice_items` 的展示缓存 JSON 里嵌的 `attempt_id`/`feedback_event_id` 仍是来源机器的整数；被真实 writer 硬删的 feedback 事件不在导出包里，若把该字段声明为引用，导出会直接拒绝（R06 的 `if_declared` 实测）。浏览器只有 `paper-practice.js` 读取 `feedback_event_id`。方向：导出时剥离这类展示缓存编号，或补上“本地硬删除的显式删除记录”（同 CR05 的删除记录缺口），二者需一并决定。
+
+CR02/S011：所有者已确定跨设备同请求返回原结果、历史按当时快照显示。此前“待决策”中的用户行为方向已确定，稳定身份与缓存引用实现仍待执行者按职责契约协调，禁止将其标为已修。新增改卷保留表与WP01资产登记缺口纳入下一轮P1完整往返检查。详见NEXT-EXECUTION-PLAN-2026-11-07.md。
