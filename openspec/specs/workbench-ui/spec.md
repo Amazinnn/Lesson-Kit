@@ -1178,7 +1178,7 @@ Saved Paper cards SHALL arrive folded with title, count and management controls 
 
 ### Requirement: Learner settings in the settings view
 
-The workbench's left column SHALL carry a single 「设置」 entry to the settings view, without inline preference controls. The settings view SHALL contain running-send behavior, self-rating visibility and source visibility alongside appearance preferences, retaining their existing workspace browser storage and defaults.
+The workbench's left column SHALL carry a single 「设置」 entry to the settings view, without inline preference controls. The settings view SHALL contain running-send behavior, self-rating visibility and source visibility alongside appearance preferences, retaining their existing defaults and browser mirror. Explicit non-sensitive course learning preferences SHALL also be confirmed through the course preference writer and restored from received course files. Device appearance and Provider credentials remain owned by their existing storage contracts.
 The self-rating preference SHALL be a checkbox, defaulting to on: self-rating behaves exactly
 as before. With it off, no self-rating surface SHALL appear anywhere in the
 flow — the rating-timing choice is hidden and not required to start, the
@@ -1209,6 +1209,16 @@ workspace in the browser across tabs and restarts, and SHALL immediately hide or
 
 - **WHEN** an ordinary Paper started with self-rating off and the learner turns the display preference on after submitting an eligible item
 - **THEN** the existing item offers optional self-rating without restarting, duplicating an Attempt or changing its answer lock
+
+#### Scenario: Received course preferences win over an old browser mirror
+
+- **WHEN** a course with confirmed learning preferences is received and opened in a browser with stale workspace preferences
+- **THEN** new practice uses the received saved values while any existing execution retains its frozen reveal timing
+
+#### Scenario: Preference persistence fails
+
+- **WHEN** the course preference writer rejects or cannot persist a change
+- **THEN** the UI reports a minimal save failure and the value is not described as confirmed or included as saved export data
 
 ### Requirement: Long provider lists remain navigable
 At desktop widths, when the visible new-conversation provider picker has more model options than fit in the available height, the system SHALL allow the learner to scroll the options with native wheel input while keeping the picker heading and helper text visible.
