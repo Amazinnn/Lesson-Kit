@@ -1,0 +1,19 @@
+{
+  "provider": "opencode",
+  "model": "deepseek-v4.1-flash-free",
+  "calls": 1,
+  "date": "2026-11-07T15:18:50.340878",
+  "free_evidence": "Official console models documentation plus installed model metadata: input/output/cache prices all zero",
+  "free_source": "https://opencode.ai/docs/console/models/",
+  "status": "incomplete",
+  "seconds": 13.501,
+  "process_exit": 0,
+  "errors": [],
+  "reported_costs": [
+    0
+  ],
+  "error": {
+    "type": "FileNotFoundError",
+    "message": "[Errno 2] No such file or directory: 'C:\\\\Users\\\\yanwei\\\\AppData\\\\Local\\\\Temp\\\\lessonkit-free-tutor-plewnw16\\\\course\\\\.lessonkit\\\\learning\\\\tutor-notes.md'"
+  }
+}

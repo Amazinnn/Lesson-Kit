@@ -1,0 +1,14 @@
+{
+  "provider": "opencode",
+  "model": "deepseek-v4.1-flash-free",
+  "calls": 0,
+  "date": "2026-11-07T16:27:40.240595",
+  "free_evidence": "Official console models documentation plus installed model metadata: input/output/cache prices all zero",
+  "free_source": "https://opencode.ai/docs/console/models/",
+  "status": "passed",
+  "replay_of": "D:\\.codex\\worktrees\\course-sync\\lesson-kit\\tmp\\agent-runs\\free-tutor\\response.json",
+  "identical_model_inputs": true,
+  "raw_attempts_unchanged": true,
+  "learning_file_received": true,
+  "reverse_export_preserved": true
+}
