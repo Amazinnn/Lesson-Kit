@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from workbench.data.course_sync import export_course, read_exchange
+from workbench.data.course_sync import export_course, inspect_exchange, read_exchange
 from workbench.data.pool import Pool
 
 
@@ -101,6 +101,64 @@ def test_dangling_attempt_reference_is_explicit_export_error(course, tmp_path):
                                'INSERT INTO feedback_events VALUES (1,999);')
     with pytest.raises(ValueError, match='unresolved course record reference'):
         export_course(pool, workspace, tmp_path / 'bundle')
+
+
+def test_repeated_export_does_not_acknowledge_one_sided_edits(course, tmp_path):
+    pool, workspace = course
+    export_course(pool, workspace, tmp_path / 'initial')
+    original = read_exchange(tmp_path / 'initial')
+    pool.connect().execute("UPDATE knowledge_points SET body='本机修改'")
+    pool.commit()
+    export_course(pool, workspace, tmp_path / 'second')
+    export_course(pool, workspace, tmp_path / 'third')
+    package = read_exchange(tmp_path / 'third')
+    assert package['base'] == original['assets']
+    assert package['assets'] != package['base']
+
+
+def test_inspection_does_not_initialize_sync_state_or_registry(course, tmp_path, monkeypatch):
+    pool, workspace = course
+    export_course(pool, workspace, tmp_path / 'bundle')
+    import shutil
+    shutil.rmtree(pool.root / '.lessonkit/course-sync')
+    registry_home = tmp_path / 'new-registry'
+    monkeypatch.setenv('LESSONKIT_WB_HOME', str(registry_home))
+    before = {path.relative_to(pool.root): path.read_bytes()
+              for path in pool.root.rglob('*') if path.is_file()}
+    result = inspect_exchange(pool, workspace, tmp_path / 'bundle')
+    after = {path.relative_to(pool.root): path.read_bytes()
+             for path in pool.root.rglob('*') if path.is_file()}
+    assert before == after
+    assert not registry_home.exists()
+    assert result['association_required']
+    assert result['errors'] == []
+
+
+def test_inspection_reports_schema_mismatch_without_discarding_other_assets(course, tmp_path):
+    pool, workspace = course
+    export_course(pool, workspace, tmp_path / 'bundle')
+    manifest_path = tmp_path / 'bundle/manifest.json'
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    descriptor = next(item for item in manifest['assets'] if 'knowledge_points/' in item['identity'])
+    path = tmp_path / 'bundle' / descriptor['path']
+    asset = json.loads(path.read_text(encoding='utf-8'))
+    asset['content']['row']['unregistered_column'] = 'foreign field'
+    path.write_text(json.dumps(asset), encoding='utf-8')
+    result = inspect_exchange(pool, workspace, tmp_path / 'bundle')
+    assert result['errors'][0]['identity'] == descriptor['identity']
+    assert descriptor['identity'] not in result['incoming']
+    assert result['incoming']
+
+
+def test_inspection_refuses_unestablished_common_base(course, tmp_path):
+    pool, workspace = course
+    export_course(pool, workspace, tmp_path / 'bundle')
+    manifest_path = tmp_path / 'bundle/manifest.json'
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    manifest['base'] = {'unrelated': {'kind': 'file', 'content': {}}}
+    manifest_path.write_text(json.dumps(manifest), encoding='utf-8')
+    result = inspect_exchange(pool, workspace, tmp_path / 'bundle')
+    assert any(error['code'] == 'baseline_mismatch' for error in result['errors'])
 
 
 def test_unknown_table_is_explicitly_rejected(course, tmp_path):

@@ -29,3 +29,9 @@ Each export publishes immutable generation paths before swapping its manifest. G
 Declared integer record identifiers and attempt/execution references now export stable origin identities, including declared stored-JSON references. A simulated local ID remap produces identical exported assets and preserves raw answers. Dangling declared references fail explicitly. Focused planner/projection checks total 22 passed. Receive allocation and complete nested snapshot coverage remain outstanding.
 
 The read-only real legacy database backup copy exported 469 assets and reread without errors. `legacy-projection.json` records exact table/column coverage and timing. This verifies projection only, not F4 receive/migration acceptance. `field-inventory.json` records the freshly generated trusted schema and static writer/consumer candidates, not exhaustive dynamic SQL analysis.
+
+## Read-only preflight checkpoint
+
+Repeated export no longer advances the shared base. Read-only inspect validates course identity, target primary keys and columns while retaining independent valid assets. It does not initialize installation metadata or course state. Baseline mismatch is explicitly blocked pending complete common-baseline/acknowledgement handling. Focused planner/projection/preflight checks total 26 passed. This is internal foundation, not task 2.4 completion.
+
+At 11:32 the user chose to retain the existing two DeepSeek workers and wait for successful recovery probes before further dispatch. The second six-call probe again returned five 200 responses followed by a 429. No provider substitution or new implementation worker is authorized by that answer.

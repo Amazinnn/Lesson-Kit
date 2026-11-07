@@ -102,8 +102,10 @@ def course_lock(root):
         path.unlink()
 
 
-def _installation_origin():
+def _installation_origin(*, read_only=False):
     path = registry.base_dir() / "course-sync-installation.json"
+    if read_only and not path.exists():
+        return "unassigned-local"
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
         lock = path.with_suffix(".lock")
@@ -123,7 +125,7 @@ def _installation_origin():
     return value["origin"]
 
 
-def _state(root, course):
+def _state(root, course, *, read_only=False):
     path = Path(root) / ".lessonkit/course-sync/state.json"
     if path.exists():
         state = _read_json(path)
@@ -132,10 +134,11 @@ def _state(root, course):
             raise ValueError("course exchange state has a different course identity")
         if not isinstance(state.get("row_identities"), dict) or not isinstance(state.get("base"), dict):
             raise ValueError("invalid course exchange identity mappings or base")
-        state["origin"] = _installation_origin()
+        state["origin"] = _installation_origin(read_only=read_only)
         return state
-    return {"course": {"id": course, "origin": "course-" + str(uuid4())},
-            "origin": _installation_origin(), "row_identities": {}, "base": {}}
+    return {"course": {"id": course, "origin": None if read_only else "course-" + str(uuid4())},
+            "origin": _installation_origin(read_only=read_only), "row_identities": {}, "base": {},
+            "initialized": False}
 
 
 def _database_projection(pool, state):
@@ -276,17 +279,27 @@ def _managed_files(pool, assets):
         yield relative, path
 
 
+def _projection(pool, state):
+    assets, inventory = _database_projection(pool, state)
+    for relative, path in _managed_files(pool, assets):
+        assets["file/" + relative] = {
+            "kind": "file", "content": {"path": relative, "encoding": "base64",
+                                         "data": base64.b64encode(path.read_bytes()).decode("ascii")},
+            "depends_on": []}
+    return assets, inventory
+
+
 def export_course(pool, workspace, destination):
     """Export a closed committed projection, rejecting unknown or missing assets."""
     destination = Path(destination).resolve()
     with course_lock(pool.root):
         state = _state(pool.root, pool.course)
-        assets, inventory = _database_projection(pool, state)
-        for relative, path in _managed_files(pool, assets):
-            assets["file/" + relative] = {
-                "kind": "file", "content": {"path": relative, "encoding": "base64",
-                                             "data": base64.b64encode(path.read_bytes()).decode("ascii")},
-                "depends_on": []}
+        assets, inventory = _projection(pool, state)
+        # Establish the initial shared image once. Merely exporting subsequent
+        # edits is not evidence that another installation has received them.
+        if not state.get("initialized", True):
+            state["base"] = assets
+            state["initialized"] = True
         # Persist source identities before publishing anything another device can
         # receive. A failed first export must retain the same course lineage.
         _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
@@ -301,11 +314,49 @@ def export_course(pool, workspace, destination):
                     "origin": state["origin"], "export_id": export_id,
                     "assets": descriptors, "base": state["base"], "tables": inventory}
         _atomic_json(destination / "manifest.json", manifest)
-        state["base"] = assets
+        state["last_export"] = {"id": export_id, "assets": assets}
         _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
         return {"status": "success", "course": state["course"], "origin": state["origin"],
                 "export_id": export_id, "assets": len(assets), "tables": inventory,
                 "destination": str(destination), "local": {"exported": True}, "remote": None}
+
+
+def inspect_exchange(pool, workspace, source):
+    """Inspect a package and target schema without writing course/registry state."""
+    if not pool.db_path.is_file():
+        raise ValueError("target course database does not exist")
+    package = read_exchange(source)
+    if package["course"]["id"] != pool.course:
+        raise ValueError("exchange package belongs to a different course")
+    state = _state(pool.root, pool.course, read_only=True)
+    local, inventory = _projection(pool, state)
+    errors = list(package["errors"])
+    schema = {item["table"]: item for item in inventory}
+    incoming = dict(package["assets"])
+    for identity, asset in list(incoming.items()):
+        if asset["kind"] != "row":
+            continue
+        content = asset["content"]
+        table = schema.get(content["table"])
+        if table is None or content["key"] != table["primary_key"] \
+                or not set(content["row"]) <= set(table["columns"]) \
+                or not set(content["key"]) <= set(content["row"]) \
+                or any(type(value) not in {str, int, float, type(None)}
+                       for value in content["row"].values()):
+            errors.append({"identity": identity, "code": "invalid_asset",
+                           "message": "row does not match the target course schema"})
+            del incoming[identity]
+    base = state["base"]
+    if state["course"]["origin"] and package["base"] != base:
+        if package["base"] == state.get("last_export", {}).get("assets"):
+            base = package["base"]
+        else:
+            errors.append({"identity": "", "code": "baseline_mismatch",
+                           "message": "a common exchange baseline has not been established"})
+    association_required = bool(local) and state["course"]["origin"] != package["course"]["origin"]
+    return {"course": package["course"], "local": local, "incoming": incoming,
+            "base": base, "tables": inventory, "errors": errors,
+            "association_required": association_required, "export_id": package.get("export_id")}
 
 
 def read_exchange(source):
