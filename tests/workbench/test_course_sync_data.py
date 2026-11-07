@@ -192,8 +192,12 @@ def test_repeat_export_reuses_unchanged_files_and_cleans_replaced_envelopes(cour
     third = export_course(pool, workspace, bundle)
     assert third['written'] == 1
     assert third['reused'] == first['assets'] - 1
-    assert len(list(bundle.rglob('*.json'))) == first['assets'] + 1
+    envelopes = [path for path in bundle.rglob('*.json')
+                 if 'files' not in path.relative_to(bundle).parts]
+    assert len(envelopes) == first['assets'] + 1
     assert read_exchange(bundle)['errors'] == []
+    # The Tutor-readable copy is a view of the same package, not an extra asset.
+    assert (bundle / 'files/.lessonkit/practice-sets/ps-001.json').is_file()
 
 
 def test_unknown_table_is_explicitly_rejected(course, tmp_path):

@@ -19,6 +19,7 @@ from uuid import uuid4
 from workbench import registry
 from workbench.bridge import git_sync
 from workbench.data import course_sync as exchange
+from workbench.data import tutor_handoff
 
 TASK_NAME = "LessonKit Course Sync"
 TASK_COMMAND = "--all-configured sync"
@@ -105,7 +106,9 @@ def _dispatch(args, pool, workspace, media=None, emit=True):
 
 
 def _export(args, pool, workspace, emit=True):
-    result = exchange.export_course(pool, workspace, _required(args.to, "--to"))
+    destination = _required(args.to, "--to")
+    result = exchange.export_course(pool, workspace, destination)
+    tutor_handoff.write(pool, destination)
     return _finish(args, pool, {"status": result["status"]}, _exit_code(result["status"]),
                    emit=emit)
 
@@ -269,7 +272,9 @@ def _sync(args, pool, workspace, media, emit=True):
                 "conflicts": [item["identity"] for item in result["conflicts"]],
                 "errors": inspection.get("errors") or [],
             }
-        exported = exchange.export_course(pool, workspace, Path(repository["repo"]) / package)
+        package_dir = Path(repository["repo"]) / package
+        exported = exchange.export_course(pool, workspace, package_dir)
+        tutor_handoff.write(pool, package_dir)
         receipt["local"]["export"] = {
             "status": exported["status"], "assets": exported["assets"],
             "written": exported["written"], "reused": exported["reused"],
@@ -322,7 +327,8 @@ def _package_paths(repo, package):
         raise _InputError("the exported package has no manifest")
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     prefix = "" if package in {"", "."} else package + "/"
-    return [prefix + "manifest.json"] + [prefix + item["path"] for item in payload["assets"]]
+    return ([prefix + "manifest.json", prefix + tutor_handoff.FILE_NAME]
+            + [prefix + item["path"] for item in payload["assets"]])
 
 
 def _sync_status(receipt):

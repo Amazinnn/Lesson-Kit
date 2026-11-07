@@ -18,6 +18,8 @@ from workbench.domain import course_sync as planning
 
 
 FORMAT_VERSION = 1
+#: Plain copies of managed files inside the package, the Tutor-readable view.
+READABLE_DIR = "files"
 TABLES = {
     "knowledge_points", "knowledge_relations", "problems", "flash_cards",
     "questions", "question_progress", "kp_progress", "problem_progress",
@@ -58,6 +60,18 @@ def _atomic_json(path, value):
         with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as stream:
             json.dump(value, stream, ensure_ascii=False, indent=2)
             stream.write("\n")
+        os.replace(name, path)
+    finally:
+        Path(name).unlink(missing_ok=True)
+
+
+def _atomic_bytes(path, data):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle, name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(handle, "wb") as stream:
+            stream.write(data)
         os.replace(name, path)
     finally:
         Path(name).unlink(missing_ok=True)
@@ -427,8 +441,9 @@ def export_course(pool, workspace, destination):
         changed = previous_manifest != manifest
         if changed:
             _atomic_json(destination / "manifest.json", manifest)
+        mirror_errors = _write_readable_files(destination, assets)
+        cleanup_errors = list(mirror_errors)
         live_paths = {item["path"] for item in descriptors}
-        cleanup_errors = []
         for relative in sorted(set(previous_paths.values()) - live_paths):
             path = _relative(destination, relative)
             try:
@@ -450,6 +465,37 @@ def export_course(pool, workspace, destination):
                 "written": written, "reused": len(assets) - written,
                 "manifest_changed": changed, "cleanup_errors": cleanup_errors,
                 "destination": str(destination), "local": {"exported": True}, "remote": None}
+
+
+def _write_readable_files(destination, assets):
+    """Keep a plain copy of every managed file so a Tutor can read and edit it.
+
+    The envelopes stay the exchange truth; this mirror is the human/Tutor
+    surface, and a reception prefers its bytes when they were edited
+    (`apply_exchange`). Stale copies from an earlier export are removed.
+    """
+    folder = Path(destination) / READABLE_DIR
+    wanted = {asset["content"]["path"]: asset for asset in assets.values()
+              if asset["kind"] == "file"}
+    written, errors = set(), []
+    for relative, asset in sorted(wanted.items()):
+        try:
+            target = _relative(folder, relative)
+            data = base64.b64decode(asset["content"]["data"], validate=True)
+            if not target.is_file() or target.read_bytes() != data:
+                _atomic_bytes(target, data)
+            written.add(relative)
+        except (ValueError, OSError) as exc:
+            errors.append({"path": relative, "message": str(exc)})
+    previous = {path.relative_to(folder).as_posix()
+                for path in folder.rglob("*") if path.is_file()} if folder.is_dir() else set()
+    stale = previous - written
+    for relative in sorted(stale):
+        try:
+            _relative(folder, relative).unlink(missing_ok=True)
+        except (ValueError, OSError) as exc:
+            errors.append({"path": relative, "message": str(exc)})
+    return errors
 
 
 def inspect_exchange(pool, workspace, source):
@@ -482,6 +528,7 @@ def inspect_exchange(pool, workspace, source):
     errors.extend(plan["errors"])
     association_required = bool(local) and state["course"]["origin"] != package["course"]["origin"]
     return {"course": package["course"], "local": local, "incoming": incoming,
+            "source": str(Path(source).resolve()),
             "base": base, "tables": inventory, "errors": errors, "plan": plan,
             "changes": plan["changes"], "outgoing": plan["outgoing"],
             "conflicts": plan["conflicts"], "unchanged": plan["unchanged"],
@@ -1178,4 +1225,32 @@ def read_exchange(source):
                 errors.append({"identity": identity, "code": "invalid_asset", "message": str(exc)})
                 continue
         assets[identity] = asset
+    _adopt_edited_copies(source, assets)
     return {**manifest, "assets": assets, "errors": errors}
+
+
+def _adopt_edited_copies(source, assets):
+    """A Tutor edits the plain copy; an edited copy is the asset's content.
+
+    The envelopes stay the exchange format, so a readable folder that disagrees
+    with its envelope means the Tutor changed the file after the export. Taking
+    that copy is what makes the returned update receivable at all.
+    """
+    folder = Path(source) / READABLE_DIR
+    if not folder.is_dir():
+        return
+    for identity, asset in assets.items():
+        if asset.get("kind") != "file" or asset.get("deleted"):
+            continue
+        content = asset.get("content") or {}
+        try:
+            edited = _relative(folder, content.get("path"))
+        except ValueError:
+            continue
+        if not edited.is_file():
+            continue
+        data = edited.read_bytes()
+        if base64.b64encode(data).decode("ascii") == content.get("data"):
+            continue
+        asset["content"] = {**content, "data": base64.b64encode(data).decode("ascii")}
+        asset["readable_copy"] = True
