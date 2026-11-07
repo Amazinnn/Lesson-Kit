@@ -609,28 +609,36 @@ def _widen_problem_attempts_status_check(conn):
 
 
 def _chapter_token(value: str) -> str:
-    for token in str(value or "").split("-"):
-        if len(token) > 2 and token.startswith("ch") and token[2:].isdigit():
-            return token
-    return ""
+    """The chapter segment between the course and ``-kp-`` in a knowledge id.
+
+    This matches how the rest of the repository reads an id
+    (``dmath-source-ch03-kp-001`` -> ``source-ch03``); an id without the
+    ``-kp-`` marker carries no chapter.
+    """
+    head = str(value or "").rpartition("-kp-")[0]
+    parts = head.split("-", 1)
+    return parts[1] if len(parts) == 2 else ""
 
 
 def ensure_knowledge_chapter_schema(conn: sqlite3.Connection) -> List[str]:
     """Give knowledge points their own chapter ownership, backfilled from the id.
 
     Only the initial chapter is inferred, and only from an id that carries one;
-    an id without a chapter token keeps NULL rather than guessing.
+    an id without a chapter segment keeps NULL rather than guessing.
     """
     if not table_exists(conn, "knowledge_points"):
         return []
     changes = ensure_columns(conn, "knowledge_points", [("chapter", "TEXT")])
     rows = conn.execute(
         "SELECT kp_id FROM knowledge_points WHERE chapter IS NULL").fetchall()
+    filled = 0
     for (kp_id,) in rows:
         chapter = _chapter_token(kp_id)
         if chapter:
             conn.execute("UPDATE knowledge_points SET chapter=? WHERE kp_id=?", (chapter, kp_id))
-            changes.append(f"knowledge_points.chapter:{kp_id}")
+            filled += 1
+    if filled:
+        changes.append(f"knowledge_points.chapter:{filled} backfilled")
     return changes
 
 

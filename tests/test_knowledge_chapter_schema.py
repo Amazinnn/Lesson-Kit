@@ -32,12 +32,23 @@ def test_backfills_the_initial_chapter_from_the_id():
     assert "knowledge_points.chapter" in changes
 
 
-def test_an_id_without_a_chapter_token_is_left_null():
-    connection = _pool_with([("legacy-kp-001", "a")])
+def test_a_multi_segment_chapter_keeps_its_whole_segment():
+    """The repository elsewhere reads the whole segment between course and -kp-."""
+    connection = _pool_with([("dmath-source-ch03-kp-001", "a")])
 
     _call(connection)
 
-    assert connection.execute("SELECT chapter FROM knowledge_points").fetchone()[0] is None
+    assert connection.execute("SELECT chapter FROM knowledge_points").fetchone()[0] \
+        == "source-ch03"
+
+
+def test_an_id_without_a_chapter_segment_is_left_null():
+    connection = _pool_with([("dmath-kp-001", "a"), ("legacy-kp-001", "b")])
+
+    _call(connection)
+
+    assert [row[0] for row in connection.execute(
+        "SELECT chapter FROM knowledge_points")] == [None, None]
 
 
 def test_rerunning_keeps_an_explicit_assignment():
