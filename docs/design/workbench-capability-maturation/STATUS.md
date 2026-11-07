@@ -1,5 +1,14 @@
 # 规划交接状态
 
+## 2026-11-07 改卷生命周期首段（adaptive-paper-content-lifecycle）
+
+按所有者要求实现该 change 的主体缺陷：**在已有作答的卷里改名单/改题序不再整卷清零**。提交 `4affbcb6`。
+
+- `paper_progress.reconcile_membership`：按题目身份协调未完成执行——存活题的状态、attempt 关联、草稿与顺序跟随新位置；新增/替代题从 pending 开始；被移除题写入新的保留历史表 `retired_paper_items`（位置、状态、attempt、内容版本、最后草稿、原因、时间）；游标先跟原题，否则后一道再前一道存活题；结构版本递增一次；active 与 parked 用同一变换；只有整卷一道不升时才清空该卷执行。
+- 预览改为报告 `preserved_items/added_items/removed_items`，`resets_progress` 仅在无存活项时为真；确认仍是并发 expected-state 守卫，不是额外审批。
+- 测试：`tests/workbench/test_paper_lifecycle.py` 6 项新用例；原先钉住"改卷重置"的两条进度用例与两条审批用例已按新契约更新。全仓 1,547 passed。
+- 已按实际证据勾选 tasks 4.1 / 4.2 / 7.1 / 7.2（4/29）。**未做**：题目归档恢复（3.2）、语义修订新身份与一次性继承（3.1/3.3）、Paper 归档恢复（4.3）、派生结果惰性失效（5.x）、CLI/API/UI（6.x）、审批退役（6.2/6.3，属 WP03）。`paper_progress.reset` 现仅由 `delete_saved` 使用，删除仍为硬删而非归档。
+
 ## 2026-11-07 第三棒：把已审接收修正合入实际源码
 
 独立审查（C05）确认批次事务设计正确，同时复现了四项缺陷；本轮把审查期间冻结的修复草稿合入实际 `workbench/data/course_sync.py`，并补齐审查发现的剩余三项：分组执行头按题目依赖排序、stale 检查失败只报一条 `stale_inspection` 并停止、不完整执行信封按 `invalid_asset` 隔离。同时把 G06 的 `list_remote_files` 接进 CLI，使 Tutor 在 Git 里新增、未改 manifest 的学习文件也能被接收；codec 审查（B06）指出的三条未被测试钉死的规则已补测试。提交 `c2a12260`。
