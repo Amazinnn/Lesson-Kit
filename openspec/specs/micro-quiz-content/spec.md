@@ -14,13 +14,12 @@ truncating long problems, and ordinary (unmarked) pool content stays exam-only.
 
 The pool SHALL store micro quizzes as formal problems carrying an explicit
 `practice_modes` marking and a structured `micro_quiz` payload with quiz type
-(`yes_no`, `single_choice`, `multiple_choice`), options, an answer key, an
-error reason, and source evidence. An objective item MAY enter without an
-answer key when its source lost it: an absent or empty `answer_key` SHALL mark
-the item keyless instead of being refused, the choice types SHALL still carry
-2–6 options, `yes_no` SHALL keep its implied 是/否 options, and `error_reason`
-SHALL be mandatory only for an item that carries a key. Every micro quiz type
-SHALL present clickable options; free-text answering SHALL NOT be part of the
+(`yes_no`, `single_choice`, `multiple_choice`), options, an answer key, and
+source evidence. An objective item MAY enter without an answer key when its
+source lost it: an absent or empty `answer_key` SHALL mark the item keyless
+instead of being refused, the choice types SHALL still carry 2–6 options, and
+`yes_no` SHALL keep its implied 是/否 options. Every micro quiz type SHALL
+present clickable options; free-text answering SHALL NOT be part of the
 contract. A micro quiz SHALL map to exactly one knowledge point and SHALL NOT
 be refused for stem length alone. Problem manifest items MAY carry optional
 `display_title` (at most 80 characters) and `display_summary` (at most 200
@@ -37,6 +36,12 @@ fabricate options a source does not have, SHALL NOT infer micro-quiz content
 from legacy problem-type values, and SHALL NOT accept the retired types
 `closest_answer` and `short_answer` at the gate.
 
+A stored `micro_quiz` payload MAY still contain a legacy `error_reason` field;
+validation and rendering SHALL ignore it. The field is not part of the current
+payload contract, is not required for a keyed item, and is not shown as a
+separate answer-reveal section. Removing the field SHALL NOT remove the answer
+key, the written `solution`, or any source evidence.
+
 #### Scenario: A well-formed micro quiz enters the pool
 
 - **WHEN** a manifest item satisfies the contract for its quiz type
@@ -46,7 +51,7 @@ from legacy problem-type values, and SHALL NOT accept the retired types
 #### Scenario: A keyless objective item enters the pool
 
 - **WHEN** a 判断题 or 单选题 manifest item declares its quiz type and options but carries no answer key
-- **THEN** it is stored with its practice-mode marking, an empty answer key, and no error reason, and the import reports how many items arrived without a key
+- **THEN** it is stored with its practice-mode marking and an empty answer key, and the import reports how many items arrived without a key
 
 #### Scenario: Contract violation
 
@@ -70,6 +75,16 @@ from legacy problem-type values, and SHALL NOT accept the retired types
 
 - **WHEN** an objective micro quiz carries an answer key
 - **THEN** `yes_no` and `single_choice` use one option string (with `yes_no` limited to 是 or 否), while `multiple_choice` uses a non-empty list of option strings contained in its options
+
+#### Scenario: A keyed item does not need an error reason
+
+- **WHEN** a keyed objective item supplies its options, answer key, and source evidence without `error_reason`
+- **THEN** the gate accepts and stores it, and the answer reveal shows the answer key and solution without a「判定依据」section
+
+#### Scenario: An existing error reason is ignored
+
+- **WHEN** an existing `micro_quiz` payload still contains `error_reason`
+- **THEN** it remains readable, validation does not require or check it, and the UI does not render it
 
 #### Scenario: An existing problem becomes a micro quiz in place
 
@@ -247,3 +262,4 @@ A Paper containing choice, judgment and open problems SHALL render each from its
 #### Scenario: Correct an open item to choice in place
 - **WHEN** a question is corrected to a validated choice payload under its original ID
 - **THEN** its unfinished occurrence becomes pending with choice controls, without recreating the question or its containing Paper
+

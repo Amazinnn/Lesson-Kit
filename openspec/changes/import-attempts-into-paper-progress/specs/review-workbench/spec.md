@@ -78,6 +78,11 @@ failing the practice flow.
 - **WHEN** a rating names an attempt that belongs to another item
 - **THEN** the rating is refused with zero writes
 
+#### Scenario: Submit remaining parts without duplicates
+
+- **WHEN** part A is already submitted and the learner submits the remaining parts together, then retries after a lost response
+- **THEN** A's attempt is unchanged and each remaining submitted part has exactly one new attempt, with the retry returning the original outcome
+
 #### Scenario: An imported attempt moves only Paper execution progress
 
 - **WHEN** an ungraded attempt is imported with a `paper_id`

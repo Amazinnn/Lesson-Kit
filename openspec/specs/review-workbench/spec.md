@@ -956,6 +956,16 @@ SHALL retain the existing degraded legacy answer-recording path, without
 manufacturing part structure or conclusions; new structured grading requires
 the explicit additive migration.
 
+A pool that has not received that additive migration SHALL keep working end to
+end rather than fail on the new storage: opening or refreshing a practice run
+SHALL present its items with no part grading requested and no grading
+conclusions, and an explicit subjective submission SHALL record the attempt
+through the pre-migration attempt columns only, without writing part context or
+grading-job rows. Explicit part-grading requests on such a pool SHALL fail with
+an actionable migration message and zero writes; they SHALL NOT silently
+succeed, fabricate conclusions, or surface as an internal server error. The
+migration gap SHALL be observable from the product's own read-only diagnostics.
+
 #### Scenario: A browser answer is durable
 
 - **WHEN** the learner submits a subjective response on the practice page
@@ -975,6 +985,21 @@ the explicit additive migration.
 
 - **WHEN** part A is already submitted and the learner submits the remaining parts together, then retries after a lost response
 - **THEN** A's attempt is unchanged and each remaining submitted part has exactly one new attempt, with the retry returning the original outcome
+
+#### Scenario: Practice status on an unmigrated pool
+
+- **WHEN** a practice run on a pool without the additive part-grading schema is opened or refreshed
+- **THEN** its items render with no part grading requested, no grading conclusions and no server error, exactly like the legacy whole-problem path
+
+#### Scenario: Submit on an unmigrated pool
+
+- **WHEN** the learner explicitly submits a subjective answer on a pool without the additive schema
+- **THEN** the attempt is recorded through the pre-migration columns only, the paper keeps advancing, and no part context or grading-job row is invented
+
+#### Scenario: Explicit grading on an unmigrated pool
+
+- **WHEN** an Agent or CLI asks for part grading on a pool without the additive schema
+- **THEN** the request fails with a message naming the migration command, writes nothing, and is not reported as an internal server error
 
 ### Requirement: Retry-safe browser practice writes
 
@@ -1210,4 +1235,37 @@ and exit statuses SHALL remain compatible.
 
 - **WHEN** an operator supplies invalid arguments to an extension command
 - **THEN** all public entry points preserve argparse validation and a nonzero exit status
+
+### Requirement: Runtime source selection
+
+`lesson-kit dashboard`, `lesson-kit daemon start` and `lesson-kit serve` SHALL
+serve, watch and report the checkout that contains the installed `lesson-kit`
+code — the checkout whose `workbench` package the running CLI imports —
+independent of the course working directory and independent of whether that
+checkout is a linked Git worktree. An explicit `--project-root PATH` SHALL
+serve and watch that path for that run without changing the default source, the
+course resolution or the installation. A path that is not a lesson-kit source
+directory SHALL be rejected with its reason and a non-zero exit status, and
+SHALL NOT start a service. The source reported by `daemon status`, `doctor` and
+`/api/runtime` SHALL be the source actually served.
+
+#### Scenario: Editable install in a linked worktree
+
+- **WHEN** the installed package resides in a linked worktree and the user runs
+  `lesson-kit daemon start` from a course folder
+- **THEN** the service imports, watches and reports that worktree
+- **AND** the primary checkout is neither served nor reported
+
+#### Scenario: Explicit preview of another checkout
+
+- **WHEN** the user passes `--project-root PATH` with an isolated port
+- **THEN** that path is served and watched for the run
+- **AND** the default source stays unchanged
+
+#### Scenario: Reject a path that is not a lesson-kit source
+
+- **WHEN** `--project-root` names a directory that does not contain the
+  lesson-kit source
+- **THEN** the command fails with that reason and a non-zero exit status
+- **AND** no service is started
 

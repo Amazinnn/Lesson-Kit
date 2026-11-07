@@ -306,6 +306,11 @@ learner's text.
 - **WHEN** a primary title contains a string wider than its column
 - **THEN** it wraps inside the column without clipping or widening the page
 
+#### Scenario: Read paragraphs inside a card
+
+- **WHEN** a card or Agent user bubble contains paragraphs, lists or long text
+- **THEN** the text keeps the surface's horizontal padding and does not overlap its left decoration or boundary
+
 #### Scenario: Practice scope title
 
 - **WHEN** a practice-scope title is longer than its column
