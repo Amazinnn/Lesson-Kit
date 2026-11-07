@@ -156,6 +156,44 @@ def search(pool, entity, query):
     return hits
 
 
+def _chapter_from_id(kp_id):
+    """The chapter segment an id was created in (``dmath-ch06-kp-001`` -> ``ch06``)."""
+    head = str(kp_id or "").rpartition("-kp-")[0]
+    parts = head.split("-", 1)
+    return parts[1] if len(parts) == 2 else ""
+
+
+def kp_chapter(item):
+    """A knowledge point's current chapter: its own column, else its id segment.
+
+    A chapter move keeps the stable id, so the id segment goes stale; rows that
+    predate the column still answer from the id.
+    """
+    return item.get("chapter") or _chapter_from_id(item.get("kp_id"))
+
+
+def move_kp(pool, kp_id, chapter):
+    """Reassign one knowledge point to another chapter without changing its id."""
+    chapter = str(chapter or "").strip()
+    if not chapter:
+        raise ValueError("moving a knowledge point needs a target chapter")
+    conn = pool.connect()
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(knowledge_points)")}
+    if "chapter" not in columns:
+        raise ValueError("migrate the pool before moving knowledge points between chapters")
+    row = conn.execute(
+        "SELECT chapter FROM knowledge_points WHERE kp_id=?", (kp_id,)).fetchone()
+    if row is None:
+        raise KeyError(kp_id)
+    previous = row[0] or _chapter_from_id(kp_id)
+    extra = ", updated_at=datetime('now')" if "updated_at" in columns else ""
+    with pool.transaction(immediate=True):
+        conn.execute(f"UPDATE knowledge_points SET chapter=?{extra} WHERE kp_id=?",
+                     (chapter, kp_id))
+    return {"kp_id": kp_id, "chapter": chapter, "previous": previous,
+            "moved": previous != chapter}
+
+
 def knowledge_query(pool, *, types=(), chapter=None, text=None):
     """Knowledge points filtered by type and chapter, searched across the
     declared text fields plus their experience summary (every keyword, AND)."""
@@ -167,7 +205,7 @@ def knowledge_query(pool, *, types=(), chapter=None, text=None):
     for item in list_items(pool, "kp"):
         if wanted and str(item.get("knowledge_type") or "").casefold() not in wanted:
             continue
-        if chapter and chapter not in str(item.get("kp_id") or "").split("-"):
+        if chapter and kp_chapter(item) != chapter:
             continue
         if words:
             fields = (item.get("knowledge_item"), item.get("graph_label"), item.get("body"),
@@ -304,6 +342,14 @@ def create(pool, entity, data):
     fields = [field for field in EDITABLE_FIELDS[entity] if field in data]
     values = [_db_value(field, data[field]) for field in fields]
     conn = pool.connect()
+    columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+    if entity == "kp" and "chapter" in columns:
+        # New content owns its chapter from the start; the id segment is not the
+        # only source once a point can move.
+        chapter = data.get("chapter") or _chapter_from_id(object_id)
+        if chapter and "chapter" not in fields:
+            fields.append("chapter")
+            values.append(chapter)
     with conn:
         conn.execute(
             f"INSERT INTO {table} ({id_column}, {', '.join(fields)}) "
@@ -597,6 +643,11 @@ def delete(pool, entity, object_id):
                 "DELETE FROM knowledge_relations WHERE relation_id=?", (object_id,)
             )
     paper_progress.flush_files(pool)
+    if entity == "kp":
+        # The row is gone, so export can no longer see it; without a recorded
+        # deletion the next exchange would report a missing asset instead.
+        from workbench.data import course_sync  # course_sync imports this module
+        course_sync.record_row_deletions(pool, table, [object_id])
 
 
 def restore(pool, entity, object_id):

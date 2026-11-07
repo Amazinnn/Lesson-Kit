@@ -644,14 +644,17 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
     )
 
 
-def _kp_chapter(kp_id, course):
-    """The chapter a knowledge point belongs to, read off its id.
+def _kp_chapter(kp_id, course, item=None):
+    """The chapter a knowledge point belongs to.
 
-    Same grammar as `Pool.chapters()` (workbench/data/pool.py:186-205): a
-    chapter is the id segment between the course and the `-kp-N` suffix. An id
-    that does not parse keeps its whole text as its chapter — a knowledge point
-    is never dropped from the list because its id looks odd.
+    Its own `chapter` wins (a move keeps the id, so the id segment goes stale);
+    otherwise the id segment between the course and the `-kp-N` suffix, the same
+    grammar as `Pool.chapters()`. An id that does not parse keeps its whole text
+    as its chapter — a knowledge point is never dropped from the list because
+    its id looks odd.
     """
+    if item and item.get("chapter"):
+        return item["chapter"]
     match = re.match(rf"^{re.escape(course or '')}-(.+)-kp-\d+$", kp_id or "")
     return match.group(1) if match else (kp_id or "")
 
@@ -703,7 +706,7 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
     group_keys = []
     group_rows = {}
     for order, item in enumerate(source_kps):
-        chapter = _kp_chapter(item.get("kp_id") or "", pool.course)
+        chapter = _kp_chapter(item.get("kp_id") or "", pool.course, item)
         if chapter not in group_rows:
             group_rows[chapter] = []
             group_keys.append(chapter)

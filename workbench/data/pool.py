@@ -66,7 +66,14 @@ class Pool:
 
     def kps(self, prefix=None):
         conn = self.connect()
-        if prefix:
+        chapter = self._chapter_of(prefix)
+        if chapter and _has_column(conn, "knowledge_points", "chapter"):
+            rows = conn.execute(
+                "SELECT * FROM knowledge_points"
+                " WHERE chapter=? OR (chapter IS NULL AND kp_id LIKE ?) ORDER BY kp_id",
+                (chapter, prefix + "%"),
+            ).fetchall()
+        elif prefix:
             rows = conn.execute(
                 "SELECT * FROM knowledge_points WHERE kp_id LIKE ? ORDER BY kp_id",
                 (prefix + "%",),
@@ -76,6 +83,12 @@ class Pool:
                 "SELECT * FROM knowledge_points ORDER BY kp_id"
             ).fetchall()
         return [dict(r) for r in rows]
+
+    def _chapter_of(self, prefix):
+        """The chapter a lens prefix names, or "" for a whole-course prefix."""
+        if not prefix or not prefix.startswith(self.course + "-"):
+            return ""
+        return prefix[len(self.course) + 1:]
 
     def kp(self, kp_id):
         row = self.connect().execute(
@@ -184,10 +197,12 @@ class Pool:
         return f"{self.course}-{self.chapter}"
 
     def chapters(self):
-        """Chapters present in this course, derived from the content ids themselves.
+        """Chapters present in this course.
 
-        There is no chapters table: a chapter exists exactly as long as content
-        carrying its id segment does. Ids that do not parse are ignored, never guessed.
+        A knowledge point's own `chapter` wins once it has one (a chapter move
+        keeps the id, so the id segment goes stale); rows without it, and the
+        other entities, still derive their chapter from the id. Ids that do not
+        parse are ignored, never guessed.
         """
         pattern = re.compile(
             rf"^{re.escape(self.course)}-(.+)-(?:kp|prob|mq|fc)-\d+$")
@@ -198,7 +213,14 @@ class Pool:
                               ("flash_cards", "card_id")):
             if not _has_table(conn, table):
                 continue
-            for row in conn.execute(f"SELECT DISTINCT {column} FROM {table}"):
+            select = f"{column}, chapter" if (
+                table == "knowledge_points" and _has_column(conn, table, "chapter")
+            ) else column
+            for row in conn.execute(f"SELECT DISTINCT {select} FROM {table}"):
+                if len(row) == 2:
+                    if row[1]:
+                        chapters.add(row[1])
+                        continue
                 match = pattern.match(row[0] or "")
                 if match:
                     chapters.add(match.group(1))
@@ -430,6 +452,10 @@ def _has_table(conn, name):
     return conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
     ).fetchone() is not None
+
+
+def _has_column(conn, table, column):
+    return column in {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
 
 
 def _maximum_readable_suffix(conn, table, column, marker):

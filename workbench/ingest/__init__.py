@@ -295,6 +295,7 @@ def apply(db_path, gate_path, backup_path=None):
                 ]
                 _insert_row(conn, "knowledge_points", {
                     **dict(zip(fields, values)), "ingest_batch_id": batch_id,
+                    "chapter": _chapter_from_kp_id(item.get("kp_id")),
                 })
         mappings = {
             item["problem"]: json.dumps(item["kp_ids"], ensure_ascii=False)
@@ -709,6 +710,13 @@ def _bundle_problem_fields(item, kp_ids):
         "exam_year": item.get("exam_year"),
         "parts": item.get("parts"),
     }
+
+
+def _chapter_from_kp_id(kp_id):
+    """The chapter segment an id was created in; None when it names none."""
+    head = str(kp_id or "").rpartition("-kp-")[0]
+    parts = head.split("-", 1)
+    return parts[1] if len(parts) == 2 else None
 
 
 def _item_chapter(item, label, bundle_chapter, errors):
@@ -1261,6 +1269,7 @@ def _apply_content_bundle(database, manifest, backup, course=None):
                     else fields["fragile"]
                 ),
                 "ingest_batch_id": batches[plan["chapter"]]["batch_id"],
+                "chapter": plan["chapter"],
             })
             batches[plan["chapter"]]["counts"]["knowledge_points"] += 1
             counts["knowledge_points"] += 1

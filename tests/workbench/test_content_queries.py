@@ -4,6 +4,7 @@ import pytest
 
 from tests.workbench.fixtures import WorkspaceFixture
 from workbench.data import content
+from workbench.data.pool import Pool
 from workbench.server import api
 
 
@@ -96,3 +97,50 @@ def test_cli_related_lists_each_problem_once(pool, capsys):
 
     assert code == 0
     assert printed.count('dmath-ch06-prob-003') == 1
+
+
+def test_a_chapter_move_keeps_the_id_and_every_reference(pool):
+    conn = pool.connect()
+    conn.execute(
+        "INSERT INTO knowledge_relations (relation_id, source_kp_id, target_kp_id,"
+        " relation_type, direction, strength) VALUES"
+        " ('rel-001','dmath-ch06-kp-001','dmath-ch07-kp-001','prerequisite','forward','strong')")
+    conn.execute(
+        "INSERT INTO kp_experiences (kp_id, content, revision, updated_by)"
+        " VALUES ('dmath-ch07-kp-001','经验正文',1,'user')")
+    pool.commit()
+
+    result = content.move_kp(pool, 'dmath-ch07-kp-001', 'ch09')
+
+    assert result["moved"] is True and result["previous"] == "ch07"
+    assert content.get(pool, "kp", "dmath-ch07-kp-001")["chapter"] == "ch09"
+    assert pool.connect().execute(
+        "SELECT COUNT(*) FROM knowledge_relations").fetchone()[0] == 1
+    assert pool.connect().execute(
+        "SELECT content FROM kp_experiences WHERE kp_id=?", ("dmath-ch07-kp-001",)
+    ).fetchone()[0] == "经验正文"
+    assert [item["kp_id"] for item in content.knowledge_query(pool, chapter="ch09")] \
+        == ["dmath-ch07-kp-001"]
+    assert [item["kp_id"] for item in content.knowledge_query(pool, chapter="ch07")] == []
+    # A chapter exists only while content carries it, and the move took the only row.
+    assert "ch09" in pool.chapters() and "ch07" not in pool.chapters()
+
+
+def test_the_active_lens_reads_a_moved_point_in_its_new_chapter(pool):
+    content.move_kp(pool, 'dmath-ch07-kp-001', 'ch06')
+    moved = Pool(pool.root, pool.db_path, "dmath", "ch06")
+
+    ids = [item["kp_id"] for item in moved.kps(moved.scope_prefix())]
+    old_lens = Pool(pool.root, pool.db_path, "dmath", "ch07")
+
+    assert 'dmath-ch07-kp-001' in ids
+    assert [item["kp_id"] for item in old_lens.kps(old_lens.scope_prefix())] == []
+    moved.close()
+    old_lens.close()
+
+
+def test_a_new_knowledge_point_gets_its_chapter_column(pool):
+    created = content.create(pool, "kp", {"knowledge_item": "New", "knowledge_type":
+                                          "concept-property", "importance": "core"})
+
+    assert created["chapter"] == "ch06"

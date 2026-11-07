@@ -66,6 +66,7 @@ job 行，不伪造结论）；显式批改请求以带 `pool/scripts/migrate-pr
 | `fragile` | active | 易错/脆弱点备注；保存内容本身，不产生学习事件 | 知识点详情、兼容编辑 API |
 | `figure_paths` | **unresolved** | 该知识点引用的逻辑图片路径 JSON；**路径命名策略当前存在仓库级冲突**。`data.content_mirror` 可在显式 JSON 同步中写入通过既有路径校验的引用；`data.figure_mirror` 只读消费池引用并同步图像文件 | 图像渲染/回滚、`data.content_mirror`、`data.figure_mirror` |
 | `ingest_batch_id` | active | 受治理 ingest/apply 的批次 provenance；原地修改的批次不保证覆盖此列，不能当作通用最后修改标记 | 回滚/审计 |
+| `chapter` | active | 知识点**当前**章节归属（可空）。创建时写入初始章；跨章移动只改这一列、`kp_id` 不变（旧标识继续可解析）。读取口径「列优先、NULL 回退 `kp_id` 的章段」，旧池未迁移/未回填的行仍可读 | 章透镜读取（`Pool.kps`）、章列表、知识点列表分组、`data search kp --chapter`、`data move kp` |
 | `created_at`, `updated_at` | active | 行生命周期时间戳；不得承载业务状态 | 审计/排序 |
 
 ### 知识关系双轨现状

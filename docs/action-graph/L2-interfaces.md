@@ -90,6 +90,7 @@
 | `data <workspace> restore problem <id>` | 从归档恢复被删题目：内容与历史重新可读，不自动回到任何试卷；重复恢复报 `already_current` 且零写入 | Agent |
 | `data <workspace> search kp <text> [--knowledge-type T]... [--chapter chNN]` | 只读知识点组合查询：按现有 `knowledge_type` 与章节收窄，文字匹配标题/正文/经验摘要/来源出处；无旗标时等价于原 `search` | Agent |
 | `data <workspace> related problem <kp-id>[,<kp-id>...]` | 只读关联题目：命中任一关联知识点即返回，同一题只出现一次，归档题不返回 | Agent |
+| `data <workspace> move kp <kp-id> --chapter chNN` | 同课程内跨章移动知识点：只改 `chapter` 列，`kp_id` 不变（旧标识继续可解析），题目关联/关系/经验/学习记录原样保留；返回 `previous`/`chapter`/`moved` | Agent |
 | `papers <workspace> delete <ps-id>` | 仅删除容器与未完成状态，不删题目及学习证据 | Agent |
 | `course-sync <workspace> export\|receive\|check\|sync\|status` / `course-sync --all-configured sync` | 整门课程的文件交换与 Git 传输（Git 仓库为可选媒介）；`check` 只读，`receive` 逐单元写入并保留未决冲突；未注册工作区可用 `receive --from 包目录 --to 新目录` 校验后创建并注册，`--keep`/`--choices` 选侧，`--associate` 接受另一来源谱系；统一 JSON 回执与退出码 0/2/3/4 | 人 + Agent |
 | `course-sync <workspace> schedule install\|enable\|disable\|remove` | 安装/启停/删除每小时系统任务（调用同一 CLI 跑全部已配置课程）；媒介配置写入 `.lessonkit/course-sync/config.json` 的 `media` | 人 |

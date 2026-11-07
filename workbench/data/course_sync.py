@@ -531,6 +531,32 @@ def _execution_projection(assets, state):
             assets[identity] = {**old, "deleted": True}
 
 
+def record_row_deletions(pool, table, keys):
+    """Mark rows this installation deleted, so the next export sends a tombstone.
+
+    Only a row that was already exported needs one: a receiver that never saw it
+    has nothing to delete, and a vanished local row must still not be confused
+    with a lost file.
+    """
+    if table not in TABLES:
+        return []
+    with course_lock(pool.root):
+        state = _state(pool.root, pool.course, pool=pool)
+        marked = []
+        for key in keys:
+            local_key = (table + "/"
+                         + json.dumps([key], ensure_ascii=False, separators=(",", ":")))
+            identity = state["row_identities"].get(local_key)
+            asset = state["base"].get(identity) if identity else None
+            if asset is None:
+                continue
+            state["base"][identity] = {**asset, "deleted": True}
+            marked.append(identity)
+        if marked:
+            _save_state(pool, state)
+        return marked
+
+
 def export_course(pool, workspace, destination):
     """Export a closed committed projection, rejecting unknown or missing assets."""
     destination = Path(destination).resolve()

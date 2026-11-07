@@ -302,3 +302,37 @@ def test_deleting_a_shared_question_propagates_to_the_other_installation(devices
     current = active_practice.current(right())
     assert "dmath-ch06-prob-002" not in [item["item_id"] for item in current["items"]]
     assert current["execution_id"] == run["execution_id"]
+
+
+def test_a_deleted_knowledge_point_travels_as_an_explicit_tombstone(devices, tmp_path):
+    """GAP-01: deleting a knowledge point must not break the next exchange."""
+    from workbench.data import content
+    left, right = devices
+    first = round_trip(left, right, tmp_path / "hop1")
+    assert first[1]["status"] == "success", first[1]["failed"]
+
+    content.delete(left(), "kp", "dmath-ch06-kp-001")
+
+    _inspected, result = round_trip(left, right, tmp_path / "hop2")
+
+    assert result["status"] == "success", result["failed"]
+    remaining = right().connect().execute(
+        "SELECT COUNT(*) FROM knowledge_points WHERE kp_id=?",
+        ("dmath-ch06-kp-001",)).fetchone()[0]
+    assert remaining == 0
+    assert right().connect().execute(
+        "SELECT COUNT(*) FROM knowledge_relations").fetchone()[0] == 0
+
+
+def test_receiving_a_knowledge_point_tombstone_twice_is_idle(devices, tmp_path):
+    from workbench.data import content
+    left, right = devices
+    round_trip(left, right, tmp_path / "hop1")
+    content.delete(left(), "kp", "dmath-ch06-kp-001")
+    round_trip(left, right, tmp_path / "hop2")
+
+    inspection = course_sync.inspect_exchange(
+        right(), workspace(right()), tmp_path / "hop2")
+
+    assert inspection["plan"]["changes"] == []
+    assert inspection["plan"]["outgoing"] == []
