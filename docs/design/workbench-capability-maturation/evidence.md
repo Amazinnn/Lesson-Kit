@@ -67,3 +67,6 @@ Q071 现状核查。workbench-ui spec 已规定运行中发送偏好在工作区
 
 
 2026-11-07 经验与独立知识点边界。workbench/data/experience.py 在 kp_experiences 中按 kp_id 维护一份可选总结，题目引用由 kp_experience_problems 保存，更新使用 expected revision。bridge/conversations.py 已提示在持续授权下读取、合并去重并记录经验。该路径依附既有知识点，不能单独满足 Q086 从练习提炼独立知识点的需求。此处只核查静态结构与提示词，不宣称真实 Agent 已能自动选择合适的总结粒度或创建时机。
+
+
+2026-11-07 回滚行为区分。PRODUCT-MANUAL 第 8 章及内容管理说明同时描述整份清单预检零写入、写入事务失败恢复、显式 ingest rollback 撤销成功批次。workbench/ingest/__init__.py 的 rollback_batch 会检查后续练习/评价及内容改动再决定是否拒绝撤销；同模块多处 conn.rollback 属于写入异常处理。相同中文词覆盖不同操作，Q096 当前未明确取消范围，不能仅按字符串删除 rollback 调用。此轮只作静态核查，未复现所有者实际感到阻断的操作。
