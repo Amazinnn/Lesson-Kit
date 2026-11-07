@@ -11,7 +11,9 @@ from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
 from workbench import registry
+from workbench.data import content as content_data
 from workbench.data import figure_mirror
+from workbench.data import paper_progress
 from workbench.domain import course_sync as planning
 
 
@@ -522,13 +524,14 @@ def _same_projection(left, right):
         return False
 
 
-def _adopt_course_origin(state, inspection, choices):
+def _adopt_course_origin(state, inspection, choices, unassigned=False):
     """Keep the lineage of a received course; a different lineage needs input."""
     package = inspection.get("course") or {}
     origin = package.get("origin")
     if not isinstance(origin, str) or not origin:
         return
-    if not inspection.get("local"):
+    if unassigned or not inspection.get("local"):
+        # Nothing recorded a lineage here yet, so the package supplies it.
         state["course"]["origin"] = origin
         return
     if state["course"]["origin"] != origin and not choices.get("associate"):
@@ -680,9 +683,11 @@ def apply_exchange(pool, workspace, inspection, choices=None):
     changes, kept, unresolved = _side_choices(plan, choices)
     supported, unsupported = _supported_units(changes)
     with course_lock(pool.root):
+        state_path = pool.root / ".lessonkit/course-sync/state.json"
+        unassigned = not state_path.exists()
         state = _state(pool.root, pool.course)
-        _adopt_course_origin(state, inspection, choices)
-        _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
+        _adopt_course_origin(state, inspection, choices, unassigned=unassigned)
+        _atomic_json(state_path, state)
         connection = pool.connect()
         index = _identity_index(connection, state)
         local_assets = inspection.get("local") or {}
@@ -729,6 +734,9 @@ def apply_exchange(pool, workspace, inspection, choices=None):
                 failed.append({"identity": identity, "code": "apply_failed", "message": str(exc)})
                 continue
             applied.append(identity)
+        # A deleted question or knowledge point queues its Paper file write in
+        # the same way its writer does; publish those intents after committing.
+        paper_progress.flush_files(pool)
         status = "conflict" if unresolved else ("partial" if failed else "success")
         return {"status": status, "course": state["course"], "origin": state["origin"],
                 "applied": applied, "kept": kept, "failed": failed,
@@ -961,13 +969,33 @@ def _write_unit(pool, connection, state, index, change):
     if asset["kind"] != "row":
         raise ValueError(f"unsupported asset kind: {asset['kind']}")
     identity = change["identity"]
-    if change["action"] == "delete" and not asset.get("content"):
+    content = asset.get("content") or {}
+    table = content.get("table")
+    deletion = change["action"] == "delete" or bool(asset.get("deleted"))
+    if table is None and deletion:
+        encoded = _identity_key(identity)
+        table = encoded[0] if encoded else None
+    if deletion and table in {"problems", "knowledge_points"}:
+        # Deletion keeps the effects its own writer owns: a question leaves its
+        # Papers, a knowledge point takes its cards, questions and relations.
+        object_id = _deleted_object_id(identity, content, table)
+        if table == "problems":
+            content_data._delete_problem(connection, object_id, pool)
+        else:
+            content_data._delete_kp(connection, object_id, pool)
+        return
+    if change["action"] == "delete" and not content:
         _delete_row(connection, index, identity)
         return
     table, row = _local_row(asset, index)
     keys = _primary_key(connection, table)
     if not keys:
         raise ValueError(f"target table has no persistent key: {table}")
+    if table == "part_grading_jobs" and row.get("status") in {"pending", "running"}:
+        raise ValueError("a waiting grading job is not dispatched by an import")
+    if table == "problems" and change["action"] != "create":
+        _update_problem(connection, row)
+        return
     if table in IDENTITY_TABLES:
         if change["action"] == "delete" or asset.get("deleted"):
             # A tombstone keeps the row (problems) or is already gone.
@@ -994,6 +1022,37 @@ def _write_unit(pool, connection, state, index, change):
         _insert_row(connection, table, row)
         return
     _update_row(connection, table, row, tuple(keys))
+
+
+def _deleted_object_id(identity, content, table):
+    row = content.get("row") or {}
+    column = "problem_id" if table == "problems" else "kp_id"
+    if row.get(column) is not None:
+        return row[column]
+    encoded = _identity_key(identity)
+    if encoded is None or encoded[0] != table or not encoded[1]:
+        raise ValueError(f"cannot address the deleted asset: {identity}")
+    return encoded[1][0]
+
+
+def _update_problem(connection, row):
+    """An imported question edit keeps the revision and draft consequences."""
+    problem_id = row["problem_id"]
+    try:
+        before = connection.execute("SELECT * FROM problems WHERE problem_id=?",
+                                    (problem_id,)).fetchone()
+    except sqlite3.Error:
+        before = None
+    columns = set(_column_names(connection, "problems"))
+    assignments = [(name, value) for name, value in row.items() if name != "problem_id"]
+    if before is not None and any(name in row and before[name] != row[name]
+                                  for name in content_data.CONTENT_AXES):
+        assignments.extend((name, None) for name in content_data.DIFFICULTY_COLUMNS
+                           if name in columns and name not in row)
+    sql = (f'UPDATE problems SET {",".join(f'"{name}"=?' for name, _ in assignments)} '
+           f'WHERE problem_id=?')
+    paper_progress.update_question(
+        connection, sql, tuple(value for _, value in assignments) + (problem_id,))
 
 
 def _insert_row(connection, table, row):

@@ -15,9 +15,13 @@ from workbench.data.course_sync import (
 from workbench.data.pool import Pool
 
 SCHEMA = """
-    CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY, body TEXT, figure_paths TEXT);
+    CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY, body TEXT, figure_paths TEXT,
+                                   related_kp_ids TEXT);
     CREATE TABLE problems (problem_id TEXT PRIMARY KEY, problem_text TEXT, kp_ids TEXT,
-                           figure_paths TEXT, deleted_at TEXT);
+                           figure_paths TEXT, deleted_at TEXT, difficulty TEXT,
+                           difficulty_knowledge_breadth TEXT, difficulty_reasoning_depth TEXT,
+                           difficulty_transfer_distance TEXT,
+                           difficulty_construction_openness TEXT, difficulty_model TEXT);
     CREATE TABLE problem_attempts (id INTEGER PRIMARY KEY, problem_id TEXT, answer_text TEXT);
     CREATE TABLE practice_execution_ids (id INTEGER PRIMARY KEY AUTOINCREMENT);
     CREATE TABLE active_practice (
@@ -33,6 +37,29 @@ SCHEMA = """
     CREATE TABLE paper_state (
         paper_id TEXT PRIMARY KEY, generation INTEGER NOT NULL DEFAULT 1,
         checkpoint_json TEXT, pending_json TEXT, pending_delete INTEGER NOT NULL DEFAULT 0);
+    CREATE TABLE problem_revisions (
+        problem_id TEXT PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 1);
+    CREATE TABLE flash_cards (card_id TEXT PRIMARY KEY, kp_id TEXT);
+    CREATE TABLE questions (q_id TEXT PRIMARY KEY, kp_id TEXT);
+    CREATE TABLE question_progress (id INTEGER PRIMARY KEY AUTOINCREMENT, q_id TEXT, note TEXT);
+    CREATE TABLE kp_progress (kp_id TEXT PRIMARY KEY, state TEXT);
+    CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY,
+                                      source_kp_id TEXT, target_kp_id TEXT);
+    CREATE TABLE learner_signals (id INTEGER PRIMARY KEY, target_id TEXT);
+    CREATE TABLE feedback_events (id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT,
+                                  item_id TEXT, note TEXT);
+    CREATE TABLE review_schedule (id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT,
+                                  item_id TEXT);
+    CREATE TABLE learning_current_state (id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT,
+                                         item_id TEXT);
+    CREATE TABLE practice_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, source_kind TEXT,
+                                source_ref TEXT, source_label TEXT, kp_ids_json TEXT DEFAULT '[]',
+                                practice_mode TEXT, rating_mode TEXT, items_json TEXT DEFAULT '[]',
+                                status TEXT, started_at TEXT, finished_at TEXT,
+                                reveal_timing TEXT);
+    CREATE TABLE part_grading_jobs (attempt_id INTEGER PRIMARY KEY, execution_id INTEGER NOT NULL,
+                                    status TEXT NOT NULL DEFAULT 'pending', error TEXT,
+                                    conversation_id TEXT, turn_id TEXT, updated_at TEXT);
 """
 
 
@@ -52,10 +79,11 @@ def pair(tmp_path, monkeypatch):
     left = make_course(tmp_path / "left")
     right = make_course(tmp_path / "right")
     connection = left.connect()
-    connection.execute("INSERT INTO knowledge_points VALUES (?,?,?)",
-                       ("math-kp-1", "公式 $x$", None))
-    connection.execute("INSERT INTO problems VALUES (?,?,?,?,?)",
-                       ("math-prob-1", "原题", '["math-kp-1"]', '["math/ch01/a.png"]', None))
+    connection.execute("INSERT INTO knowledge_points (kp_id, body, figure_paths)"
+                       " VALUES (?,?,?)", ("math-kp-1", "公式 $x$", None))
+    connection.execute("INSERT INTO problems (problem_id, problem_text, kp_ids, figure_paths)"
+                       " VALUES (?,?,?,?)",
+                       ("math-prob-1", "原题", '["math-kp-1"]', '["math/ch01/a.png"]'))
     connection.execute("INSERT INTO problem_attempts VALUES (?,?,?)",
                        (1, "math-prob-1", "原始答案\n$x=1$"))
     left.commit()
@@ -301,6 +329,96 @@ def test_a_parked_checkpoint_is_rebuilt_for_its_paper(pair, tmp_path):
     assert parked["items"][0]["draft_sequence"] == 4
     assert parked["cursor"] == 0
     assert rows(right, "active_practice") == []
+
+
+def test_an_imported_question_edit_clears_difficulty_and_local_drafts(pair, tmp_path):
+    left, right = pair
+    publish(left, tmp_path / "bundle")
+    receive(right, tmp_path / "bundle")
+    connection = right.connect()
+    connection.execute("UPDATE problems SET difficulty='hard', difficulty_model='m1'")
+    connection.execute("INSERT OR REPLACE INTO problem_revisions VALUES ('math-prob-1', 4)")
+    connection.execute(
+        "INSERT INTO active_practice_items (position, item_type, item_id, state, draft_json)"
+        " VALUES (0,'problem','math-prob-1','pending','{\"answer\":\"本机草稿\"}')")
+    connection.execute("INSERT INTO practice_execution_ids DEFAULT VALUES")
+    connection.execute("INSERT INTO active_practice (singleton, source_kind, source_ref,"
+                       " practice_mode, rating_mode, execution_id)"
+                       " VALUES (1,'paper','ps-001','exam','immediate',1)")
+    right.commit()
+
+    left.connect().execute("UPDATE problems SET problem_text='改了题面'")
+    left.commit()
+    publish(left, tmp_path / "bundle")
+
+    # A local difficulty rating and a remote question edit are two changes to
+    # one row, so the row needs a side before the writer clears that rating.
+    inspected, blocked = receive(right, tmp_path / "bundle")
+    assert blocked["status"] == "conflict", blocked
+    assert [item["identity"] for item in inspected["conflicts"]] == ['row/problems/["math-prob-1"]']
+    _inspected, result = receive(right, tmp_path / "bundle", {"side": "incoming"})
+
+    assert result["status"] == "success", result["failed"]
+    problem = rows(right, "problems")[0]
+    assert problem["problem_text"] == "改了题面"
+    assert problem["difficulty"] is None and problem["difficulty_model"] is None
+    item = rows(right, "active_practice_items")[0]
+    assert item["state"] == "pending"
+    assert item["attempt_id"] is None
+    assert item["draft_json"] is None
+    assert item["content_revision"] == 5
+
+
+def test_an_imported_deletion_keeps_the_writer_side_effects(pair, tmp_path):
+    left, right = pair
+    connection = right.connect()
+    connection.execute("INSERT INTO flash_cards VALUES ('card-1','math-kp-1')")
+    connection.execute("INSERT INTO questions VALUES ('q-1','math-kp-1')")
+    connection.execute("INSERT INTO question_progress (q_id, note) VALUES ('q-1','')")
+    connection.execute("INSERT INTO kp_progress VALUES ('math-kp-1','learned')")
+    connection.execute("INSERT INTO knowledge_relations VALUES ('r-1','math-kp-1','math-kp-2')")
+    connection.execute("INSERT INTO learner_signals VALUES (1,'card-1')")
+    right.commit()
+    publish(left, tmp_path / "bundle")
+    receive(right, tmp_path / "bundle")
+
+    manifest_path = tmp_path / "bundle/manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    descriptor = next(item for item in manifest["assets"]
+                      if item["kind"] == "row" and "knowledge_points" in item["identity"])
+    (tmp_path / "bundle" / descriptor["path"]).write_text(
+        json.dumps({"kind": "row", "deleted": True}), encoding="utf-8")
+    _inspected, result = receive(right, tmp_path / "bundle")
+
+    assert result["status"] == "success", result["failed"]
+    assert rows(right, "knowledge_points") == []
+    for table in ("flash_cards", "questions", "question_progress", "kp_progress",
+                  "knowledge_relations"):
+        assert rows(right, table) == [], table
+    assert rows(right, "learner_signals") == []
+
+
+def test_a_waiting_grading_job_is_not_dispatched_by_an_import(pair, tmp_path):
+    left, right = pair
+    left.connect().execute("INSERT INTO practice_execution_ids DEFAULT VALUES")
+    left.connect().execute("INSERT INTO part_grading_jobs (attempt_id, execution_id, status)"
+                           " VALUES (1, 1, 'pending')")
+    left.commit()
+    publish(left, tmp_path / "bundle")
+
+    _inspected, result = receive(right, tmp_path / "bundle")
+
+    assert result["status"] == "partial"
+    refused = {item["identity"]: item["message"] for item in result["failed"]}
+    assert any("grading job" in message for message in refused.values())
+    assert rows(right, "part_grading_jobs") == []
+
+    left.connect().execute("UPDATE part_grading_jobs SET status='failed', error='timeout'")
+    left.commit()
+    publish(left, tmp_path / "bundle")
+    _inspected, settled = receive(right, tmp_path / "bundle")
+    assert settled["status"] == "success", settled["failed"]
+    assert rows(right, "part_grading_jobs")[0]["status"] == "failed"
 
 
 def test_explicit_deletion_removes_the_row_and_a_missing_file_does_not(pair, tmp_path):
