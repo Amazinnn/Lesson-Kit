@@ -30,6 +30,9 @@ SCHEMA = """
         position INTEGER PRIMARY KEY, item_type TEXT, item_id TEXT, direction TEXT DEFAULT '',
         state TEXT DEFAULT 'pending', attempt_id INTEGER, content_revision INTEGER DEFAULT 1,
         draft_json TEXT, draft_sequence INTEGER DEFAULT 0);
+    CREATE TABLE paper_state (
+        paper_id TEXT PRIMARY KEY, generation INTEGER NOT NULL DEFAULT 1,
+        checkpoint_json TEXT, pending_json TEXT, pending_delete INTEGER NOT NULL DEFAULT 0);
 """
 
 
@@ -184,6 +187,22 @@ def test_a_failed_unit_keeps_independent_units_and_retries(pair, tmp_path):
     assert [row["id"] for row in rows(right, "problem_attempts")] == [1]
 
 
+def running_paper(left, draft="草稿", generation=1):
+    connection = left.connect()
+    connection.execute("INSERT INTO practice_execution_ids DEFAULT VALUES")
+    connection.execute(
+        "INSERT INTO active_practice (singleton, source_kind, source_ref, source_label,"
+        " kp_ids_json, practice_mode, rating_mode, cursor, started_at, updated_at,"
+        " execution_id, paper_generation, reveal_timing)"
+        " VALUES (1,'paper','ps-001','期中练习卷','[\"math-kp-1\"]','exam','immediate',0,"
+        "'2026-11-07 10:00:00','2026-11-07 10:00:00',1,?,'per_item')", (generation,))
+    connection.execute(
+        "INSERT INTO active_practice_items (position, item_type, item_id, state, attempt_id,"
+        " content_revision, draft_json, draft_sequence) VALUES (0,'problem','math-prob-1',"
+        "'pending',1,3,?,2)", (json.dumps({"answer": draft}, ensure_ascii=False),))
+    left.commit()
+
+
 def test_unfinished_executions_are_refused_without_dropping_saved_state(pair, tmp_path):
     left, right = pair
     connection = left.connect()
@@ -195,17 +214,93 @@ def test_unfinished_executions_are_refused_without_dropping_saved_state(pair, tm
         "INSERT INTO active_practice_items (position, item_type, item_id, draft_json)"
         " VALUES (0,'problem','math-prob-1','{\"answer\":\"草稿\"}')")
     left.commit()
-    publish(left, tmp_path / "bundle")
+
+    # The paper file the execution belongs to is part of the same package.
+    (left.root / ".lessonkit/practice-sets/ps-001.json").write_text(
+        '{"title":"期中练习卷"}\n', encoding="utf-8")
+    assert export_course(left, workspace(left), tmp_path / "bundle")["status"] == "success"
 
     _inspected, result = receive(right, tmp_path / "bundle")
 
-    assert result["status"] == "partial"
-    refused = {item["identity"]: item["code"] for item in result["failed"]}
-    executable = {identity for identity in refused if identity.startswith("execution/")}
-    assert executable and all(refused[identity] == "unsupported_kind" for identity in executable)
-    assert rows(right, "active_practice") == []
-    assert rows(right, "active_practice_items") == []
+    assert result["status"] == "success", result["failed"]
     assert rows(right, "knowledge_points")[0]["kp_id"] == "math-kp-1"
+
+
+def test_an_active_execution_is_rebuilt_with_its_drafts(pair, tmp_path):
+    left, right = pair
+    running_paper(left)
+    assert export_course(left, workspace(left), tmp_path / "bundle")["status"] == "success"
+
+    _inspected, result = receive(right, tmp_path / "bundle")
+
+    assert result["status"] == "success", result["failed"]
+    active = rows(right, "active_practice")
+    assert len(active) == 1
+    assert active[0]["source_ref"] == "ps-001"
+    assert json.loads(active[0]["kp_ids_json"]) == ["math-kp-1"]
+    assert active[0]["reveal_timing"] == "per_item"
+    items = rows(right, "active_practice_items")
+    assert [(row["position"], row["item_id"], row["state"]) for row in items] == [
+        (0, "math-prob-1", "pending")]
+    assert json.loads(items[0]["draft_json"]) == {"answer": "草稿"}
+    assert items[0]["draft_sequence"] == 2
+    assert items[0]["content_revision"] == 3
+    assert items[0]["attempt_id"] == 1
+
+
+def test_a_draft_changed_on_one_side_travels_without_a_conflict(pair, tmp_path):
+    left, right = pair
+    running_paper(left)
+    export_course(left, workspace(left), tmp_path / "bundle")
+    receive(right, tmp_path / "bundle")
+
+    right.connect().execute(
+        "UPDATE active_practice_items SET draft_json=?, draft_sequence=3 WHERE position=0",
+        (json.dumps({"answer": "右边的草稿"}, ensure_ascii=False),))
+    right.commit()
+    export_course(right, workspace(right), tmp_path / "bundle")
+
+    inspected, result = receive(left, tmp_path / "bundle")
+    assert inspected["conflicts"] == []
+    assert result["status"] == "success", result["failed"]
+    assert json.loads(rows(left, "active_practice_items")[0]["draft_json"]) == {
+        "answer": "右边的草稿"}
+
+
+def test_a_parked_checkpoint_is_rebuilt_for_its_paper(pair, tmp_path):
+    left, right = pair
+    record = {
+        "source_kind": "paper", "source_ref": "ps-001", "source_label": "期中练习卷",
+        "kp_ids": ["math-kp-1"], "practice_mode": "exam", "rating_mode": "immediate",
+        "cursor": 0, "started_at": "2026-11-07 10:00:00", "updated_at": "2026-11-07 10:05:00",
+        "execution_id": 1, "paper_generation": 2, "reveal_timing": "on_submit",
+        "items": [{"position": 0, "item_type": "problem", "item_id": "math-prob-1",
+                   "direction": "", "state": "answered", "attempt_id": 1,
+                   "content_revision": 3, "draft": {"answer": "暂停的草稿"},
+                   "draft_sequence": 4}],
+        "progress": {"completed": 1, "remaining": 0, "total": 1},
+    }
+    connection = left.connect()
+    connection.execute("INSERT INTO practice_execution_ids DEFAULT VALUES")
+    connection.execute("INSERT INTO paper_state VALUES ('ps-001', 2, ?, NULL, 0)",
+                       (json.dumps(record, ensure_ascii=False),))
+    left.commit()
+    (left.root / ".lessonkit/practice-sets/ps-001.json").write_text(
+        '{"title":"期中练习卷"}\n', encoding="utf-8")
+    export_course(left, workspace(left), tmp_path / "bundle")
+
+    _inspected, result = receive(right, tmp_path / "bundle")
+
+    assert result["status"] == "success", result["failed"]
+    state = rows(right, "paper_state")[0]
+    assert state["paper_id"] == "ps-001"
+    assert state["generation"] == 2
+    parked = json.loads(state["checkpoint_json"])
+    assert parked["execution_id"] == 1
+    assert parked["items"][0]["draft"] == {"answer": "暂停的草稿"}
+    assert parked["items"][0]["draft_sequence"] == 4
+    assert parked["cursor"] == 0
+    assert rows(right, "active_practice") == []
 
 
 def test_explicit_deletion_removes_the_row_and_a_missing_file_does_not(pair, tmp_path):

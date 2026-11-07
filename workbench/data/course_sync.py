@@ -677,6 +677,8 @@ def apply_exchange(pool, workspace, inspection, choices=None):
         _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
         connection = pool.connect()
         index = _identity_index(connection, state)
+        local_assets = inspection.get("local") or {}
+        headers, executions = _execution_units(supported, local_assets)
         ordered, blocked = _dependency_order(supported)
         failed = [{"identity": identity, "code": "invalid_dependency",
                    "message": "the unit depends on an unavailable asset"}
@@ -685,11 +687,30 @@ def apply_exchange(pool, workspace, inspection, choices=None):
                        "message": "this receiver cannot write that asset yet"}
                       for identity in sorted(unsupported))
         applied = []
+        failed_identities = {item["identity"] for item in failed}
         for change in ordered:
             identity = change["identity"]
+            if change["asset"]["kind"] == "execution_item" \
+                    and identity.rsplit("/item/", 1)[0] in headers:
+                # Written with its execution header, which owns the whole record.
+                state["base"][identity] = change["asset"]
+                continue
+            unavailable = [key for key in change["asset"].get("depends_on", [])
+                           if key in failed_identities]
+            if unavailable:
+                failed.append({"identity": identity, "code": "invalid_dependency",
+                               "message": f"a dependency did not apply: {unavailable[0]}"})
+                failed_identities.add(identity)
+                continue
             try:
                 with pool.transaction(immediate=True):
-                    _write_unit(pool, connection, state, index, change)
+                    if identity in headers:
+                        _write_execution(pool, connection, state, index, identity,
+                                         change["asset"], executions.get(identity, {}))
+                    elif change["asset"]["kind"] == "execution_item":
+                        _write_execution_item(connection, index, identity, change["asset"])
+                    else:
+                        _write_unit(pool, connection, state, index, change)
                     # The acknowledgement and the record mapping are written
                     # before the commit they describe: a retry then sees either
                     # both or neither, and a mapping without its row is ignored
@@ -711,29 +732,217 @@ def apply_exchange(pool, workspace, inspection, choices=None):
 
 
 def _supported_units(changes):
-    """Units this receiver can write today; the rest are reported, never skipped silently."""
-    unsupported = set()
-    for change in changes:
-        if change["asset"]["kind"] in {"execution", "execution_item"}:
-            unsupported.add(change["identity"])
-    paper_ids = {change["asset"]["content"].get("paper_id")
-                 for change in changes
-                 if change["asset"]["kind"] == "execution" and change["asset"].get("content")}
-    paper_ids.discard(None)
-    supported = []
+    """Reserved for units a future receiver cannot write; every v1 kind is writable now."""
+    return list(changes), set()
+
+
+def _execution_units(changes, local_assets):
+    """Group each execution header with every item known for it, local or incoming."""
+    headers = {}
+    incoming_items = {}
+    local_items = {}
     for change in changes:
         asset = change["asset"]
-        if change["identity"] in unsupported:
-            continue
-        row = asset.get("content", {}).get("row") if asset["kind"] == "row" else None
-        if row is not None and asset["content"]["table"] == "paper_state" \
-                and row.get("paper_id") in paper_ids:
-            # Its checkpoint was projected out; writing the stripped row would
-            # drop the parked execution this receiver cannot rebuild yet.
-            unsupported.add(change["identity"])
-            continue
-        supported.append(change)
-    return supported, unsupported
+        if asset["kind"] == "execution":
+            headers[change["identity"]] = change
+        elif asset["kind"] == "execution_item" and asset.get("content"):
+            header = change["identity"].rsplit("/item/", 1)[0]
+            incoming_items.setdefault(header, {})[asset["content"]["position"]] = asset
+    for identity, asset in local_assets.items():
+        if asset.get("kind") == "execution_item" and asset.get("content"):
+            header = identity.rsplit("/item/", 1)[0]
+            local_items.setdefault(header, {})[asset["content"]["position"]] = asset
+    grouped = {}
+    for identity in headers:
+        merged = dict(local_items.get(identity, {}))
+        merged.update(incoming_items.get(identity, {}))
+        grouped[identity] = merged
+    return headers, grouped
+
+
+def _write_execution(pool, connection, state, index, identity, asset, items):
+    """Rebuild an active run or a parked checkpoint from its projected units."""
+    if asset.get("deleted"):
+        _retire_execution(connection, state, index, identity, asset)
+        return
+    content = dict(asset["content"])
+    presentation = asset.get("presentation") or {}
+    record = {key: value for key, value in content.items() if key != "paper_id"}
+    record["execution_id"] = _local_identifier(content.get("execution_id"), index)
+    ordered = [items[position] for position in sorted(items)]
+    record["items"] = [_item_record(item, index) for item in ordered]
+    paper_id = content.get("paper_id") or content.get("source_ref")
+    generation = content.get("paper_generation") or 1
+    record["paper_generation"] = generation
+    if presentation.get("selected"):
+        _write_active(connection, record, presentation)
+    else:
+        _write_checkpoint(connection, record, presentation, paper_id, generation)
+
+
+def _retire_execution(connection, state, index, identity, asset):
+    """A tombstone only clears a run the newer Paper generation replaced."""
+    generation = (asset.get("content") or {}).get("paper_generation") or asset.get("presentation", {}).get(
+        "paper_generation") or 0
+    paper_id = (asset.get("content") or {}).get("paper_id") or asset.get("content", {}).get("source_ref")
+    execution_id = (asset.get("content") or {}).get("execution_id")
+    local = index.get(execution_id, (None, None))[1] if execution_id in index else None
+    if local is not None and _table_exists(connection, "active_practice"):
+        row = connection.execute("SELECT execution_id FROM active_practice").fetchone()
+        if row is not None and row["execution_id"] == local:
+            connection.execute("DELETE FROM active_practice_items")
+            connection.execute("DELETE FROM active_practice")
+    if paper_id and _table_exists(connection, "paper_state"):
+        row = connection.execute("SELECT generation, checkpoint_json FROM paper_state "
+                                 "WHERE paper_id=?", (paper_id,)).fetchone()
+        if row is not None and row["checkpoint_json"]:
+            parked = json.loads(row["checkpoint_json"])
+            if parked.get("execution_id") == local and generation > (parked.get("paper_generation") or 0):
+                connection.execute("UPDATE paper_state SET checkpoint_json=NULL WHERE paper_id=?",
+                                   (paper_id,))
+
+
+def _item_record(asset, index):
+    item = dict(asset["content"])
+    for key in ("paper_id", "paper_generation"):
+        item.pop(key, None)
+    item.pop("execution_id", None)
+    item["attempt_id"] = _local_identifier(item.get("attempt_id"), index)
+    item["draft"] = item.pop("draft", {}) or {}
+    item["draft_sequence"] = (asset.get("presentation") or {}).get("draft_sequence", 0)
+    return item
+
+
+def _active_item_row(item):
+    row = {key: value for key, value in item.items() if key != "draft"}
+    row["draft_json"] = json.dumps(item.get("draft") or {}, ensure_ascii=False)
+    return row
+
+
+def _write_execution_item(connection, index, identity, asset):
+    """One item changed while its execution header is unchanged on both sides."""
+    content = asset["content"]
+    item = _item_record(asset, index)
+    execution_id = _local_identifier(content.get("execution_id"), index)
+    if _table_exists(connection, "active_practice"):
+        active = connection.execute("SELECT execution_id FROM active_practice").fetchone()
+        if active is not None and active["execution_id"] == execution_id:
+            columns = set(_column_names(connection, "active_practice_items"))
+            values = {key: value for key, value in _active_item_row(item).items()
+                      if key in columns}
+            connection.execute(
+                f'INSERT OR REPLACE INTO active_practice_items '
+                f'({",".join(f'"{key}"' for key in values)}) '
+                f'VALUES ({",".join("?" for _ in values)})', tuple(values.values()))
+            return
+    paper_id = content.get("paper_id") or content.get("source_ref")
+    if paper_id and _table_exists(connection, "paper_state"):
+        row = connection.execute("SELECT checkpoint_json FROM paper_state WHERE paper_id=?",
+                                 (paper_id,)).fetchone()
+        if row is not None and row["checkpoint_json"]:
+            parked = json.loads(row["checkpoint_json"])
+            if parked.get("execution_id") == execution_id:
+                items = parked.get("items") or []
+                position = item["position"]
+                if not 0 <= position < len(items):
+                    raise ValueError(f"the parked execution has no position {position}")
+                items[position] = item
+                connection.execute(
+                    "UPDATE paper_state SET checkpoint_json=? WHERE paper_id=?",
+                    (json.dumps(parked, ensure_ascii=False), paper_id))
+                return
+    raise ValueError("the execution this item belongs to is not present locally")
+
+
+def _local_identifier(value, index):
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if value not in index:
+        raise ValueError(f"unresolved incoming reference: {value}")
+    return index[value][1]
+
+
+def _write_active(connection, record, presentation):
+    columns = set(_column_names(connection, "active_practice"))
+    row = {
+        "singleton": 1,
+        "source_kind": record.get("source_kind"),
+        "source_ref": record.get("source_ref"),
+        "source_label": record.get("source_label"),
+        "kp_ids_json": json.dumps(record.get("kp_ids") or [], ensure_ascii=False),
+        "practice_mode": record.get("practice_mode"),
+        "rating_mode": record.get("rating_mode"),
+        "cursor": presentation.get("cursor") or 0,
+        "started_at": record.get("started_at") or _now(connection),
+        "updated_at": presentation.get("updated_at") or record.get("updated_at") or _now(connection),
+        "execution_id": record["execution_id"],
+        "paper_generation": record.get("paper_generation") or 1,
+        "reveal_timing": record.get("reveal_timing"),
+    }
+    row = {key: value for key, value in row.items() if key in columns}
+    connection.execute(
+        f'INSERT OR REPLACE INTO active_practice ({",".join(f'"{key}"' for key in row)}) '
+        f'VALUES ({",".join("?" for _ in row)})', tuple(row.values()))
+    connection.execute("DELETE FROM active_practice_items")
+    item_columns = set(_column_names(connection, "active_practice_items"))
+    for item in record["items"]:
+        values = {key: value for key, value in _active_item_row(item).items()
+                  if key in item_columns}
+        connection.execute(
+            f'INSERT INTO active_practice_items ({",".join(f'"{key}"' for key in values)}) '
+            f'VALUES ({",".join("?" for _ in values)})', tuple(values.values()))
+    _clear_checkpoint_of(connection, record["paper_id"] if "paper_id" in record
+                         else record.get("source_ref"), record["execution_id"])
+
+
+def _clear_checkpoint_of(connection, paper_id, execution_id):
+    if not paper_id or not _table_exists(connection, "paper_state"):
+        return
+    row = connection.execute("SELECT checkpoint_json FROM paper_state WHERE paper_id=?",
+                             (paper_id,)).fetchone()
+    if row is None or not row["checkpoint_json"]:
+        return
+    parked = json.loads(row["checkpoint_json"])
+    if parked.get("execution_id") == execution_id:
+        connection.execute("UPDATE paper_state SET checkpoint_json=NULL WHERE paper_id=?",
+                           (paper_id,))
+
+
+def _write_checkpoint(connection, record, presentation, paper_id, generation):
+    if not paper_id:
+        raise ValueError("a parked execution needs its Paper identity")
+    record["cursor"] = presentation.get("cursor") or record.get("cursor") or 0
+    record["updated_at"] = presentation.get("updated_at") or record.get("updated_at") or _now(connection)
+    if presentation.get("progress") is not None:
+        record["progress"] = presentation["progress"]
+    row = connection.execute("SELECT generation FROM paper_state WHERE paper_id=?",
+                             (paper_id,)).fetchone()
+    if row is not None and (row["generation"] or 1) > generation:
+        raise ValueError("the incoming execution belongs to an older Paper generation")
+    body = json.dumps(record, ensure_ascii=False)
+    if row is None:
+        connection.execute(
+            "INSERT INTO paper_state (paper_id, generation, checkpoint_json) VALUES (?,?,?)",
+            (paper_id, generation, body))
+    else:
+        connection.execute(
+            "UPDATE paper_state SET generation=?, checkpoint_json=? WHERE paper_id=?",
+            (max(generation, row["generation"] or 1), body, paper_id))
+    if _table_exists(connection, "active_practice"):
+        active = connection.execute("SELECT execution_id FROM active_practice").fetchone()
+        if active is not None and active["execution_id"] == record["execution_id"]:
+            connection.execute("DELETE FROM active_practice_items")
+            connection.execute("DELETE FROM active_practice")
+
+
+def _column_names(connection, table):
+    return [row["name"] for row in connection.execute(f'PRAGMA table_info("{table}")')]
+
+
+def _now(connection):
+    return connection.execute("SELECT datetime('now')").fetchone()[0]
 
 
 def _write_unit(pool, connection, state, index, change):
@@ -760,11 +969,7 @@ def _write_unit(pool, connection, state, index, change):
             change = {**change, "action": "update"}
         elif change["action"] == "create":
             row.pop("id", None)
-            columns = [name for name in row]
-            connection.execute(
-                f'INSERT INTO "{table}" ({",".join(f'"{name}"' for name in columns)}) '
-                f'VALUES ({",".join("?" for _ in columns)})',
-                tuple(row[name] for name in columns))
+            _insert_row(connection, table, row)
             row["id"] = connection.execute("SELECT last_insert_rowid()").fetchone()[0]
             key = json.dumps([row[name] for name in keys],
                              ensure_ascii=False, separators=(",", ":"))
@@ -778,13 +983,20 @@ def _write_unit(pool, connection, state, index, change):
         _update_row(connection, table, row, ("id",))
         return
     if change["action"] == "create":
-        columns = [name for name in row]
-        connection.execute(
-            f'INSERT INTO "{table}" ({",".join(f'"{name}"' for name in columns)}) '
-            f'VALUES ({",".join("?" for _ in columns)})',
-            tuple(row[name] for name in columns))
+        _insert_row(connection, table, row)
         return
     _update_row(connection, table, row, tuple(keys))
+
+
+def _insert_row(connection, table, row):
+    columns = list(row)
+    if not columns:
+        connection.execute(f'INSERT INTO "{table}" DEFAULT VALUES')
+        return
+    connection.execute(
+        f'INSERT INTO "{table}" ({",".join(f'"{name}"' for name in columns)}) '
+        f'VALUES ({",".join("?" for _ in columns)})',
+        tuple(row[name] for name in columns))
 
 
 def _delete_row(connection, index, identity):
