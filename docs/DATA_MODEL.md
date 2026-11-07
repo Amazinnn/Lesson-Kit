@@ -318,3 +318,17 @@ CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 
 
 ## 用户级 Agent 资源（不属于 Pool）
 `~/.lessonkit-workbench/agent-resources.json`（可用 LESSONKIT_WB_HOME 隔离）保存 generation、instructions、builtin_enabled 与按 ID 索引的 Skill 元数据；默认空要求与内置 Skill 启用。由设置 API 经 workbench.agent_resources 写入，不从聊天自动改写。entry/source 是本地路径，不是学习事实；副本位于 managed-skills/。配置原子替换、进程内串行；替换先复制再发布，运行轮次持有引用，旧副本到该轮结束才回收。无 SQLite schema 变化。continuity 从同对话成功 transcript/turn 读取最近两轮原文；不重写已排队的提交上下文。资源在实际派发时读取，Provider 原生历史保留。
+
+
+## Confirmed course learning preferences (WP01)
+
+The Data writer `course_preferences.save_preferences(root, course, values)` persists explicit values in `.lessonkit/course-preferences.json`, scoped by course identity. `load_preferences` reads that confirmed projection. The browser `wb_settings_<workspace>` value remains an interaction mirror, and does not establish that data has been saved for exchange. Server-confirmed received values take precedence during hydration. An absent server projection may adopt explicit existing browser learning values once through the same writer.
+
+The learning keys are `showRating` and `showSource` (boolean), `submissionGranularity` (`per_part` or `whole_problem`) and `revealTiming` (`per_item` or `on_submit`). Omitted values retain current entry defaults. Active executions retain their frozen `reveal_timing`. Invalid or corrupt persisted data is an explicit failure. Credentials, Provider configuration and device appearance are outside this course projection.
+
+
+## Course exchange source identity (WP01 in progress)
+
+Data allocates one installation origin in the user-level registry `course-sync-installation.json`, under an exclusive initialization lock and atomic publication. Each course has a distinct persistent course origin in `.lessonkit/course-sync/state.json`. Copying course assets preserves the course origin and source record identities, while the receiving installation retains its own origin.
+
+`row_identities` associates a local table/primary-key tuple with its persistent source asset identity. SQLite-generated history IDs are namespaced by installation origin, never compared across devices as global row identities. `base` is a captured export projection, not a new learner observation. Record/reference remapping on receive remains an implementation prerequisite before this boundary can be released.

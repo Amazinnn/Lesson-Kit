@@ -1,0 +1,44 @@
+{
+  "python": "3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026, 16:04:56) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "source_root": "D:\\.codex\\worktrees\\course-sync\\lesson-kit",
+  "branch": "codex/course-sync",
+  "base_commit": "c5a9c642",
+  "installed_version": "0.1.0",
+  "installed_source": {
+    "dir_info": {
+      "editable": true
+    },
+    "url": "file:///D:/Projects/Academic%20Workflow/lesson-kit"
+  },
+  "runtime_error": "URLError",
+  "active_changes": [
+    "expand-file-mediated-course-sync",
+    "workbench-visual-language-v2",
+    "workbench-v1-baseline-convergence",
+    "workbench-display-redundancy-cleanup",
+    "workbench-component-forms",
+    "stable-runtime-live-reload",
+    "stabilize-agent-message-continuity",
+    "source-preserving-live-markdown",
+    "retire-project-approval-gates",
+    "remove-micro-quiz-error-reason",
+    "part-grading-legacy-pool-fallback",
+    "mature-course-content-operations",
+    "json-content-repository-sync",
+    "ingest-integrity-and-observability",
+    "improve-agent-context-and-skills",
+    "import-attempts-into-paper-progress",
+    "graph-settle-smoothness",
+    "graph-node-visual-language",
+    "graph-free-force-field",
+    "evaluation-terminology-and-agent-crud",
+    "connect-evidence-guided-learning",
+    "complete-practice-continuity-and-rich-titles",
+    "complete-live-display-preferences",
+    "cluster-flat-knowledge-graph-levels",
+    "agent-chat-simplify",
+    "ads-answer-gap-repair",
+    "adaptive-paper-content-lifecycle"
+  ]
+}

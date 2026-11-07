@@ -16,4 +16,10 @@ The headless entry creates a fresh persisted session, and exposes no resume flag
 
 Full Data export/reception, cross-device integer identity mapping, per-question unfinished Paper projection, CLI registration, Git composition, hourly task, free-LLM Tutor acceptance and full real-environment acceptance are not complete. New pure comparison code is not a delivered synchronization feature.
 
-The pre-change full pytest run is still being collected. It already contains failures before product implementation and its final summary must be recorded.
+The first full pytest invocation without PYTHONUTF8 exited 1 with a truncated log and no final summary. It is incomplete evidence. A subsequent UTF-8 run collected 1,332 tests and passed all in 285.90 seconds. That run includes the focused course comparison/projection tests present at collection time, and predates completion of G01/P01. Full post-integration acceptance is outstanding.
+
+## Projection implementation checkpoint
+
+Committed database projection and bundle reader now have 11 targeted checks, with the pure planner bringing the focused total to 20 passed. No installed CLI exposure or receive-side completion is claimed. Read/write is isolated to temporary fixtures. Exact rows, original answers and file bytes are preserved, unknown tables and missing references are errors, path escapes and Windows aliases are rejected, and interrupted export publication leaves the previously published manifest and bytes intact. Origins are persisted before publication.
+
+Each export publishes immutable generation paths before swapping its manifest. Generation garbage collection and F2 performance measurements remain outstanding. Durable receive identity/reference remapping, execution/draft normalization, and all covered-class F1/F4 validation remain prerequisites for marking task 2.3 complete.

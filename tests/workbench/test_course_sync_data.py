@@ -1,0 +1,175 @@
+"""Portable projection checks use isolated course data and real files."""
+
+import json
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from workbench.data.course_sync import export_course, read_exchange
+from workbench.data.pool import Pool
+
+
+@pytest.fixture
+def course(tmp_path, monkeypatch):
+    monkeypatch.setenv("LESSONKIT_WB_HOME", str(tmp_path / "registry"))
+    root = tmp_path / "course"
+    root.mkdir()
+    database = root / "course.db"
+    conn = sqlite3.connect(database)
+    conn.executescript("""
+        CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY, body TEXT, figure_paths TEXT);
+        CREATE TABLE problems (problem_id TEXT PRIMARY KEY, problem_text TEXT, kp_ids TEXT,
+                               figure_paths TEXT, deleted_at TEXT);
+        CREATE TABLE problem_attempts (id INTEGER PRIMARY KEY, problem_id TEXT, answer_text TEXT);
+    """)
+    conn.execute("INSERT INTO knowledge_points VALUES (?,?,?)", ("math-kp-1", "公式 $x$", None))
+    conn.execute("INSERT INTO problems VALUES (?,?,?,?,?)",
+                 ("math-prob-1", "原题", '["math-kp-1"]', '["math/ch01/a.png"]', None))
+    conn.execute("INSERT INTO problem_attempts VALUES (?,?,?)", (1, "math-prob-1", "原始答案\n$x=1$"))
+    conn.commit()
+    conn.close()
+    (root / ".lessonkit/figures/math/ch01").mkdir(parents=True)
+    (root / ".lessonkit/figures/math/ch01/a.png").write_bytes(b"source image bytes\x00\xff")
+    (root / ".lessonkit/practice-sets").mkdir()
+    (root / ".lessonkit/practice-sets/ps-001.json").write_text('{"title":"试卷"}\n', encoding="utf-8")
+    pool = Pool(root, database, "math", "")
+    yield pool, {"name": "math", "path": str(root), "db": "course.db", "active_course": "math"}
+    pool.close()
+
+
+def test_export_preserves_all_columns_original_answers_and_bytes(course, tmp_path):
+    pool, workspace = course
+    result = export_course(pool, workspace, tmp_path / "bundle")
+    assert result["status"] == "success"
+    package = read_exchange(tmp_path / "bundle")
+    rows = [asset["content"]["row"] for asset in package["assets"].values()
+            if asset["kind"] == "row" and asset["content"]["table"] == "problem_attempts"]
+    assert rows[0]["answer_text"] == "原始答案\n$x=1$"
+    assert any(asset["kind"] == "file" for asset in package["assets"].values())
+    paths = {asset["content"]["path"]: asset for asset in package["assets"].values()
+             if asset["kind"] == "file"}
+    import base64
+    assert base64.b64decode(paths[".lessonkit/figures/math/ch01/a.png"]["content"]["data"]) == b"source image bytes\x00\xff"
+    assert ".lessonkit/practice-sets/ps-001.json" in paths
+
+
+def test_origin_and_row_identity_survive_repeat_exports(course, tmp_path):
+    pool, workspace = course
+    export_course(pool, workspace, tmp_path / "one")
+    export_course(pool, workspace, tmp_path / "two")
+    one, two = (read_exchange(tmp_path / name) for name in ("one", "two"))
+    assert one["course"] == two["course"]
+    assert one["assets"] == two["assets"]
+    assert one["origin"] == two["origin"]
+
+
+def test_unknown_table_is_explicitly_rejected(course, tmp_path):
+    pool, workspace = course
+    pool.connect().execute("CREATE TABLE unexpected_data (id TEXT)")
+    pool.commit()
+    with pytest.raises(ValueError, match="unexpected_data"):
+        export_course(pool, workspace, tmp_path / "bundle")
+
+
+def test_missing_referenced_figure_is_not_complete_success(course, tmp_path):
+    pool, workspace = course
+    (pool.root / ".lessonkit/figures/math/ch01/a.png").unlink()
+    with pytest.raises(ValueError, match="figure"):
+        export_course(pool, workspace, tmp_path / "bundle")
+
+
+def test_registered_learning_files_and_original_sources_are_included(course, tmp_path):
+    pool, workspace = course
+    folder = pool.root / ".lessonkit/course-sync"
+    folder.mkdir()
+    (pool.root / "source.pdf").write_bytes(b"PDF original")
+    (pool.root / "learning.md").write_text("# 误解与续接\n", encoding="utf-8")
+    (folder / "config.json").write_text(json.dumps({"managed_paths": ["source.pdf", "learning.md"]}))
+    export_course(pool, workspace, tmp_path / "bundle")
+    paths = {value["content"]["path"] for value in read_exchange(tmp_path / "bundle")["assets"].values()
+             if value["kind"] == "file"}
+    assert {"source.pdf", "learning.md"} <= paths
+
+
+def test_reader_reports_missing_asset_and_rejects_path_escape(course, tmp_path):
+    pool, workspace = course
+    folder = tmp_path / "bundle"
+    export_course(pool, workspace, folder)
+    manifest_path = folder / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    descriptor = manifest["assets"][0]
+    (folder / descriptor["path"]).unlink()
+    assert read_exchange(folder)["errors"][0]["code"] == "missing_asset"
+    descriptor["path"] = "../outside.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ValueError, match="path"):
+        read_exchange(folder)
+
+
+def test_corrupt_goals_and_unconfirmed_pending_paper_are_not_ignored(course, tmp_path):
+    pool, workspace = course
+    (pool.root / ".lessonkit/goals.json").write_text("broken", encoding="utf-8")
+    with pytest.raises(ValueError, match="goals"):
+        export_course(pool, workspace, tmp_path / "bundle")
+
+
+def test_unknown_bundle_version_and_duplicate_identity_are_rejected(course, tmp_path):
+    pool, workspace = course
+    folder = tmp_path / "bundle"
+    export_course(pool, workspace, folder)
+    path = folder / "manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest["assets"].append(manifest["assets"][0])
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ValueError, match="duplicate"):
+        read_exchange(folder)
+    manifest["format_version"] = 99
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ValueError, match="format_version"):
+        read_exchange(folder)
+
+
+def test_one_invalid_asset_does_not_hide_independent_valid_files(course, tmp_path):
+    pool, workspace = course
+    folder = tmp_path / "bundle"
+    export_course(pool, workspace, folder)
+    manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+    (folder / manifest["assets"][0]["path"]).write_text("broken", encoding="utf-8")
+    result = read_exchange(folder)
+    assert len(result["errors"]) == 1
+    assert len(result["assets"]) == len(manifest["assets"]) - 1
+
+
+def test_windows_git_alias_paths_are_refused(course, tmp_path):
+    pool, workspace = course
+    folder = pool.root / ".lessonkit/course-sync"
+    folder.mkdir()
+    for invalid in (".GIT/config", "source/../.git/config", "file.txt "):
+        (folder / "config.json").write_text(json.dumps({"managed_paths": [invalid]}))
+        with pytest.raises(ValueError, match="path"):
+            export_course(pool, workspace, tmp_path / "bundle")
+
+
+def test_failed_republication_keeps_previous_manifest_and_asset_bytes(course, tmp_path, monkeypatch):
+    from workbench.data import course_sync
+    pool, workspace = course
+    folder = tmp_path / "bundle"
+    export_course(pool, workspace, folder)
+    original = read_exchange(folder)
+    pool.connect().execute("UPDATE problems SET problem_text='changed'")
+    pool.commit()
+    writer = course_sync._atomic_json
+
+    def interrupted(path, value):
+        if Path(path) == folder / "manifest.json":
+            raise OSError("interrupted before publishing manifest")
+        return writer(path, value)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(course_sync, "_atomic_json", interrupted)
+        with pytest.raises(OSError, match="interrupted"):
+            export_course(pool, workspace, folder)
+    assert read_exchange(folder) == original
+    export_course(pool, workspace, folder)
+    assert read_exchange(folder)["course"] == original["course"]
