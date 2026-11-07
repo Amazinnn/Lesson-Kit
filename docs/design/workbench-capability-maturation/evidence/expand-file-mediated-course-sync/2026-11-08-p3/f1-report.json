@@ -1,0 +1,97 @@
+{
+  "fixture": "F1 complete small course",
+  "steps": {
+    "fixture": {
+      "counts": {
+        "knowledge_points": 12,
+        "problems": 24,
+        "flash_cards": 6,
+        "knowledge_relations": 6,
+        "problem_attempts": 12,
+        "kp_experiences": 4,
+        "active_practice": 1,
+        "paper_state": 2
+      },
+      "papers": [
+        "ps-001",
+        "ps-002",
+        "ps-003"
+      ]
+    },
+    "export": {
+      "code": 0,
+      "seconds": 0.815,
+      "manifest": true,
+      "handoff": true,
+      "files": 29
+    },
+    "sync-01-receive": {
+      "code": 0,
+      "counts": {
+        "knowledge_points": 12,
+        "problems": 24,
+        "flash_cards": 6,
+        "knowledge_relations": 6,
+        "problem_attempts": 12,
+        "kp_experiences": 4,
+        "active_practice": 1,
+        "paper_state": 2
+      },
+      "same_counts": true,
+      "files": [
+        "note-01.md",
+        "note-02.md",
+        "note-03.md"
+      ],
+      "goal_file": true,
+      "source": true,
+      "figure": true
+    },
+    "fs-02-new-assets": {
+      "code": 0,
+      "problem": 1,
+      "learning_file": true
+    },
+    "fs-06-delete-shared": {
+      "retired_after_delete": 1,
+      "papers": [
+        "ps-002"
+      ],
+      "items": {
+        "ps-002": [
+          "dmath-ch01-prob-003",
+          "dmath-ch02-prob-011",
+          "dmath-ch03-prob-019"
+        ]
+      }
+    },
+    "fs-06-propagate": {
+      "code": 0,
+      "deleted_in_b": "2026-11-07 15:35:53"
+    },
+    "fs-05-missing-file": {
+      "code": 2,
+      "paper_file_absent": true,
+      "paper_row_kept": 1,
+      "bundle_written": false
+    },
+    "fs-07-delete-kp": {
+      "kp_gone": true,
+      "related_cleared": 0,
+      "questions_kept": 21
+    },
+    "fs-08-restore": {
+      "supported": false,
+      "reason": "Paper/problem archive restore is task 3.2 of adaptive-paper-content-lifecycle and is not implemented yet"
+    },
+    "lp-01-handoff": {
+      "goals": true,
+      "scope": true,
+      "original_answer": true,
+      "position": true,
+      "notes": true
+    }
+  },
+  "work": "C:\\Users\\yanwei\\AppData\\Local\\Temp\\p3-f1-usylxmjv",
+  "status": "completed"
+}

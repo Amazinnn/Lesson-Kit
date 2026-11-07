@@ -1,0 +1,54 @@
+{
+  "fixture": "SYNC-06 real scheduled task",
+  "task": "LessonKitSyncAcceptance",
+  "steps": {
+    "manual-sync": {
+      "code": 0
+    },
+    "install": {
+      "returncode": 0,
+      "output": "�ɹ�: �ɹ������ƻ����� \"LessonKitSyncAcceptance\"��"
+    },
+    "triggered": {
+      "run_returncode": 0,
+      "last_result": {
+        "manual_wrapper": 0,
+        "manual_log": "{\n  \"status\": \"success\",\n  \"courses\": {\n    \"task-course\": 0\n  },\n  \"failures\": []\n}\n",
+        "verbose_tail": "         2026-11-07\n��������:                           N/A\n��:                                 N/A\n��:                                 N/A\n�ظ�: ÿ:                           1 Сʱ�� 0 ����\n�ظ�: ��ֹ: ʱ��:                   ��\n�ظ�: ��ֹ: ����ʱ��:               �ѽ���\n�ظ�: ����������У�ֹͣ:           �ѽ���\n"
+      },
+      "receipt": false,
+      "status": null,
+      "operation": "",
+      "remote": null,
+      "task_log": "{\n  \"status\": \"success\",\n  \"courses\": {\n    \"task-course\": 0\n  },\n  \"failures\": []\n}\n"
+    },
+    "disable": {
+      "returncode": 0,
+      "enabled_element": [
+        "<Enabled>false</Enabled>"
+      ]
+    },
+    "enable": {
+      "returncode": 0
+    },
+    "remove": {
+      "returncode": 0,
+      "absent": true
+    },
+    "peer-push": {
+      "returncode": 0,
+      "error": "To C:\\Users\\yanwei\\AppData\\Local\\Temp\\p3-task-v4b4zyk6\\remote.git\n   5746327..99c1778  main -> main"
+    },
+    "conflict-notification": {
+      "first_status": "conflict",
+      "first_notice": true,
+      "first_conflicts": 1,
+      "second_status": "conflict",
+      "second_notice": null,
+      "first_error": null,
+      "first_stdout": null
+    }
+  },
+  "work": "C:\\Users\\yanwei\\AppData\\Local\\Temp\\p3-task-v4b4zyk6",
+  "status": "completed"
+}

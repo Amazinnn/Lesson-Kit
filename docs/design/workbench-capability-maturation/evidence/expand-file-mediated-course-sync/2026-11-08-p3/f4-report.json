@@ -1,0 +1,98 @@
+{
+  "fixture": "F4 legacy pool (2026-08-26, before the readiness migration)",
+  "source": "D:\\Projects\\Academic Workflow\\lesson-kit\\pool\\dmath-pre-readiness-2026-08-26.db",
+  "steps": {
+    "export": {
+      "status": "success",
+      "assets": 347,
+      "retired": [
+        {
+          "table": "problems",
+          "columns": [
+            "problem_id",
+            "kp_ids",
+            "problem_text",
+            "solution",
+            "problem_type",
+            "source_kind",
+            "created_at",
+            "updated_at",
+            "figure_paths",
+            "display_title",
+            "display_summary"
+          ],
+          "primary_key": [
+            "problem_id"
+          ],
+          "rows": 303,
+          "retired_columns": [
+            "topic_label"
+          ]
+        },
+        {
+          "table": "",
+          "columns": [],
+          "primary_key": [],
+          "rows": 0,
+          "retired_tables": [
+            "candidate_attempts",
+            "candidate_problems"
+          ]
+        }
+      ],
+      "source_tables": [
+        "knowledge_points",
+        "questions",
+        "kp_progress",
+        "question_progress",
+        "problems",
+        "problem_progress",
+        "problem_attempts",
+        "candidate_problems",
+        "candidate_attempts",
+        "learner_signals",
+        "review_schedule",
+        "feedback_events",
+        "knowledge_relations",
+        "learning_current_state"
+      ]
+    },
+    "bootstrap": {
+      "returncode": 0
+    },
+    "receive": {
+      "errors": [],
+      "changes": 347,
+      "status": "success",
+      "applied": 347,
+      "failed": [],
+      "counts": {
+        "knowledge_points": 28,
+        "problems": 303,
+        "problem_attempts": 3,
+        "learner_signals": 6,
+        "feedback_events": 2,
+        "review_schedule": 1
+      },
+      "sample": [
+        "1. There are 18 mathematics majors and 325 computer science majors at a college.\n\na) In how many ways can two representatives be picked so that one is a mathematics major and the other is a computer science major?\n\nb) In how many ways can one representative be picked who is either a mathematics major or a computer science major?",
+        "textbook"
+      ],
+      "topic_label_absent": true,
+      "repeat_applied": []
+    },
+    "source": {
+      "original_tables_kept": true,
+      "added_tables": [
+        "course_sync_checkpoint",
+        "course_sync_units",
+        "sqlite_sequence"
+      ],
+      "rows_kept": true,
+      "note": "only the two exchange bookkeeping tables are added on first exchange",
+      "bytes_changed": true
+    }
+  },
+  "work": "C:\\Users\\yanwei\\AppData\\Local\\Temp\\p3-f4-x45uzyju",
+  "status": "completed"
+}

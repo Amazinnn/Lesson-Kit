@@ -715,8 +715,14 @@ def remove_question(pool, problem_id):
         queue_file(pool, pid, raw)
     # Both active and parked snapshots use the same item-removal rule.
     def cleaned(record):
+        from workbench.data.pool import ensure_paper_lifecycle_schema
+        ensure_paper_lifecycle_schema(conn)
         old_cursor = record['cursor']
         old = record['items']
+        for item in old:
+            if item['item_id'] == problem_id and item.get('item_type') == 'problem':
+                _retire_item(conn, record.get('source_ref') or record.get('paper_id') or '',
+                             item, 'deleted')
         record['items'] = [item for item in old if item['item_id'] != problem_id]
         removed_before = sum(item['item_id'] == problem_id for item in old[:old_cursor])
         record['cursor'] = max(0, min(old_cursor-removed_before, len(record['items'])-1))

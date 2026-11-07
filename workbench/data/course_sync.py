@@ -485,6 +485,12 @@ def _execution_projection(assets, state):
         metadata["selected"] = record is active
         paper_id = header.get("source_ref")
         header["paper_id"] = paper_id
+        # The header owns the item set: a receiver must drop a local item the
+        # sender no longer has, and position alone cannot say whether it moved.
+        header["items"] = [{"position": item.get("position"),
+                            "item_type": item.get("item_type"),
+                            "item_id": item.get("item_id"),
+                            "direction": item.get("direction") or ""} for item in items]
         dependencies = [execution_id]
         if paper_id:
             dependencies.append("file/.lessonkit/practice-sets/" + paper_id + ".json")
@@ -1134,9 +1140,10 @@ def _write_execution(pool, connection, state, index, identity, asset, items):
         return
     content = dict(asset["content"])
     presentation = asset.get("presentation") or {}
+    declared = content.pop("items", None)
     record = {key: value for key, value in content.items() if key != "paper_id"}
     record["execution_id"] = _local_identifier(content.get("execution_id"), index)
-    ordered = [items[position] for position in sorted(items)]
+    ordered = _execution_items(declared, items)
     record["items"] = [_item_record(item, index) for item in ordered]
     paper_id = content.get("paper_id") or content.get("source_ref")
     generation = content.get("paper_generation") or 1
@@ -1145,6 +1152,28 @@ def _write_execution(pool, connection, state, index, identity, asset, items):
         _write_active(connection, record, presentation)
     else:
         _write_checkpoint(connection, record, presentation, paper_id, generation)
+
+
+def _execution_items(declared, items):
+    """The items the sender still holds, in its order.
+
+    `declared` is the header's own item list; `items` are the changed item units.
+    A local item that is not declared has been removed by the sender and is
+    dropped, and a declared item without an incoming unit keeps its local row.
+    Packages written before the header carried its item list fall back to the
+    position merge.
+    """
+    if not isinstance(declared, list):
+        return [items[position] for position in sorted(items)]
+    chosen = []
+    for entry in declared:
+        # `items` already holds the incoming unit for a changed position and the
+        # local row for an unchanged one; a position the sender does not declare
+        # is a removed question and must not survive.
+        asset = items.get(entry.get("position"))
+        if asset is not None:
+            chosen.append(asset)
+    return chosen
 
 
 def _retire_execution(connection, state, index, identity, asset):

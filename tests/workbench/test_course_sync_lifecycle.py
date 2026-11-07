@@ -283,3 +283,22 @@ def test_a_cached_display_id_never_blocks_export_or_gets_rebound(devices, tmp_pa
 
     _inspected, received = round_trip(left, right, tmp_path / "hop2")
     assert received["status"] == "success", received["failed"]
+
+
+def test_deleting_a_shared_question_propagates_to_the_other_installation(devices, tmp_path):
+    """FS-06: the question leaves both Papers and their executions stay writable."""
+    from workbench.data import content
+    left, right = devices
+    paper_id, run = prepared(left())
+    first = round_trip(left, right, tmp_path / "hop1")
+    assert first[1]["status"] == "success", first[1]["failed"]
+
+    content.delete(left(), "problem", "dmath-ch06-prob-002")
+    left().commit()
+
+    _inspected, result = round_trip(left, right, tmp_path / "hop2")
+
+    assert result["status"] == "success", result["failed"]
+    current = active_practice.current(right())
+    assert "dmath-ch06-prob-002" not in [item["item_id"] for item in current["items"]]
+    assert current["execution_id"] == run["execution_id"]

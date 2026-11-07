@@ -1,0 +1,42 @@
+{
+  "fixture": "SYNC-05 dedicated remote",
+  "steps": {
+    "first-sync": {
+      "code": 0,
+      "remote_commit": "4eaf5b6fec24",
+      "local_commit": "4eaf5b6fec24"
+    },
+    "no-change-sync": {
+      "code": 0,
+      "same_commit": true,
+      "staged": "",
+      "unrelated_untouched": true
+    },
+    "divergent-remote": {
+      "code": 0,
+      "local_commit": "299ab1d3f6c0",
+      "remote_commit": "299ab1d3f6c0",
+      "remote_has_intruder": false
+    },
+    "rejected-push": {
+      "code": 4,
+      "local_ahead": "1"
+    },
+    "foreign-lineage-refused": {
+      "code": 2,
+      "head_unchanged": true,
+      "remote_kept": true
+    },
+    "managed-paths-only": {
+      "status": "",
+      "listed": []
+    },
+    "github-readonly-probe": {
+      "returncode": 0,
+      "heads": 120,
+      "note": "read-only reachability check; nothing is published to the owner's account"
+    }
+  },
+  "work": "C:\\Users\\yanwei\\AppData\\Local\\Temp\\p3-git-umh2a5dw",
+  "status": "completed"
+}

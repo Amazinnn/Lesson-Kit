@@ -1,0 +1,55 @@
+{
+  "fixture": "F3 anomaly variants",
+  "steps": {
+    "baseline": {
+      "status": "success",
+      "applied": 5
+    },
+    "f3-unknown-format": {
+      "refused": true,
+      "message": "unsupported course exchange format_version"
+    },
+    "f3-unknown-table": {
+      "refused": true,
+      "message": "unregistered course tables: unexpected_table"
+    },
+    "f3-missing-figure": {
+      "refused": true,
+      "message": "missing referenced figure: dmath/ch06/fig.png"
+    },
+    "f3-foreign-lineage": {
+      "association_required": true,
+      "refused": true,
+      "message": "the package belongs to a different course lineage; explicit association input is required"
+    },
+    "fs-04-conflict": {
+      "status": "conflict",
+      "conflicts": [
+        "row/problems/[\"dmath-ch06-prob-002\"]"
+      ]
+    },
+    "fs-04-side-choice": {
+      "status": "success",
+      "text": "左边版本"
+    },
+    "fs-09-independent-attempts": {
+      "left_before": 1,
+      "right_before": 1,
+      "merged": [
+        "A 的作答",
+        "B 的作答"
+      ],
+      "repeated_applied": []
+    },
+    "fs-11-delete-vs-edit": {
+      "status": "conflict",
+      "conflicts": [
+        "row/problems/[\"dmath-ch06-prob-003\"]"
+      ],
+      "applied": 0,
+      "failed": 0
+    }
+  },
+  "work": "C:\\Users\\yanwei\\AppData\\Local\\Temp\\p3-f3-_z99vad3",
+  "status": "completed"
+}
