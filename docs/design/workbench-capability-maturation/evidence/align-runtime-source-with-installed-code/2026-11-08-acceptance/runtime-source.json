@@ -28,7 +28,9 @@
     "compileall": "python -m compileall -q lessonkit.py workbench pipeline pool tests：OK",
     "openspec_strict": "align-runtime-source-with-installed-code 有效；stable-runtime-live-reload 有效；live specs 21/21 通过",
     "guard_extract_problems": "dmath ch06 PASS",
-    "full_pytest": "PYTHONUTF8=1 python -m pytest tests -q：1557 passed in 593.45s（上一基线 1556，+1 为新增非法路径用例）"
+    "cli_boundary_probe": "lesson-kit daemon start --port 3099 --project-root C:/definitely-not-a-lesson-kit-source → stderr: workbench: not a lesson-kit source directory: C:\\definitely-not-a-lesson-kit-source；exit 2；未生成 daemon.json",
+    "full_pytest_run1": "PYTHONUTF8=1 python -m pytest tests -q：1557 passed in 593.45s（上一基线 1556，+1 为新增非法路径用例）",
+    "full_pytest_run2": "PYTHONUTF8=1 python -m pytest tests -q：1558 passed, 1 failed in 557.42s。失败为 tests/test_runtime_process.py::test_real_reload_invalid_edit_assets_and_stop 的 ConnectionResetError（worker 替换期连接被重置）。该用例走显式 --project-root，不经过本次改动的默认来源分支；单独重跑 4/4 通过（13.3–14.5s），判为既有集成用例的 socket 抖动，未修改该测试。"
   },
   "unknowns": "未做进程级中断/跨设备场景，本 change 未涉及"
 }

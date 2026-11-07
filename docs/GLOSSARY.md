@@ -321,6 +321,11 @@ _Avoid_：把做题记录当复习页或练习方式、再开别的页面
 _Avoid_：Heartbeat 后台服务（不做）、任务计划程序、开机自启
 出处：ADR 0022；review-workbench spec「Background workbench service」
 
+### 运行时来源 / Runtime Source
+`lesson-kit dashboard`、`daemon start`、`serve` 实际 import 并服务的代码 checkout——安装的 `workbench` 包所在仓库根。默认就用这一份：课程工作目录与 Git worktree 归属都不改变它，editable 装在 worktree 里就服务该 worktree。`--project-root PATH` 为本次运行换一份源码，仍要求是 lesson-kit 源码目录，且不改写默认来源与课程解析。`daemon status`、`doctor`、`/api/runtime` 报告的来源必须就是实际服务的来源。它与课程工作区的数据目录无关。
+_Avoid_：主检出（primary checkout，默认来源不再看它）、当前课程目录（不决定运行时来源）、换来源要重装
+出处：review-workbench spec「Runtime source selection」；2026-11-08 align-runtime-source-with-installed-code
+
 ### 工作台命令 / lesson-kit Command
 本项目的唯一命令名，模块形式 `python -m workbench.cli.main` 等价。`lesson-kit init` 注册工作区；`lesson-kit dashboard` 确保服务在跑并打开浏览器，**不新增页面**。
 _Avoid_：`lesson-kit`（另一个同名程序是 Weights & Biases，与本项目无关）、`lessonkit.py init`（根 CLI，语义不同：写 `.lessonkit/state.yaml`）
@@ -1111,11 +1116,6 @@ Lesson Kit 用户目录中独立管理的 Skill 副本或包内只读内置 Skil
 ## 原位 Markdown 编辑
 
 以 Markdown 源码为唯一文本状态，光标或选区涉及的语法块显示源码，其他块原位呈现安全 Markdown 与公式；显示切换不改写源码。
-
-### 运行时来源 / Runtime Source
-`lesson-kit dashboard`、`daemon start`、`serve` 实际 import 并服务的代码 checkout——安装的 `workbench` 包所在仓库根。默认就用这一份：课程工作目录与 Git worktree 归属都不改变它，editable 装在 worktree 里就服务该 worktree。`--project-root PATH` 为本次运行换一份源码，仍要求是 lesson-kit 源码目录，且不改写默认来源与课程解析。`daemon status`、`doctor`、`/api/runtime` 报告的来源必须就是实际服务的来源。它与课程工作区的数据目录无关。
-_Avoid_：主检出（primary checkout，默认来源不再看它）、当前课程目录（不决定运行时来源）、换来源要重装
-出处：review-workbench spec「Runtime source selection」；2026-11-08 align-runtime-source-with-installed-code
 
 ## Runtime supervisor / worker（运行时监督进程 / HTTP 工作进程）
 监督进程持有稳定 PID，选择源目录、验证源文件并拥有 HTTP 工作进程；只有工作进程监听工作台端口。运行时代次是成功替换工作进程后递增的可读整数，资源代次是安全接受静态资源变化后递增的整数。两者不是学习记录或内容版本。

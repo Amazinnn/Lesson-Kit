@@ -36,7 +36,7 @@
 
 ### D2 非法路径继续拒绝
 
-`--project-root` 校验（必须含 `workbench/cli`）保持原样并进 spec：它今天就是可观察行为，且是"拒绝服务非源码目录"的唯一守卫。
+`--project-root` 校验（必须含 `workbench/cli`）保持原样并进 spec：它今天就是可观察行为，且是"拒绝服务非源码目录"的唯一守卫。CLI 边界统一为 `workbench: <原因>` + 退出码 2（`daemon start`/`dashboard` 原已捕获 `RuntimeError`，`serve` 与 `ValueError` 一并补齐）；此前是未捕获 traceback + 退出码 1，与仓库"输入错误 → exit 2"的约定不一致，且违反本 change 声明的"以原因拒绝"。
 
 ### D3 迁移与身份
 

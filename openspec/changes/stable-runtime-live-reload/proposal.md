@@ -6,6 +6,6 @@ Default runtime source selection is owned by `review-workbench` (superseded here
 ### New Capabilities
 - `runtime-live-reload`: provenance and safe live updates.
 ### Modified Capabilities
-- `review-workbench`: dashboard/daemon/serve source and status diagnostics.
+- `review-workbench`: dashboard/daemon/serve status diagnostics (the source-selection requirement moved to `align-runtime-source-with-installed-code`).
 ## Impact
 Shell, Bridge admission, browser update client, CLI, documentation. No pool schema or frozen pipeline changes.

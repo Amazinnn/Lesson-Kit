@@ -9,6 +9,7 @@
 - [x] 2.1 `workbench/cli/runtime_source.py::project_root()` 默认返回安装源码 checkout，删除 worktree → primary 的 Git 指针回溯；`--project-root` 校验与报错保持不变。（函数 26 行降到 13 行；`installed` 接缝保留）
 - [x] 2.2 改写 `tests/workbench/test_runtime_source.py`：linked worktree 默认服务自身、显式覆盖仍生效、非源码目录被拒绝并给出原因。（三条断言 + 新增 `test_explicit_path_must_be_a_lesson_kit_source`）
 - [x] 2.3 核对 `workbench/cli/main.py::cmd_serve` 与 `workbench/cli/service.py::start`：默认路径下不再走"切换到 primary 子进程"的分支，来源记录与 `/api/runtime` 报告一致。（默认时 `root == parents[2]` 直接 in-process；显式覆盖才 spawn 子进程；`daemon.json` 与 `/api/runtime` 均报同一 `source_root`）
+- [x] 2.4 CLI 边界统一拒绝非法 `--project-root`：`daemon start`/`dashboard` 的 except 扩到 `ValueError`，`serve` 补捕获；输出 `workbench: not a lesson-kit source directory: <path>` + 退出码 2（此前 traceback + 1）。测试：`test_daemon_start_rejects_a_project_root_that_is_not_a_source`（断言退出码、原因文本、未生成 `daemon.json`）+ `test_default_source_is_the_imported_package_checkout`（钉住无参默认表达式）。
 
 ## 3. 文档同步
 
@@ -20,6 +21,6 @@
 ## 4. 验证
 
 - [x] 4.1 聚焦用例：`PYTHONUTF8=1 python -m pytest tests/workbench/test_runtime_source.py tests/workbench/test_cli_daemon.py -q`。（45 passed）
-- [x] 4.2 仓库级检查：全仓 `pytest tests -q`、`python -m compileall -q lessonkit.py workbench pipeline pool tests`、`openspec validate --specs --strict`、`openspec validate align-runtime-source-with-installed-code --strict`、`python lessonkit.py guard extract-problems --course dmath --chapter ch06`。（1557 passed / 593s；compileall OK；live specs 21/21；两个 change strict 有效；guard dmath ch06 PASS）
+- [x] 4.2 仓库级检查：全仓 `pytest tests -q`、`python -m compileall -q lessonkit.py workbench pipeline pool tests`、`openspec validate --specs --strict`、`openspec validate align-runtime-source-with-installed-code --strict`、`python lessonkit.py guard extract-problems --course dmath --chapter ch06`。（首轮 1557 passed / 593s；补 CLI 边界后复跑 1558 passed + 1 failed（`tests/test_runtime_process.py::test_real_reload_invalid_edit_assets_and_stop` 的 `ConnectionResetError`，worker 替换期抖动；该用例走显式 `--project-root`，单跑 4/4 通过）；compileall OK；live specs 21/21；两个 change strict 有效；guard dmath ch06 PASS）
 - [x] 4.3 真实隔离验收：在 worktree 内 `lesson-kit daemon start --port <空闲端口> --no-reload`（不带 `--project-root`），确认 `/api/runtime` 的 `source_root` 是本 worktree 而非 primary，然后 `daemon stop`；记录证据。（端口 3097，`source_root` = worktree；已 stop 复原。未做浏览器目视：本 change 不改页面行为，同一进程同时提供 API 与页面）
 - [x] 4.4 显式覆盖回归：同一端口段用 `--project-root` 指定另一 checkout，确认覆盖生效且默认来源未被改写。（端口 3098 指向主检出，`source_root` = 主检出；已 stop）

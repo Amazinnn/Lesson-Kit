@@ -166,6 +166,21 @@ class CliSurfaceTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("not running", out)
 
+    def test_daemon_start_rejects_a_project_root_that_is_not_a_source(self):
+        bad = Path(self.fixture.tmp.name) / "not-a-source"
+        bad.mkdir()
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            code, _ = self.run_cli(
+                "daemon", "start", "--port", "3098", "--project-root", str(bad)
+            )
+
+        self.assertEqual(code, 2)
+        self.assertIn("not a lesson-kit source directory", err.getvalue())
+        from workbench.cli import service
+
+        self.assertEqual(service.read_state(), {})
+
     def test_bridge_add_writes_command_and_model(self):
         code, _ = self.run_cli(
             "bridge", "add", "pi", "--command", "C:/npm-global/pi.cmd",

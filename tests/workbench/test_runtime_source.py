@@ -16,6 +16,9 @@ def test_explicit_path_must_be_a_lesson_kit_source(tmp_path):
     (tmp_path/'workbench/cli').mkdir(parents=True)
     with pytest.raises(ValueError): runtime_source.project_root(tmp_path/'missing',installed=tmp_path)
 
+def test_default_source_is_the_imported_package_checkout():
+    assert runtime_source.project_root()==Path(runtime_source.__file__).resolve().parents[2]
+
 def test_snapshot_detects_edit_delete_rollback_and_ignores_runtime_data(tmp_path):
     code=tmp_path/'workbench/cli/x.py';code.parent.mkdir(parents=True);code.write_text('a')
     assets=tmp_path/'workbench/server/static/x.js';assets.parent.mkdir(parents=True);assets.write_text('a')

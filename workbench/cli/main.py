@@ -872,7 +872,11 @@ def cmd_open(args):
 def cmd_serve(args):
     import os
     from workbench.cli import runtime, runtime_source
-    root = runtime_source.project_root(args.project_root)
+    try:
+        root = runtime_source.project_root(args.project_root)
+    except ValueError as exc:
+        print(f"workbench: {exc}", file=sys.stderr)
+        return 2
     if os.environ.get("LESSONKIT_RUNTIME_WORKER"):
         from workbench.server import app
         app.serve(port=args.port)
@@ -905,7 +909,7 @@ def cmd_daemon(args):
             print(f"workbench stopped: pid {result['pid']} (log: {result['log']})")
             return 0
         result = service.status()
-    except RuntimeError as exc:
+    except (RuntimeError, ValueError) as exc:
         print(f"workbench: {exc}", file=sys.stderr)
         return 2
     if not result["running"]:
@@ -923,7 +927,7 @@ def cmd_dashboard(args):
     from workbench.cli import service
     try:
         result = service.start(port=args.port, project_root=args.project_root, reload_enabled=not args.no_reload)
-    except RuntimeError as exc:
+    except (RuntimeError, ValueError) as exc:
         print(f"workbench: {exc}", file=sys.stderr)
         return 2
     if result["already_running"]:
