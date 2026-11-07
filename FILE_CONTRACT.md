@@ -804,3 +804,14 @@ the intermediate files or for the SQLite pool.
 ## Agent resources settings API
 浏览器入口：GET/PATCH/POST `/api/w/{name}/agent-resources`；GET/PATCH/DELETE `/api/w/{name}/agent-resources/skills/{skill_id}`。URL 工作区需有效，资源作用域为用户全局。根 PATCH `{instructions: string}`；POST `{source_path: string, replace?: boolean}`；Skill PATCH `{enabled: boolean}`。详情返回 body/entry。非法输入 400，未知 Skill 404。重复 ID 必须显式 replace=true，内置文件不可覆盖/删除。导入拒绝链接及受管目录递归导入，不执行脚本。
 每轮 agent_resources 只含启用目录和全局要求，continuity 含最近两轮成功原文；它们不是新授权或执行回执。Metadata 识别 YAML name/description 标量及折叠/字面块，或 Markdown 标题/首段，原文及附属文件保留。无兼容 YAML 的入口走路径读取，不冒充 Pi 原生包。
+
+
+## Course exchange implementation boundary (WP01 in progress)
+
+The `expand-file-mediated-course-sync` change owns this new boundary. Existing mirror artifacts retain their declared format. The course exchange v1 manifest follows the exchange matrix and is not an implicit upgrade of mirror JSON.
+
+The internal pure comparison `plan_exchange(base, local, incoming)` accepts maps keyed by persistent asset identity. Each value has `kind`, `content`, optional `depends_on` identities and optional explicit `deleted` flag. Absent assets never imply deletion. Comparison uses these semantic fields, excluding transport revisions. Drafts are projected per execution/question position. Historical facts use persistent origin/record identities.
+
+The plan returns deterministic `changes` (incoming to local), `outgoing` (local to incoming), `conflicts`, `errors` and `unchanged` lists. Mutations contain `identity`, `action` (`create`, `update`, `delete`) and the selected `asset`. Conflicts contain complete `base`, `local`, `incoming` projections. Errors contain `identity`, `code`, `message`. Invalid dependency groups remain unchanged while independent valid units continue. The planner does no IO and never mutates inputs. Concrete persisted v1 payload and writer mapping are completed before exposing export/receive as delivered.
+
+The confirmed learning preference file `.lessonkit/course-preferences.json` is a managed course asset. GET/PATCH `/api/w/{name}/course-preferences` reads or saves validated course-scoped learning keys through Data. The preference writer owns its precise JSON envelope, documented with its implementation and regression checks before delivery. Browser-only unconfirmed values are not exported as saved state.

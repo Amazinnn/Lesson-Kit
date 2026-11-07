@@ -7,7 +7,7 @@
 ## 2. 实现与逐单元检查
 
 - [ ] 2.1 从实际 schema、注册目录及浏览器保存值生成覆盖表，对 data-exchange-matrix 每行登记字段、writer、consumer、引用、删除和旧格式。F1/F4 中每类均有样本，未知类型不得静默略过。
-- [ ] 2.2 在 workbench/domain/course_sync.py 实现 plan_exchange 的纯比较，先覆盖无变化、单侧、同改一致、双侧、明确删除/缺文件、历史并集和按题草稿冲突。通过 tests/workbench/test_course_sync.py 的表驱动反例。
+- [x] 2.2 在 workbench/domain/course_sync.py 实现 plan_exchange 的纯比较，先覆盖无变化、单侧、同改一致、双侧、明确删除/缺文件、历史并集和按题草稿冲突。通过 tests/workbench/test_course_sync.py 的表驱动反例。
 - [ ] 2.3 在 workbench/data/course_sync.py 复用现有查询导出完整manifest、正文与附件，保存课程来源和记录来源映射。F1 逐字段和字节核对，再在 F2 计时。
 - [ ] 2.4 实现预检、注册新课程、身份疑点输入、独立单元接收及中断续办；按同一操作身份重试。每个数据库/文件发布边界注入失败，证明无悬空引用和重复作答。
 - [ ] 2.5 将目标、范围、资料索引、总结、误解和续接文件全部登记并接收 CRUD；定义无原生会话也可读取的 Tutor handoff，原始答案/揭晓/未答项完整。

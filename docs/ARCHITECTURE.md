@@ -41,6 +41,7 @@ workbench/
 ├── surface.py         # 接口归属表：每个路由/命令的受众，测试与真实 parser/ROUTES 对账
 ├── domain/            # 学习模型层（纯规则）
 │   ├── __init__.py
+│   ├── course_sync.py # Pure asset-map three-way comparison and dependency isolation
 │   ├── weak.py        # 弱项排序 + 级联信号提升（ADR 0015）
 │   ├── pull.py        # 拉题引擎（正式 problems → 缺口报告）
 │   ├── feedback.py    # 1-5 与自然语言 → signals/events（ADR 0011）
