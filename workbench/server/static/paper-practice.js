@@ -25,6 +25,14 @@
     var richText = deps.richText || function (value) { return deps.escapeHtml(String(value || "")); };
     var escapeHtml = deps.escapeHtml || function (value) { return String(value || ""); };
     var navigate = deps.navigate || function (target) { window.location.href = target; };
+    /* The confirmed course projection (`.lessonkit/course-preferences.json`
+       through `/course-preferences`): a new Paper starts from it, an active
+       execution keeps its frozen mode. */
+    var coursePreferences = typeof deps.coursePreferences === "function"
+      ? deps.coursePreferences : null;
+    var preferencesReady = typeof deps.coursePreferencesReady === "function"
+      ? deps.coursePreferencesReady() : deps.coursePreferencesReady;
+    var setupChosen = false;
     var ids = {
       setup: document.getElementById("paper-setup"),
       title: document.getElementById("paper-title"),
@@ -223,6 +231,32 @@
       return (run && run.reveal_timing) || "per_item";
     }
 
+    function confirmedRevealTiming() {
+      var values = coursePreferences ? coursePreferences() : null;
+      var mode = values && values.revealTiming;
+      return mode === "on_submit" || mode === "per_item" ? mode : "";
+    }
+
+    /* Only a setup without an explicit choice follows the confirmed value;
+       a continuation keeps the mode its execution was created with. */
+    function adoptConfirmedRevealTiming() {
+      if (!ids.timing || ids.timing.disabled || setupChosen) return;
+      if (!savedPaper || savedPaper.continuation) return;
+      var mode = confirmedRevealTiming();
+      if (mode) ids.timing.value = mode;
+    }
+
+    /* A start waits for the preference read once, so the execution is created
+       from the confirmed value rather than the default it is about to
+       replace. A read that never answered leaves the setup default in place
+       instead of blocking the learner. */
+    function preferencesSettled() {
+      if (!preferencesReady || typeof preferencesReady.then !== "function") {
+        return Promise.resolve();
+      }
+      return preferencesReady.then(function () {}, function () {});
+    }
+
     function wholeProblemOnly() {
       try { return JSON.parse(window.localStorage.getItem('wb_settings_'+workspace) || '{}').submissionGranularity==='whole_problem'; }
       catch (_) { return false; }
@@ -416,6 +450,7 @@
           if (ids.timing.value !== "on_submit" && ids.timing.value !== "per_item") {
             ids.timing.value = "per_item";
           }
+          adoptConfirmedRevealTiming();
         }
         if (ids.start) ids.start.textContent = "开始练习";
         if (!canStart) showError(record.start_block_reason || "当前试卷暂时无法开始。");
@@ -497,6 +532,14 @@
       ids.start.disabled = true;
       clearError();
       var continuation = savedPaper.continuation;
+      return preferencesSettled().then(function () {
+        if (disposed) return;
+        if (!continuation) adoptConfirmedRevealTiming();
+        return startExecution(continuation);
+      });
+    }
+
+    function startExecution(continuation) {
       var body;
       var startRequest;
       if (archivedRecord) {
@@ -1591,7 +1634,8 @@
       return Promise.resolve();
     }
 
-    if (ids.start) ids.start.addEventListener("click", savedStart);
+    if (ids.start) ids.start.addEventListener("click", function () { savedStart(); });
+    if (ids.timing) ids.timing.addEventListener("change", function () { setupChosen = true; });
     if (ids.previous) ids.previous.addEventListener("click", function () { moveTo(position - 1); });
     if (ids.next) ids.next.addEventListener("click", function () { moveTo(position + 1); });
     if (ids.stuck) ids.stuck.addEventListener("click", function () { var item = activeItem(); if (item) markStuck(item); });

@@ -29,6 +29,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 #: node suites that have no dedicated pytest wrapper (see module docstring).
 UNWRAPPED_SUITES = [
     "agent_ui_v1.test.js",
+    "course-preferences.test.js",
     "graph_layout_seed.test.js",
     "graph_physics_runtime.test.js",
     "graph_physics_worker.test.js",

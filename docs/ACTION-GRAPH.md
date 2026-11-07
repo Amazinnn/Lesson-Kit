@@ -389,3 +389,5 @@ flowchart LR
 升级既有长文本编辑动作的呈现方式，涵盖作答、评价备注、目标说明、Agent 输入与队列编辑、知识点心得；载荷和动作级别不变。未增加作答解锁或更正动作。
 
 2026-10-30: human runtime lifecycle now selects explicit/default primary source, verifies supervisor/worker identity and waits for safe automatic Python/asset updates; runtime endpoints registered in L2-interfaces and workbench.surface. No learning action added.
+
+- 2026-11-07 学习偏好成为课程已确认投影（expand-file-mediated-course-sync / WP01）：练习与试卷的显示评价、显示来源、提交粒度、揭晓时机四项从「仅浏览器本地偏好」**改级**为课程数据——显式改动经课程 writer 写入 `.lessonkit/course-preferences.json`，浏览器记录降为交互镜像；接收端以已确认值为准，新试卷按已确认揭晓时机起步（开始页显式选择优先，继续未完成的一轮保持冻结）。新增 L2 两条路由与 L3「修改学习偏好」动作；不新增学习事实、不写池。GLOSSARY、DATA_MODEL、FILE_CONTRACT、surface 与 PRODUCT-MANUAL 同步。

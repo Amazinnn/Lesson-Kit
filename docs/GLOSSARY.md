@@ -184,6 +184,12 @@ _Avoid_：评分（1–5 评价才是评分）、掌握度、把判定当成绩�
 _Avoid_：把设置当学习记录、按工作区写进数据库、对进行中的轮次即时生效
 出处：rating-toggle-setting change「Learner settings in the left rail」
 
+### 已确认课程学习偏好 / Confirmed course learning preferences
+四项非敏感学习偏好（练习与试卷的显示评价、显示来源、提交粒度、揭晓时机）的**课程级已保存投影**：由 Data writer 写入该课程工作区的 `.lessonkit/course-preferences.json`，随课程交换包一起传输。浏览器 `wb_settings_<工作区>` 只是**交互镜像**，不证明某项已被保存；服务端已确认值在恢复时优先，浏览器里的显式旧值只在服务端尚无投影时一次性迁移过去。外观、阅读字面、动效、声音与 Provider 凭据**不属于**该投影。
+_Avoid_：浏览器偏好（那是交互镜像）、学习者设置（那是界面上的设置组）、学习事实（偏好不写池、不构成学习证据）
+出处：openspec/changes/expand-file-mediated-course-sync（workbench-ui delta；DATA_MODEL、FILE_CONTRACT）
+
+
 ### 做题记录 / Practice Record
 把尝试、判定与评价合成一行的历史视图：练习页揭示区的「历史作答」折叠段（这道题我做过的每次作答），以及左侧「记录」中心的**作答明细 / 错题**视图（可按题过滤）。同一行读作「作答了什么、判定如何、评为几分」——评价通过 `attempt_id` 链回那次提交。**作答记录只增不改**：重新作答会追加 Attempt。唯一相关例外是浏览器在同一 Paper Practice Run 回看中再次保存评价时，只原位覆盖该 Attempt 关联反馈的评分和评语；不新增 Attempt/反馈，也不重放学习影响。此例外不扩展 Agent Attempt Correction。
 _Avoid_：学习状态、排期表、把记录页当批改结果

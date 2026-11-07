@@ -17,11 +17,13 @@
 
 > 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者；**只读 API** = 可供查询，不是浏览器选题入口。
 
-## API 路由（`/api/w/{ws}` 前缀，62 条）
+## API 路由（`/api/w/{ws}` 前缀，75 条）
 
 | 方法 路径 | 读写 | 服务层 | 给谁 |
 |---|---|---|---|
 | GET `/hub/workspaces` | 读 | 查询 | 浏 |
+| GET `/course-preferences` | 读 | 已确认的课程学习偏好投影（`.lessonkit/course-preferences.json`）；无投影时 `saved=false` | 浏 |
+| PATCH `/course-preferences` | 写 | 显式确认四项学习偏好（布尔与闭集取值校验）；拒绝写入如实失败，不计为已保存 | 浏 |
 | GET `/weak` | 读 | 查询 | 双 |
 | POST `/chapter` | 写 | 注册表（顶栏章透镜；空串 = 全课程，与 `use` 同源） | 浏 |
 | GET `/due` | 读 | 查询 | 双 |

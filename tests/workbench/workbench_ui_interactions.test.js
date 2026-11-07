@@ -542,6 +542,7 @@ function runWorkbench({
     trigger(type, event = {}) {
       for (const callback of this.listeners[type] || []) callback(event);
     },
+    dispatchEvent(event) { this.trigger(event.type, event); },
     scrollTo() {},
     matchMedia() { return { matches: reducedMotion }; },
     prompt: promptFn,
@@ -553,6 +554,7 @@ function runWorkbench({
   const sandbox = {
     document,
     window,
+    Event: class { constructor(type) { this.type = type; } },
     AgentUISurfaces: agentUISurfaces || undefined,
     GraphPhysics: physics,
     PracticeDeck,

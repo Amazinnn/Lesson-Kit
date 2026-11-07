@@ -85,6 +85,12 @@ function layout(dataset = { workspace: "alpha" }) {
   return new FakeElement("layout", { dataset });
 }
 
+/* `workbench.js` reports a preference change with a DOM event; the shell stub
+   answers the same way a browser does. */
+class FakeEvent {
+  constructor(type) { this.type = type; }
+}
+
 function runWorkbench({ elements, local = new FakeStorage(), fetch }) {
   const document = {
     documentElement: new FakeElement("html"),
@@ -115,6 +121,7 @@ function runWorkbench({ elements, local = new FakeStorage(), fetch }) {
     trigger(type, event = {}) {
       for (const callback of this.listeners[type] || []) callback(event);
     },
+    dispatchEvent(event) { this.trigger(event.type, event); },
     scrollTo() {},
     matchMedia() { return { matches: false }; },
     localStorage: local,
@@ -123,6 +130,7 @@ function runWorkbench({ elements, local = new FakeStorage(), fetch }) {
   const sandbox = {
     document,
     window,
+    Event: FakeEvent,
     sessionStorage: new FakeStorage(),
     localStorage: local,
     fetch,
@@ -258,7 +266,7 @@ test("an absent server projection adopts the explicit browser learning keys once
   });
   await flush();
 
-  const patches = preferenceCalls(calls).filter((call) => call.options.method === "PATCH");
+  const patches = preferenceCalls(calls).filter((call) => call.options && call.options.method === "PATCH");
   assert.equal(patches.length, 1, "the migration is one explicit save, not a stream of them");
   assert.deepEqual(JSON.parse(patches[0].options.body), {
     showRating: false, submissionGranularity: "whole_problem",

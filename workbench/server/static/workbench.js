@@ -366,12 +366,17 @@
       saveSetting(key, confirmedPreferences[key]);
     });
     applyDisplayPreferences();
+    var granularity = document.getElementById("setting-submission-granularity");
+    if (granularity && confirmedPreferences.submissionGranularity) {
+      granularity.value = confirmedPreferences.submissionGranularity;
+    }
     window.dispatchEvent(new Event("lk-submission-granularity"));
   }
 
   /* First answer wins: an unreadable server state is not permission to
      overwrite it later, and a confirmed value is never replaced by the
-     stale mirror this tab still holds. */
+     stale mirror this tab still holds.  A failed read leaves the confirmed
+     projection unknown (`null`), which is not the same as an empty one. */
   function hydratePreferences() {
     if (preferencesRequest) return preferencesRequest;
     preferencesRequest = api(PREFERENCES_URL).then(function (data) {
@@ -395,6 +400,13 @@
     });
     return preferencesRequest;
   }
+
+  /* The confirmed projection, readable by the practice views before their
+     own controller starts (`null` until the read has answered). */
+  window.lkCoursePreferences = {
+    ready: hydratePreferences,
+    values: function () { return confirmedPreferences; },
+  };
 
   /* An explicit change goes to the course writer as well as the mirror.  A
      rejected write is one short report — the mirror keeps the control value
@@ -1515,7 +1527,7 @@
     if (showRatingViewBox) {
       showRatingViewBox.checked = showRatingEnabled();
       showRatingViewBox.addEventListener("change", function () {
-        saveSetting("showRating", showRatingViewBox.checked);
+        saveLearningSetting("showRating", showRatingViewBox.checked);
         if (showRatingBox) showRatingBox.checked = showRatingViewBox.checked;
         applyDisplayPreferences();
       });
@@ -1524,7 +1536,7 @@
     if (submissionSelect) {
       submissionSelect.value = loadSetting('submissionGranularity', 'per_part');
       submissionSelect.addEventListener('change', function () {
-        saveSetting('submissionGranularity', submissionSelect.value);
+        saveLearningSetting('submissionGranularity', submissionSelect.value);
         window.dispatchEvent(new Event('lk-submission-granularity'));
       });
       window.addEventListener('storage', function () { submissionSelect.value = loadSetting('submissionGranularity', 'per_part'); });
@@ -1533,7 +1545,7 @@
     if (showSourceViewBox) {
       showSourceViewBox.checked = showSourceEnabled();
       showSourceViewBox.addEventListener("change", function () {
-        saveSetting("showSource", showSourceViewBox.checked);
+        saveLearningSetting("showSource", showSourceViewBox.checked);
         if (showSourceBox) showSourceBox.checked = showSourceViewBox.checked;
         applyDisplayPreferences();
       });
@@ -3281,6 +3293,10 @@
     load: load,
     showRatingEnabled: showRatingEnabled,
     showSourceEnabled: showSourceEnabled,
+    /* The confirmed course projection decides a new Paper's setup; the
+       controller waits for `ready` before creating an execution. */
+    coursePreferences: function () { return confirmedPreferences; },
+    coursePreferencesReady: hydratePreferences,
     renderMath: renderMath,
     escapeHtml: escapeHtml,
     richText: richText,
@@ -6438,6 +6454,9 @@
     mountMiddlePageRender();
     timeViewDispose = mountTimeView();
     mountSettingsView();
+    /* One hydration per page load, and only where the learning preferences
+       are actually shown (settings view or the Paper entry). */
+    if (preferencesSurfaceOpen()) hydratePreferences();
     renderSettingsToggle();
     if (layout.dataset.objectType && layout.dataset.objectId) {
       recordRecent(layout.dataset.objectType, layout.dataset.objectId);

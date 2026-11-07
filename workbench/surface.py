@@ -26,6 +26,12 @@ ROUTES = {
     ('GET', '/api/w/{name}/agent-resources/skills/{skill_id}'): (BROWSER, (), "user-global Agent resources are managed in settings"),
     ('PATCH', '/api/w/{name}/agent-resources/skills/{skill_id}'): (BROWSER, (), "user-global Agent resources are managed in settings"),
     ('DELETE', '/api/w/{name}/agent-resources/skills/{skill_id}'): (BROWSER, (), "user-global Agent resources are managed in settings"),
+    ('GET', '/api/w/{name}/course-preferences'): (
+        BROWSER, (),
+        "the settings view and the Paper entry read the confirmed course learning projection"),
+    ('PATCH', '/api/w/{name}/course-preferences'): (
+        BROWSER, (),
+        "an explicit settings change confirms the course learning projection"),
 
     ("GET", "/api/runtime"): (HUMAN, (), "read-only runtime provenance and update status"),
     ("POST", "/api/runtime/prepare-reload"): (HUMAN, (), "owned supervisor admission control"),
