@@ -73,3 +73,6 @@ Q071 现状核查。workbench-ui spec 已规定运行中发送偏好在工作区
 
 
 2026-11-07 审批静态清点。GLOSSARY 包含 Approval Gate 与 Paper Progress-reset Approval；workbench-ui 定义批次回滚审批，ai-teacher-bridge 定义改卷待审批保存及暂停派发；bridge/agent_contracts.py 要求只提议改卷并等待额外点击，bridge/conversations.py 存在 pending_paper_approval、审批投影、派发阻断与 resolve_paper_approval。这些是 S008 的明确契约协调对象。本轮未修改程序，以上路径仍可能要求审批，不将顶层新规则写入误报为运行时退役完成。
+
+
+2026-11-07 新参考资料。完整读取用户给定《学习协议 V3.1》主文、分页及视觉规范、Teach 方法与格式模板，原包副本逐字节一致且 ZIP 成员校验通过，见 learning-protocol-v3.1.md。资料包含教学方法及宿主动作要求，本次仅分析，未安装 Skill 或执行附录指令。静态核查 goals.py 已有 .lessonkit/goals.json 和派生 plan.json；evidence.py 仅提供作答事实，由外部 Agent 形成结论。完整教学续接与 GitHub 交接尚未经真实模型/正常用户入口验证。
