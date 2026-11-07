@@ -1,0 +1,54 @@
+{
+  "date": "2026-11-07",
+  "source": "workbench/data/course_sync.py @ c2a12260 (grouped layout + batched receive)",
+  "kind": "single diagnostic run, not a 20-run p95 acceptance",
+  "fixture": {
+    "chapters": 20,
+    "knowledge_points": 1000,
+    "problems": 10000,
+    "papers": 100,
+    "attempts": 10000,
+    "unfinished": 30,
+    "learning_files": 500,
+    "attachment_bytes": 104857600
+  },
+  "phases_seconds": {
+    "fixture": 3.168,
+    "export": 20.237,
+    "initial_check": 35.101,
+    "receive": 20.233,
+    "repeat_check": 47.845
+  },
+  "assets": 24790,
+  "status": {
+    "export": "success",
+    "receive": "success",
+    "table_counts_equal": true,
+    "repeat_changes": 0,
+    "repeat_errors": []
+  },
+  "thresholds": {
+    "export_p95_le_30s": {
+      "measured_single_run": 20.237,
+      "verdict": "meets target (single run)"
+    },
+    "receive_p95_le_30s": {
+      "measured_single_run": 20.233,
+      "verdict": "meets target (single run)"
+    },
+    "unchanged_check_p95_le_5s": {
+      "measured_single_run": 47.845,
+      "verdict": "FAILS target"
+    },
+    "first_check": {
+      "measured_single_run": 35.101,
+      "note": "no earlier base; not the unchanged-check threshold"
+    }
+  },
+  "prior_run_for_comparison": {
+    "export": 141.822,
+    "receive": 15.854,
+    "unchanged_check": 58.18,
+    "note": "evidence/2026-11-07-07"
+  }
+}
