@@ -152,6 +152,18 @@ CLI全量24 passed in67.29s发生于新Git-note回归加入之前。该新回归
 4. `tasks.md` 现为 **3/19**（1.1、2.2、2.10），其余仍需实测证据；F1/F3/F4/SYNC-08/RELEASE-02、真实远端/浏览器/旧课程迁移、独立最终验收均未做。
 5. B06 的 F1–F3 是 `pack` 在“传入未校验的旧 manifest”时的前置条件缺口，本轮只补了文档与测试，未加运行时校验。
 
+### 第四棒（同一天稍后，性能与旧数据阶段）
+
+| 提交 | 内容 |
+|---|---|
+| `61bd365f` | 性能定位与修复：`cProfile` 显示无变化检查 99s 中 **61s** 花在重复的 `Path.resolve()`；改为按物理文件校验路径 + 缓存根解析（越界/绝对/`.git`/Windows 歧义/逐段 symlink 检查全部保留）。F2 复测（预热后 20 次）：**无变化检查 p50 3.10s / p95 3.32s（目标 ≤5s）**、导出 p50 17.27s、接收 p50 9.68s，`changes=0 errors=[]`。证据 `evidence/…/2026-11-07-11/` |
+| `c1d7c7bc` | 旧格式可用：真实 2026-08-26 dmath 池原先**完全无法导出**（带退役候选表）或**全部题目被判无效**（带 DATA_MODEL 已删的 `problems.topic_label`）。现在按**已知退役名**跳过并登记在清单里（`retired_tables` / `retired_columns`），其它未知表/列仍然报错。实测导出 347 项、接收 347 项 0 失败，28/303/3/6 与源一致。证据 `evidence/…/2026-11-07-12/` |
+| `09b18eb3` | RELEASE-02 半程：记录实际安装身份（editable → 主检出 main `c5a9c642`，非本分支；守护进程未运行）；真实主池副本 `migrate-progress` 升级后原有表行数不变、新增两张 checkpoint 表；升级前字节备份可逐字节还原。**未切换安装身份**。证据 `evidence/…/2026-11-07-13/` |
+
+验证：全仓 `PYTHONUTF8=1 pytest tests -q` → **1,541 passed（430s）**；compileall 全仓；change strict 与 live specs strict（21/21）；`guard extract-problems --course dmath --chapter ch06` PASS。
+
+仍未完成：R06 的两项待决策（操作重放指纹、展示缓存编号）、SYNC-06 真实计划任务与通知展示、真实 GitHub 远端、真实浏览器、RELEASE-02 的切换与 `/api/runtime` 核对、F1/F3 夹具与独立最终验收。tasks 3/19。
+
 ### 建议下一棒入口
 
 先读本文件与 `STATUS.md`，再处理上面第 2、3 项（都需要先定契约），然后按 `benchmarks/catalog.md` 补 SYNC-02 的 20 次 p95、SYNC-06 真实计划任务、SYNC-08 旧库接收与 RELEASE-02 安装身份。
