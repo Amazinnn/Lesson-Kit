@@ -1,0 +1,133 @@
+{
+  "id": "SYNC-01 (real course copy) / partial SYNC-02 timing",
+  "date": "2026-11-07",
+  "environment": {
+    "python": "3.14.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "source_pool": "D:/Projects/Academic Workflow/lesson-kit/pool/dmath.db (read-only copy)"
+  },
+  "fixture_note": "A real 31-KP / 345-problem course copy, not the synthetic F2 fixture; these timings are a baseline, not the SYNC-02 threshold result.",
+  "commands": {
+    "export": "lesson-kit course-sync A export --to <bundle>",
+    "receive": "lesson-kit course-sync B receive --from <bundle>"
+  },
+  "timing_seconds": {
+    "export": {
+      "median": 0.7795,
+      "samples": [
+        0.7795,
+        0.8951,
+        0.7593,
+        0.7644,
+        0.8628
+      ],
+      "max": 0.8951
+    },
+    "receive": {
+      "median": 0.7235,
+      "samples": [
+        0.7752,
+        0.777,
+        0.7235,
+        0.717,
+        0.6389
+      ],
+      "max": 0.777
+    },
+    "receive_repeat": {
+      "median": 0.6582,
+      "samples": [
+        0.6102,
+        0.682,
+        0.6582
+      ]
+    }
+  },
+  "bundle": {
+    "files": 498,
+    "handoff": true,
+    "readable": 7
+  },
+  "assets": 489,
+  "row_counts_equal": true,
+  "table_count": 30,
+  "differing_tables": {},
+  "files": {
+    "source": 7,
+    "received": 7,
+    "missing": [],
+    "differing": []
+  },
+  "lineage": {
+    "A_course_origin": "course-403c1177-c733-45c1-95aa-59af7f1a72aa",
+    "B_course_origin": "course-403c1177-c733-45c1-95aa-59af7f1a72aa",
+    "same": true,
+    "B_base_size": 489
+  },
+  "continuation": {
+    "paper": [
+      "ps-001",
+      0,
+      "per_item"
+    ],
+    "items": [
+      [
+        0,
+        "dmath-ch06-prob-079",
+        "answered"
+      ],
+      [
+        1,
+        "dmath-ch06-prob-088",
+        "pending"
+      ],
+      [
+        2,
+        "dmath-ch06-prob-080",
+        "pending"
+      ],
+      [
+        3,
+        "dmath-ch06-prob-085",
+        "answered"
+      ],
+      [
+        4,
+        "dmath-ch06-prob-086",
+        "pending"
+      ],
+      [
+        5,
+        "dmath-ch06-prob-084",
+        "pending"
+      ]
+    ],
+    "attempt_answers": [
+      [
+        1,
+        "dmath-ch06-prob-265",
+        null
+      ],
+      [
+        2,
+        "dmath-ch06-prob-176",
+        null
+      ],
+      [
+        3,
+        "dmath-ch06-prob-001",
+        "我在第三步卡住了"
+      ],
+      [
+        4,
+        "dmath-ch06-prob-079",
+        "q"
+      ],
+      [
+        5,
+        "dmath-ch06-prob-085",
+        "1"
+      ]
+    ]
+  }
+}
