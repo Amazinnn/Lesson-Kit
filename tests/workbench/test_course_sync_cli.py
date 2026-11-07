@@ -426,3 +426,15 @@ def test_task_output_uses_native_encoding(monkeypatch):
     monkeypatch.setattr(course_sync.locale,"getencoding",lambda:"cp936")
     result=subprocess.CompletedProcess([],0,"成功".encode("cp936"),b"")
     assert course_sync._text(result)=="成功"
+
+
+def test_export_receipt_retains_the_actual_projection_result(workspace,tmp_path,capsys):
+    bundle=tmp_path/"bundle"
+    assert cli("math","export","--to",str(bundle),"--json-output")==0
+    receipt=json.loads(capsys.readouterr().out)
+    assert receipt["assets"]>0
+    assert receipt["destination"]==str(bundle.resolve())
+    assert receipt["local"]["exported"] is True
+    assert receipt["cleanup_errors"]==[]
+    saved=json.loads((workspace/".lessonkit/course-sync/last-receipt.json").read_text(encoding="utf-8"))
+    assert saved["assets"]==receipt["assets"]

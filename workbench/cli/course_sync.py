@@ -116,7 +116,7 @@ def _export(args, pool, workspace, emit=True):
     destination = _required(args.to, "--to")
     result = exchange.export_course(pool, workspace, destination)
     tutor_handoff.write(pool, destination)
-    return _finish(args, pool, {"status": result["status"]}, _exit_code(result["status"]),
+    return _finish(args, pool, result, _exit_code(result["status"]),
                    emit=emit)
 
 
