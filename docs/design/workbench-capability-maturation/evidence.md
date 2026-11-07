@@ -61,3 +61,6 @@ Q071 现状核查。workbench-ui spec 已规定运行中发送偏好在工作区
 顶层准则入口核查。docs/design/philosophy.md 为产品及学习理念，ARCHITECTURE §5 为工程约束。ADR 0025–0027 已禁止图谱求解器及渲染器保留并行运行时 fallback，ADR 0007 则记有旧池 related_kp_ids fallback 的历史决定，需按现行字段契约核对实际兼容责任。S006 新规写入 AGENTS 并由架构文档引用；本轮未扫描全部后端 fallback 调用，不宣称已完成存量清理。
 
 2026-11-07 知识点标签核查。主检出 knowledge_points 的契约字段包含 knowledge_type、importance、graph_label，未发现通用 tags 字段及对应知识点标签读写契约。workbench/data/content.py 支持读取/编辑知识点的既有字段；题目 topic_label 已退役，闪卡 topic_label 独立存在。不能把闪卡标签或图谱短名称当成知识点通用标签。此结论基于当前契约与静态路径搜索，未查询真实课程的分类填充情况。
+
+
+2026-11-07 新建知识点路径核查。workbench/ingest/__init__.py 的 content-bundle 预检接受 knowledge_points，新项需有效章节、唯一非空 key 及非空 knowledge_item，可由现有逻辑分配可读 ID。同批题目可通过本地 key 引用新知识点。knowledge_type 允许缺失，提供时须属于 KP_TYPES。该静态证据说明已有入库载体，不能据此认定 Agent 生成内容的正确性、来源核对或正常入口端到端能力已经验收。FILE_CONTRACT 的 content-bundle 契约为后续协调入口，尚未变更持久字段或执行实际入库。
