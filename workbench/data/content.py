@@ -167,8 +167,13 @@ def knowledge_query(pool, *, types=(), chapter=None, text=None):
     for item in list_items(pool, "kp"):
         if wanted and str(item.get("knowledge_type") or "").casefold() not in wanted:
             continue
-        if chapter and chapter not in str(item.get("kp_id") or "").split("-"):
-            continue
+        if chapter:
+            owned_chapter = item.get("chapter")
+            if owned_chapter is not None:
+                if owned_chapter != chapter:
+                    continue
+            elif chapter not in str(item.get("kp_id") or "").split("-"):
+                continue
         if words:
             fields = (item.get("knowledge_item"), item.get("graph_label"), item.get("body"),
                       item.get("source_location"), experiences.get(item.get("kp_id")))
