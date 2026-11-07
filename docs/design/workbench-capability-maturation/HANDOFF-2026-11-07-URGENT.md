@@ -120,3 +120,38 @@ CLI全量24 passed in67.29s发生于新Git-note回归加入之前。该新回归
 5. 正式source免费输出重放、完整规模性能重测，保存真实证据；不要降低性能门槛。
 6. 契约同步职责文件，记录实际当前与尚未实现，精确路径小提交；更新STATUS/handoff。tasks仍2/19，不要依据模块通过就批量勾选。
 7. 不自动合并到main、不启动主服务、不动活跃课程。当前隔离实现尚未交付；六个包远未完成。
+
+## 第三棒交接记录（本记录之后的状态）
+
+接手者在 `D:\.codex\worktrees\course-sync\lesson-kit` / `codex/course-sync` 续跑，未合并 main、未切安装源、未动活跃课程。
+
+### 核对到的终态
+
+- C05、G06 **正常退出**（exit 0，报告已落盘）；B06 报告已落盘（无 exit 文件）；**R06 以 exit 1 中断**——中断原因是 provider `429 overloaded`，不是任务结论。它的 `R06-results.json`/`R06-probe.py` 已含三项审查的实测数据。
+- 未跟踪的 `docs/design/workbench-capability-maturation/debug.log` 仍未纳入提交。
+
+### 本轮提交
+
+| 提交 | 内容 |
+|---|---|
+| `c2a12260` | 把审查期间冻结的修复草稿合入**实际** `workbench/data/course_sync.py`（OS 独占锁、分组包 v2、显式谱系关联、类型化引用、`files/` 新增文件成显式创建、received `row_identities`、拒绝覆盖课程库）；补 C05 剩余三项（分组头按题目依赖排序、`stale_inspection` 早停、不完整执行信封按 `invalid_asset`）；接入 G06 的 `list_remote_files`；B06 三条未钉死规则补测试 |
+| `708808e8` `a1e533f0` `052b2959` | STATUS、紧急交接入库；免费真实 Tutor 输出在正式源码重放通过，**task 2.10 勾选**（证据 `evidence/…/2026-11-07-09/`） |
+| `f7436ddb` | F2 全量诊断：导出 20.2s、接收 20.2s（门槛内），**无变化检查 47.8s 未达 ≤5s**（证据 `evidence/…/2026-11-07-10/`） |
+| `73801e69` | R06 的判分作业会话绑定：收到完成态作业时丢弃 `conversation_id`/`turn_id`（原先会把目标机自己的会话标成 internal、列表消失、GET 404）；另两项写成待决策 |
+
+### 已验收
+
+- 全仓 `PYTHONUTF8=1 pytest tests -q`：`c2a12260` 之后 **1,535 passed（458s）**；`73801e69` 之后 **1,539 passed（446s）**，0 失败。
+- `compileall` 全仓、`openspec validate expand-file-mediated-course-sync --strict`、live specs strict、`guard extract-problems --course dmath --chapter ch06` PASS。
+
+### 仍未完成 / 待决策
+
+1. **无变化检查性能**：47.8s vs ≤5s。门槛不降，达标需显式设计决定（三条候选写在 `evidence/…/2026-11-07-10/summary.md`）。
+2. **操作重放指纹**：`correct` 指纹按本机 attempt id 计算，跨机重放报“request_id 已用于不同内容”（误导性）；`apply` 可重算；篡改指纹不阻止重放。方向 (a) 导出重写指纹、(b) 增加机器无关稳定键，都属契约变更。
+3. **展示缓存编号**：`active_practice_items` 的 payload 内嵌来源机 `attempt_id`/`feedback_event_id`；被硬删的 feedback 事件不在包内。需与“本地硬删除的显式删除记录”一并决定。
+4. `tasks.md` 现为 **3/19**（1.1、2.2、2.10），其余仍需实测证据；F1/F3/F4/SYNC-08/RELEASE-02、真实远端/浏览器/旧课程迁移、独立最终验收均未做。
+5. B06 的 F1–F3 是 `pack` 在“传入未校验的旧 manifest”时的前置条件缺口，本轮只补了文档与测试，未加运行时校验。
+
+### 建议下一棒入口
+
+先读本文件与 `STATUS.md`，再处理上面第 2、3 项（都需要先定契约），然后按 `benchmarks/catalog.md` 补 SYNC-02 的 20 次 p95、SYNC-06 真实计划任务、SYNC-08 旧库接收与 RELEASE-02 安装身份。
