@@ -1,0 +1,47 @@
+## Context
+
+完整课程交换与外部 Tutor 交接 follows Q002/Q005–Q020/Q080/Q082–Q083/Q097/Q099–Q102/Q105–Q106；S007–S010. Current implementation evidence, authority ownership and contract drift are recorded in the program's evidence.md and contract-reconciliation.md. The package is independently scoped in packages/wp01.md.
+
+## Goals / Non-Goals
+
+本包目标以 specs/file-course-sync/spec.md 为准。实现边界与文件归属见对应 package 卡，Shell → Domain → Data，Bridge 旁挂。既有可满足的能力直接复用，只修改命中本包的规则、数据和入口。
+
+## Decisions
+
+### 交换与身份
+
+复用已有 mirror 投影与 figure 读取，新增 course_sync 只编排缺少的全课程能力。`domain.course_sync.plan_exchange(base, local, incoming)` 接收纯 Python 投影，返回有序独立单元、冲突和校验结果，不读文件。Data 负责 `export_course(pool, workspace, destination)`、`inspect_exchange(pool, workspace, source)` 和 `apply_exchange(pool, workspace, plan, choices)`，实际签名复用 Pool/字典习惯，在实现前登记 FILE_CONTRACT。
+
+格式 v1 使用 data-exchange-matrix 的 manifest。每个跨端记录使用持久来源身份与原记录号，本机 SQLite 自增 ID 经映射转换。新安装分配一次可读来源标识并与课程来源分开保存，不哈希、不以当前行号误认另一台机器的记录。课程复制保留课程来源，目标安装保留自身安装来源。相同可读内容 ID 的独立新增要按来源区别并报告冲突或明确映射，不覆盖既有历史。
+
+基线保存每资产最近共同投影。比较实际字段/字节，忽略传输元数据造成的伪冲突。单侧自动协调、同改一致自动收敛。作答合并按来源记录身份去重。草稿按执行和题目位置比较，不对整库或整卷取最近时间。学习投影使用原 writer 语义重建/协调，所有评分副作用必须由操作身份去重。
+
+### 内容与文件一致性
+
+按依赖拆独立单元，预检记录所有问题后可执行有效单元。文件写入使用同根临时文件和原子替换，单元内保留失败恢复需要的前值与发布步骤，受同课程写锁保护；写数据库只由 Data 完成。失败补偿仅恢复当前未成功单元的数据一致性，已成功独立单元保留。发布与数据库提交每个边界均注入故障验证，回执记录实际完成边界；再次执行用原操作身份续办，不重新派发已完成的 provider 作业。成功批次无撤销命令。
+
+课程学习文件先用相对路径的原文管理和类型元数据，无需把每种 Markdown 主题拆表。机器路径字段替换为可解析逻辑引用，不能盲目复制旧路径。浏览器偏好建立显式课程持久 writer/reader，CLI 能核对最后保存值，接收端正常入口实际消费。工作区默认继续上次位置，原生 Provider 会话仍单列。
+
+### CLI、Git与定时
+
+在 installed CLI 注册 `course-sync` 扩展，子命令 `export`、`receive`、`check`、`sync`、`status`、`schedule install|remove|enable|disable`。这是拟议新接口，现有 mirror 保留。单课显式 workspace/repo，定时可用 `--all-configured`，接收选择 `--keep local|incoming` 仅作用于真实冲突，也可读逐项 choices JSON。check 只读。统一 JSON 回执，普通脚本无需解析自然语言。
+
+回执顶层 status 为 success/partial/conflict/failed，包含 local/remote 结果、课程来源、资产数、操作身份及逐项变化。退出码0完整成功、2输入或格式错误、3需要冲突选侧、4部分完成或传输失败。遇到多种情况优先返回2、再3、再4，逐项完整结果不丢。单次多课程调度记录各课程退出码，任一受阻总结果非0。每课程仅保留最新完整回执，不建同步历史浏览平台。
+
+Git 使用系统 git 子进程，显式 cwd 和参数数组，只暂存受管理路径。拉取远端、文件协调、提交、推送、远端回读分步记录。网络失败不切换另一种同步实现。平台任务计划调用同一已安装命令和显式配置，标准 Windows 能力实现每小时，通知只针对新待选侧冲突且去重。安装/更新/停用/移除任务必须实操。
+
+## Risks / Trade-offs
+
+- 旧库和活跃 change 可能与静态阅读不同。开工以当前 checkout、真实 schema 和正常入口重新核对，记录差异，不以历史任务勾选覆盖实际结果。
+- 跨层职责冲突在被命中范围内修正，并同步对应职责文件；避免为本包启动无关全仓重构。
+- 部分成功必须准确表达，单元内错误不能产生半条实体或静默默认值。对未知行为保留真实失败，按 AGENTS 审查任何 fallback。
+- 数值门槛由工程规划选择，尚未实测。以 SYNC-01–08、FS-01–11、LP-01/02 固定夹具建立基线后公开实际结果，不虚报当前性能。
+
+## Migration Plan
+
+1. 冻结旧数据和接口样本，登记本包每个受影响字段及旧状态。
+2. 首先完成旧 requirement 的同职责 delta 协调及失败回归检查，再改产品实现。
+3. SQLite 变更仅通过 ensure_* 增量迁移，副本升级后验证原内容、历史及引用。
+4. 受影响文件工件更新 FILE_CONTRACT、字段更新 DATA_MODEL、名词更新 GLOSSARY、入口更新 ACTION-GRAPH/surface/手册与 Agent 契约。
+5. 真实入口和仓库检查通过后，按 S008 直接执行已准备切换，并记录安装/运行身份。数据故障以可恢复备份和直接修正处理，成功批次撤销已退役。
+6. 任务只按实际证据勾选，完整验收交接使用 execution-guide.md 和 benchmarks/catalog.md。

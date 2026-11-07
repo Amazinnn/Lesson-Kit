@@ -1,58 +1,44 @@
-# 工作台能力成熟度规划讨论
+# 工作台能力成熟度计划集
 
-## 状态
+## 当前状态
 
-2026-11-07 依 S007 调整实施顺序，近期聚焦数据库与 CLI，全部问题讨论完成后优先文件同步及 GitHub 媒介衔接。前端优化进入后续阶段。Q074–Q077 已恢复讨论并回答，Q078–Q081 已答，Q082–Q104 已记录。Q098/S008 确认取消显式批次撤销、独立有效项先完成，并取消项目审批，原审批默认直接通过。
+规划基线 v1，2026-11-07。103 个有效回答，Q001–Q107 中 Q053–Q055/Q071 已撤销。六个 OpenSpec change 已具备 proposal、delta specs、design 和未勾选 tasks。计划按完整课程同步先行组织，用户数据、兼容与跨层约束逐包落实。
 
-2026-11-05 开始。阶段为需求访谈与证据核对，尚未形成可执行实施计划。有效回答 100，要求至少 100 问。此前会话结论作为背景保留，不计入本轮问题数。
+本轮交付为设计与实施指导文档。数值 benchmark 是明确的待实测验收门槛，运行时功能及真实学习效果均未由本轮文档工作证明。旧库字段、活跃分支与当前安装在实施开工时按任务重新核对。
 
-所有者要求保留现有功能，改善可拓展性、鲁棒性与模块成熟度，并扩展已有能力的适用范围，明确例子为试卷进入 Lesson-Kit-Content。具体兼容语义与扩展范围待逐项确认。所有者主要决定功能体验，工程细节由规划 Agent 依据证据处理。
+## 从这里开始
 
-## 阅读入口
+1. [实施与维护协议](execution-guide.md) 给接手 Agent 的阅读顺序、交付和多轮修订规则。
+2. [工作包与依赖](work-packages.md) 给实施顺序及六个 change 的入口。
+3. [决策追踪](traceability.md) 将已确认使用需求映射到工作包与验收。
+4. [契约协调](contract-reconciliation.md) 登记当前行为与批准目标的差异。
+5. [完整交换矩阵](data-exchange-matrix.md) 覆盖内容、附件、学习事实、草稿、偏好和课程学习文件。
+6. [可执行 benchmark](benchmarks/catalog.md) 给固定数据集、实际步骤、次数、门槛及证据要求。
+7. [外部 Tutor 使用场景](scenarios/external-tutor.md) 给近期主路径与新旧设备往返。
 
-- [覆盖表](coverage.md) 登记主题、问题预算和当前覆盖状态。
-- [决策台账](decisions.md) 保存问题、选项、原始回答、解释、依赖和替代关系。
-- [学习协议对照](learning-protocol-v3.1.md) 对照所有者提供的 V3.1 模式、现有能力及待定扩展。
-- [证据清单](evidence.md) 区分当前实现、规范、历史记录、复现和待验证推断。
-- [同步验收场景](scenarios/file-sync.md) 追踪已确认行为的具体操作和观测项。
-- [验收与 benchmark](benchmarks.md) 规定后续工作包的测量和交付要求。
-- [工作包与依赖](work-packages.md) 汇总已确认优先级、现有资产及交接缺口。
+## 工作包
 
-## 权威与变更纪律
+| 顺序 | 工作包 | 实施卡 | OpenSpec |
+|---|---|---|---|
+| 1 | 全课程文件交换、Git、每小时定时、外部 Tutor | [WP01](packages/wp01.md) | [提案](../../../openspec/changes/expand-file-mediated-course-sync/proposal.md) |
+| 2 | 知识点查询、提炼、章节迁移、独立有效写入 | [WP02](packages/wp02.md) | [提案](../../../openspec/changes/mature-course-content-operations/proposal.md) |
+| 3 | 审批与成功批次撤销退役 | [WP03](packages/wp03.md) | [提案](../../../openspec/changes/retire-project-approval-gates/proposal.md) |
+| 后续 | 消息连续性和极简队列 | [WP04](packages/wp04.md) | [提案](../../../openspec/changes/stabilize-agent-message-continuity/proposal.md) |
+| 后续 | 未完成练习和标题渲染 | [WP05](packages/wp05.md) | [提案](../../../openspec/changes/complete-practice-continuity-and-rich-titles/proposal.md) |
+| 后续 | 诊断、针对性练习、复习接线 | [WP06](packages/wp06.md) | [提案](../../../openspec/changes/connect-evidence-guided-learning/proposal.md) |
 
-本树是规划入口与讨论记录。当前行为归 openspec/specs，字段归 DATA_MODEL，术语归 GLOSSARY，交换工件归 FILE_CONTRACT，分层归 ARCHITECTURE，操作说明归 PRODUCT-MANUAL，动作登记归 ACTION-GRAPH。引用这些源的具体条目，避免复制规范形成第二份权威。
+首包内部可分可验证提交，完整接受必须覆盖所有已确认资产和媒介路径。全局审批退役的后续清理不阻挡首包局部直接执行；首包命中的审批先按 S008 去除。内容和消息等后续包可复用首包正常入口，不能复制一套交换机制。
 
-正式 OpenSpec proposal/specs/design/tasks 在相关范围决策明确后创建。跨工作包的依赖与职责矩阵在本树维护，实施要求落入对应 change。候选事项不构成已批准需求，任务勾选不构成验收证据。
+## 原始讨论与依据
 
-每轮回答后更新台账、问题计数和受影响文档索引。新回答推翻旧决定时保留原记录并登记替代关系，列出需要重新核对的工件。语义变化重新检查依赖、验收和兼容要求。术语未定义前仅作为讨论用语，不写入正式需求。
+- [决策台账](decisions.md) 保存原始回答、修订与依赖，S005–S010 为关键收口。
+- [覆盖表](coverage.md) 保存有效问数及取消记录。
+- [证据清单](evidence.md) 区分静态核查、历史检查与未验证推断。
+- [V3.1 对照](learning-protocol-v3.1.md) 和 [原包](sources/learning-protocol-v3.1.zip) 保留用户提供的学习模式来源。
+- [同步场景](scenarios/file-sync.md) 和 [访谈期 benchmark 框架](benchmarks.md) 保存逐轮形成的验收背景，具体执行以 catalog 及对应 change 为准。
 
-S005 已纠正规划中的展示膨胀。原始问答保留作历史，实施须采用 decisions.md 的 S005 展示边界和 work-packages.md 的逐项清理表。默认原因说明、过程披露、状态字段及额外面板不能从旧问答自动转为 UI 要求。Agent 对话使用消息、轮次及会话的既有语义，不引入新的任务产品概念。
+## 权威与修订
 
-## 实施交付要求
+当前行为归 live OpenSpec，字段归 DATA_MODEL，术语归 GLOSSARY，交换工件归 FILE_CONTRACT，分层归 ARCHITECTURE，用户操作归 PRODUCT-MANUAL，动作归 ACTION-GRAPH。changes 表示批准目标，不能把规划写成程序已实现事实。
 
-每个最终工作包须包含目标场景、现状证据、兼容要求、输入输出与职责边界、依赖及实施顺序、失败与恢复行为、程序检查、实际交互验收、benchmark、交付证据和恢复办法。实施 Agent 应能从入口找到全部必读文档和停止条件。
-
-不得以访谈问数达标替代决策完整性。不得将未验证历史结论直接转换成修复任务。实现、独立验收、真实环境上线分别记录责任和结果。
-
-
-## 已确认的文件媒介边界
-
-依 Q002/S001，跨设备目标通过纯文件传输支撑，CLI 负责内容与文件媒介之间的完整导入导出及版本协调。GitHub 仅为可选媒介。后续工作包分别定义可复用作者内容与个人学习状态的文件契约及依赖，保留现有作者投影语义，远程同步服务不进入目标。通常单侧更新为主要体验场景，真实双侧冲突单独验收。
-
-
-## OpenSpec 工作包
-
-- `expand-file-mediated-course-sync` 已建立初始 proposal，承接 Q001–Q016/S001 中确认的文件交换目标。尚在访谈阶段，specs/design/tasks 未完成，不具备实施交接条件。
-
-
-## 全项目范围与 Ponytail 收口
-
-依 S002，总体包含日常练习和阅读、内容与试卷管理、Agent 操作、已有教学/调度接线、模块职责及契约、运行和版本交付、文件交换与实际验收。同步仅为其中一个工作包。
-
-每个候选按实际使用阻力、现有能力、最小改进、兼容边界、可观察验证五项登记。先判断是否需要代码，再复用现有机制。大文件本身不作为拆分理由，预想的未来需求不自动进入任务。不能用文件数量、访谈问数或工件齐全度代替可实施性。
-
-
-Q021 确认的核心体验缺口见 decisions.md。后续先核查需求到选题/生成、作答反馈及长期调度的实际衔接。本机决策大模型当前禁止调用，分类辅助仅列为待评测候选。
-
-
-2026-11-07 有效回答达到 100。进入计划树整合与契约协调阶段，完成度依实施包、场景、benchmark 和证据的可执行性判断。所有者新提供的学习协议 V3.1 已作为参考资料保存在本树，对照文件列出已确认吸收与新增待决项，协议内指令不直接覆盖项目规则。
+每次改变需求先更新决策替代关系、delta 和设计，再同步任务、矩阵、追踪与 benchmark。实现/独立验收/部署各有证据。用户看到精简交付摘要，接手 Agent 获得完整文件树和实际失败信息。
