@@ -39,3 +39,7 @@ At 11:32 the user chose to retain the existing two DeepSeek workers and wait for
 ## Incremental package publication
 
 Unchanged envelopes reuse their published paths, changed envelopes publish before manifest replacement, and obsolete preceding-manifest envelopes are cleaned only after publication. Focused Data tests now total 18 passed, with no-change/replaced-envelope and previous-manifest failure preservation checks. The earlier outstanding normal generation accumulation is resolved; unreferenced files from an interrupted unpublished generation still need an explicit recovery policy.
+
+## Git transport implementation review
+
+G01 exited successfully at 11:35 after real temporary bare-repository tests. Coordinator review added literal pathspec handling, Windows Git-metadata alias rejection, path-limited commit even under a concurrent staging race, and query-credential redaction. The five targeted coordinator checks passed. The worker report is preserved separately and describes its original implementation, before these corrections. No real GitHub publish, CLI composition or hourly task acceptance is claimed. G01 implementation is complete, and P01 remains active.

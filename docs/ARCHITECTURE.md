@@ -86,6 +86,7 @@ workbench/
 │   └── retrieval.py   # 开发者诊断：通过 Data 只读接口评估检索事实
 ├── bridge/
 │   ├── __init__.py
+│   ├── git_sync.py    # Requested system-Git transport, managed paths and independent publication results
 │   ├── agent_contracts.py # 已安装的只读按需契约主题：commands / attempts / practice / actions / content
 │   ├── conversation_providers.py # Agent harness 发现、统一模型目标、原生新建/续聊命令与轮次预算
 │   ├── conversations.py # conv-###、串行 turn、取消、成功镜像（含执行计划、静默预算看门狗）
