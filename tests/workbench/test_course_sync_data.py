@@ -64,6 +64,45 @@ def test_origin_and_row_identity_survive_repeat_exports(course, tmp_path):
     assert one["origin"] == two["origin"]
 
 
+def test_attempt_references_use_record_identity_and_ignore_local_number(course, tmp_path):
+    pool, workspace = course
+    connection = pool.connect()
+    connection.executescript("""
+        CREATE TABLE feedback_events (id INTEGER PRIMARY KEY, attempt_id INTEGER, note TEXT);
+        CREATE TABLE practice_request_operations (request_id TEXT PRIMARY KEY, payload TEXT, result TEXT);
+    """)
+    connection.execute("INSERT INTO feedback_events VALUES (1,1,'保持原文')")
+    connection.execute("INSERT INTO practice_request_operations VALUES (?,?,?)",
+                       ('request-1', '{"attempt_id": 1}', '{"answer_text":"$x=1$", "attempt_id":1}'))
+    pool.commit()
+    export_course(pool, workspace, tmp_path / "one")
+    first = read_exchange(tmp_path / "one")
+    state_path = pool.root / '.lessonkit/course-sync/state.json'
+    state = json.loads(state_path.read_text(encoding='utf-8'))
+    old_identity = state['row_identities'].pop('problem_attempts/[1]')
+    state['row_identities']['problem_attempts/[8]'] = old_identity
+    state_path.write_text(json.dumps(state), encoding='utf-8')
+    connection.execute('UPDATE problem_attempts SET id=8 WHERE id=1')
+    connection.execute('UPDATE feedback_events SET attempt_id=8')
+    connection.execute('UPDATE practice_request_operations SET payload=?,result=?',
+                       ('{"attempt_id": 8}', '{"answer_text":"$x=1$", "attempt_id":8}'))
+    pool.commit()
+    export_course(pool, workspace, tmp_path / "two")
+    second = read_exchange(tmp_path / "two")
+    assert first['assets'] == second['assets']
+    attempt = second['assets'][old_identity]['content']['row']
+    assert attempt['id'] == old_identity
+    assert attempt['answer_text'] == '原始答案\n$x=1$'
+
+
+def test_dangling_attempt_reference_is_explicit_export_error(course, tmp_path):
+    pool, workspace = course
+    pool.connect().executescript('CREATE TABLE feedback_events (id INTEGER PRIMARY KEY, attempt_id INTEGER);'
+                               'INSERT INTO feedback_events VALUES (1,999);')
+    with pytest.raises(ValueError, match='unresolved course record reference'):
+        export_course(pool, workspace, tmp_path / 'bundle')
+
+
 def test_unknown_table_is_explicitly_rejected(course, tmp_path):
     pool, workspace = course
     pool.connect().execute("CREATE TABLE unexpected_data (id TEXT)")

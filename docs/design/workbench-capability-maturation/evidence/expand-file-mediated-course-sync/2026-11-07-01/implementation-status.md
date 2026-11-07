@@ -23,3 +23,9 @@ The first full pytest invocation without PYTHONUTF8 exited 1 with a truncated lo
 Committed database projection and bundle reader now have 11 targeted checks, with the pure planner bringing the focused total to 20 passed. No installed CLI exposure or receive-side completion is claimed. Read/write is isolated to temporary fixtures. Exact rows, original answers and file bytes are preserved, unknown tables and missing references are errors, path escapes and Windows aliases are rejected, and interrupted export publication leaves the previously published manifest and bytes intact. Origins are persisted before publication.
 
 Each export publishes immutable generation paths before swapping its manifest. Generation garbage collection and F2 performance measurements remain outstanding. Durable receive identity/reference remapping, execution/draft normalization, and all covered-class F1/F4 validation remain prerequisites for marking task 2.3 complete.
+
+## Integer provenance checkpoint
+
+Declared integer record identifiers and attempt/execution references now export stable origin identities, including declared stored-JSON references. A simulated local ID remap produces identical exported assets and preserves raw answers. Dangling declared references fail explicitly. Focused planner/projection checks total 22 passed. Receive allocation and complete nested snapshot coverage remain outstanding.
+
+The read-only real legacy database backup copy exported 469 assets and reread without errors. `legacy-projection.json` records exact table/column coverage and timing. This verifies projection only, not F4 receive/migration acceptance. `field-inventory.json` records the freshly generated trusted schema and static writer/consumer candidates, not exhaustive dynamic SQL analysis.

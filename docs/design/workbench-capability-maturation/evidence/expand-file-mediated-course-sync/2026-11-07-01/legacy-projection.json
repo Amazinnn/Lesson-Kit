@@ -1,0 +1,363 @@
+{
+  "fixture": "F4 legacy local copy projection",
+  "receive_verified": false,
+  "source_modified": false,
+  "status": "passed",
+  "assets": 469,
+  "tables": [
+    {
+      "table": "active_practice",
+      "columns": [
+        "singleton",
+        "source_kind",
+        "source_ref",
+        "source_label",
+        "kp_ids_json",
+        "practice_mode",
+        "rating_mode",
+        "cursor",
+        "started_at",
+        "updated_at"
+      ],
+      "primary_key": [
+        "singleton"
+      ],
+      "rows": 0
+    },
+    {
+      "table": "active_practice_items",
+      "columns": [
+        "position",
+        "item_type",
+        "item_id",
+        "direction",
+        "state",
+        "attempt_id"
+      ],
+      "primary_key": [
+        "position"
+      ],
+      "rows": 0
+    },
+    {
+      "table": "attempt_operations",
+      "columns": [
+        "request_id",
+        "problem_id",
+        "attempt_id",
+        "kind",
+        "rating",
+        "fingerprint",
+        "batch_fingerprint",
+        "result",
+        "pre_state",
+        "post_state",
+        "created_at"
+      ],
+      "primary_key": [
+        "request_id",
+        "problem_id"
+      ],
+      "rows": 0
+    },
+    {
+      "table": "content_sequences",
+      "columns": [
+        "scope",
+        "entity_type",
+        "next_value"
+      ],
+      "primary_key": [
+        "scope",
+        "entity_type"
+      ],
+      "rows": 3
+    },
+    {
+      "table": "feedback_events",
+      "columns": [
+        "id",
+        "item_type",
+        "item_id",
+        "rating",
+        "note",
+        "created_at",
+        "attempt_id"
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "rows": 2
+    },
+    {
+      "table": "flash_cards",
+      "columns": [
+        "card_id",
+        "kp_id",
+        "front",
+        "back",
+        "source_evidence",
+        "topic_label",
+        "ingest_batch_id",
+        "directions"
+      ],
+      "primary_key": [
+        "card_id"
+      ],
+      "rows": 66
+    },
+    {
+      "table": "ingest_batches",
+      "columns": [
+        "batch_id",
+        "kind",
+        "manifest_path",
+        "counts_json",
+        "backup_path",
+        "applied_at",
+        "rolled_back_at"
+      ],
+      "primary_key": [
+        "batch_id"
+      ],
+      "rows": 2
+    },
+    {
+      "table": "knowledge_points",
+      "columns": [
+        "kp_id",
+        "knowledge_item",
+        "source_location",
+        "knowledge_type",
+        "related_kp_ids",
+        "importance",
+        "learning_action",
+        "body",
+        "difficulty",
+        "fragile",
+        "created_at",
+        "updated_at",
+        "graph_label",
+        "figure_paths",
+        "ingest_batch_id"
+      ],
+      "primary_key": [
+        "kp_id"
+      ],
+      "rows": 31
+    },
+    {
+      "table": "knowledge_relations",
+      "columns": [
+        "relation_id",
+        "source_kp_id",
+        "target_kp_id",
+        "relation_type",
+        "direction",
+        "strength",
+        "created_at",
+        "updated_at"
+      ],
+      "primary_key": [
+        "relation_id"
+      ],
+      "rows": 0
+    },
+    {
+      "table": "kp_progress",
+      "columns": [
+        "kp_id",
+        "mastery_state",
+        "self_assessment"
+      ],
+      "primary_key": [
+        "kp_id"
+      ],
+      "rows": 0
+    },
+    {
+      "table": "learner_signals",
+      "columns": [
+        "signal_id",
+        "target_type",
+        "target_id",
+        "signal_type",
+        "weight",
+        "evidence_count",
+        "note",
+        "last_practice_kind",
+        "last_practice_ref",
+        "created_at",
+        "updated_at"
+      ],
+      "primary_key": [
+        "signal_id"
+      ],
+      "rows": 6
+    },
+    {
+      "table": "learning_current_state",
+      "columns": [
+        "item_type",
+        "item_id",
+        "state",
+        "updated_at"
+      ],
+      "primary_key": [
+        "item_type",
+        "item_id"
+      ],
+      "rows": 1
+    },
+    {
+      "table": "practice_request_operations",
+      "columns": [
+        "request_id",
+        "payload",
+        "result",
+        "created_at"
+      ],
+      "primary_key": [
+        "request_id"
+      ],
+      "rows": 0
+    },
+    {
+      "table": "practice_runs",
+      "columns": [
+        "id",
+        "source_kind",
+        "source_ref",
+        "source_label",
+        "kp_ids_json",
+        "practice_mode",
+        "rating_mode",
+        "items_json",
+        "status",
+        "started_at",
+        "finished_at"
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "rows": 0
+    },
+    {
+      "table": "problem_attempts",
+      "columns": [
+        "id",
+        "problem_id",
+        "status",
+        "note",
+        "answer_text",
+        "verdict",
+        "choices",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "rows": 3
+    },
+    {
+      "table": "problem_progress",
+      "columns": [
+        "problem_id",
+        "status",
+        "note",
+        "updated_at"
+      ],
+      "primary_key": [
+        "problem_id"
+      ],
+      "rows": 3
+    },
+    {
+      "table": "problems",
+      "columns": [
+        "problem_id",
+        "kp_ids",
+        "problem_text",
+        "solution",
+        "problem_type",
+        "source_kind",
+        "origin_kind",
+        "created_at",
+        "updated_at",
+        "figure_paths",
+        "display_title",
+        "display_summary",
+        "practice_modes",
+        "micro_quiz",
+        "ingest_batch_id",
+        "difficulty",
+        "difficulty_knowledge_breadth",
+        "difficulty_reasoning_depth",
+        "difficulty_transfer_distance",
+        "difficulty_construction_openness",
+        "difficulty_model",
+        "source_evidence",
+        "source_answer",
+        "solution_origin",
+        "exam_year"
+      ],
+      "primary_key": [
+        "problem_id"
+      ],
+      "rows": 345
+    },
+    {
+      "table": "question_progress",
+      "columns": [
+        "id",
+        "q_id",
+        "note",
+        "mastery_state",
+        "created_at"
+      ],
+      "primary_key": [
+        "id"
+      ],
+      "rows": 0
+    },
+    {
+      "table": "questions",
+      "columns": [
+        "q_id",
+        "question_text",
+        "answer_key",
+        "answer_explanation",
+        "kp_id",
+        "difficulty"
+      ],
+      "primary_key": [
+        "q_id"
+      ],
+      "rows": 0
+    },
+    {
+      "table": "review_schedule",
+      "columns": [
+        "item_type",
+        "item_id",
+        "direction",
+        "state",
+        "repetitions",
+        "ease",
+        "interval_days",
+        "due_at",
+        "last_rating",
+        "last_reviewed_at"
+      ],
+      "primary_key": [
+        "item_type",
+        "item_id",
+        "direction"
+      ],
+      "rows": 1
+    }
+  ],
+  "read_errors": [],
+  "missing_referenced_files": 0,
+  "seconds": 3.813
+}

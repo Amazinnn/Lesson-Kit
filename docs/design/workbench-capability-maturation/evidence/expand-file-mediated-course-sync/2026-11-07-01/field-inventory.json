@@ -1,0 +1,4137 @@
+[
+  {
+    "name": "active_practice",
+    "pk": [
+      "singleton"
+    ],
+    "columns": [
+      {
+        "name": "singleton",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "source_kind",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "source_ref",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "source_label",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "kp_ids_json",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'[]'"
+      },
+      {
+        "name": "practice_mode",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "rating_mode",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "cursor",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "0"
+      },
+      {
+        "name": "started_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "execution_id",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "0"
+      },
+      {
+        "name": "paper_generation",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "1"
+      },
+      {
+        "name": "reveal_timing",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_require_schema",
+        "line": 29,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_require_reveal_timing_schema",
+        "line": 56,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_row",
+        "line": 179,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "create",
+        "line": 253,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_delete",
+        "line": 414,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_adopt_legacy_ordinary",
+        "line": 440,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "navigate",
+        "line": 453,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "mark",
+        "line": 520,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "finish_if_complete",
+        "line": 636,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_restore",
+        "line": 812,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "record_result",
+        "line": 423,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_round_rating_mode",
+        "line": 486,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "record_browser_attempt",
+        "line": 497,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "record_browser_feedback",
+        "line": 589,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "reconcile_active",
+        "line": 67,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "park",
+        "line": 93,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "reset",
+        "line": 112,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "guard",
+        "line": 150,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "selected_saved",
+        "line": 209,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "_binding_target",
+        "line": 251,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "bind_attempts",
+        "line": 389,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "attempt_paper",
+        "line": 501,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "continuation",
+        "line": 533,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "start_blocker",
+        "line": 580,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "remove_question",
+        "line": 603,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "_target",
+        "line": 18,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "save_draft",
+        "line": 40,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "_submit_item",
+        "line": 83,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "submit",
+        "line": 129,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "preview_update",
+        "line": 387,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "append_saved",
+        "line": 427,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_runs",
+        "line": 47,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice_set_start",
+        "line": 434,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "active_practice_get",
+        "line": 459,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "active_practice_create",
+        "line": 467,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "active_practice_update",
+        "line": 481,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "active_practice_delete",
+        "line": 502,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice_navigate",
+        "line": 514,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice_stuck",
+        "line": 528,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice_submit",
+        "line": 543,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice_run_get",
+        "line": 560,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice_draft",
+        "line": 581,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice_part_draft",
+        "line": 618,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice_part_submit",
+        "line": 634,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice_run_replay",
+        "line": 650,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "practice",
+        "line": 664,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "feedback_record",
+        "line": 691,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "attempt_record",
+        "line": 757,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/context.py",
+        "function": "_practice",
+        "line": 71,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "active_practice_items",
+    "pk": [
+      "position"
+    ],
+    "columns": [
+      {
+        "name": "position",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "item_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "item_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "direction",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "''"
+      },
+      {
+        "name": "state",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'pending'"
+      },
+      {
+        "name": "attempt_id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "content_revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "1"
+      },
+      {
+        "name": "draft_json",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "draft_sequence",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "0"
+      }
+    ],
+    "foreign_keys": [
+      [
+        0,
+        0,
+        "problem_attempts",
+        "attempt_id",
+        "id",
+        "NO ACTION",
+        "NO ACTION",
+        "NONE"
+      ]
+    ],
+    "source_functions": [
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_require_schema",
+        "line": 29,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "current",
+        "line": 185,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "create",
+        "line": 253,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_delete",
+        "line": 414,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "mark_stuck_draft",
+        "line": 476,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "mark",
+        "line": 520,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "bind_attempt",
+        "line": 595,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_restore",
+        "line": 812,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "save_draft",
+        "line": 906,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "reconcile_active",
+        "line": 67,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "guard",
+        "line": 150,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "_binding_target",
+        "line": 251,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "attempt_paper",
+        "line": 501,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "continuation",
+        "line": 533,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "_write",
+        "line": 35,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "_submit_item",
+        "line": 83,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "append_saved",
+        "line": 427,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "attempt_operations",
+    "pk": [
+      "request_id",
+      "problem_id"
+    ],
+    "columns": [
+      {
+        "name": "request_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "problem_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "attempt_id",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "kind",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "rating",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "fingerprint",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "batch_fingerprint",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "result",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "pre_state",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "post_state",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "apply",
+        "line": 209,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_insert_operation",
+        "line": 350,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_operations",
+        "line": 366,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "linked_operation",
+        "line": 373,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_require_schema",
+        "line": 838,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "content_mirror_log",
+    "pk": [
+      "id"
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "entity_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "entity_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "direction",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "from_revision",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "to_revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/content_mirror.py",
+        "function": "_require_tables",
+        "line": 77,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_mirror.py",
+        "function": "_put_state",
+        "line": 228,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "content_mirror_state",
+    "pk": [
+      "entity_type",
+      "entity_id"
+    ],
+    "columns": [
+      {
+        "name": "entity_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "entity_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "content_json",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/content_mirror.py",
+        "function": "_require_tables",
+        "line": 77,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_mirror.py",
+        "function": "_state",
+        "line": 213,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_mirror.py",
+        "function": "_put_state",
+        "line": 228,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_mirror.py",
+        "function": "_tracked",
+        "line": 255,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "content_sequences",
+    "pk": [
+      "scope",
+      "entity_type"
+    ],
+    "columns": [
+      {
+        "name": "scope",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "entity_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "next_value",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/content.py",
+        "function": "next_id",
+        "line": 199,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_allocate_batch_id",
+        "line": 1460,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "feedback_events",
+    "pk": [
+      "id"
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "item_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "item_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "rating",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "note",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "attempt_id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "correct",
+        "line": 244,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "record_browser_feedback",
+        "line": 589,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_require_schema",
+        "line": 838,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "history",
+        "line": 159,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_learning_rows",
+        "line": 574,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/evaluations.py",
+        "function": "add_event",
+        "line": 111,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/evidence.py",
+        "function": "_feedback_for_attempts",
+        "line": 69,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/mastery.py",
+        "function": "snapshot",
+        "line": 6,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "insert_feedback_event",
+        "line": 351,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "feedback_events",
+        "line": 361,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "feedback_event_for_attempt",
+        "line": 375,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "feedback_event",
+        "line": 382,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "feedback_event_rows",
+        "line": 388,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "update_feedback_event",
+        "line": 408,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "delete_feedback_event",
+        "line": 415,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/queries.py",
+        "function": "_attempt_rows",
+        "line": 123,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_summary",
+        "line": 70,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_rating_distribution",
+        "line": 170,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_practice_sets",
+        "line": 187,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "overview",
+        "line": 265,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "flash_cards",
+    "pk": [
+      "card_id"
+    ],
+    "columns": [
+      {
+        "name": "card_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "kp_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "front",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "back",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "source_evidence",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "topic_label",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "directions",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'[\"forward\"]'"
+      },
+      {
+        "name": "ingest_batch_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/bridge/conversations.py",
+        "function": "_prompt",
+        "line": 735,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_kp",
+        "line": 582,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "cards_for_kps",
+        "line": 135,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "card",
+        "line": 144,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "next_free_content_ids",
+        "line": 157,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "chapters",
+        "line": 186,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_apply_patch",
+        "line": 553,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_content_bundle",
+        "line": 820,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_apply_content_bundle",
+        "line": 1177,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_content_bundle",
+        "line": 1387,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_conflicts",
+        "line": 1523,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "rollback_batch",
+        "line": 2087,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_flash_cards",
+        "line": 2240,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "ingest_batches",
+    "pk": [
+      "batch_id"
+    ],
+    "columns": [
+      {
+        "name": "batch_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "kind",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "manifest_path",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "counts_json",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "backup_path",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "applied_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "rolled_back_at",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_content_bundle",
+        "line": 1387,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_record_batch",
+        "line": 1624,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_problem_patch",
+        "line": 1851,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_gate_report",
+        "line": 1873,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "list_batches",
+        "line": 2065,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "rollback_batch",
+        "line": 2087,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_figure_patch",
+        "line": 2160,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "ingest_batches",
+        "line": 815,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "knowledge_points",
+    "pk": [
+      "kp_id"
+    ],
+    "columns": [
+      {
+        "name": "kp_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "knowledge_item",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "graph_label",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "source_location",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "knowledge_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "related_kp_ids",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "importance",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "learning_action",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "body",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "difficulty",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "fragile",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "figure_paths",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "ingest_batch_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/bridge/conversations.py",
+        "function": "_prompt",
+        "line": 735,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/doctor.py",
+        "function": "_check_workspaces",
+        "line": 34,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "cmd_experiment",
+        "line": 838,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "ensure_kp_batch_column",
+        "line": 138,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_kp",
+        "line": 582,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_mirror.py",
+        "function": "_apply_kp_patch",
+        "line": 740,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/mastery.py",
+        "function": "snapshot",
+        "line": 6,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "kps",
+        "line": 67,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "kp",
+        "line": 80,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "update_kp_content",
+        "line": 86,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "chapters",
+        "line": 186,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "_plan",
+        "line": 175,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "_record_errors",
+        "line": 329,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/typesetting.py",
+        "function": "read_rows",
+        "line": 22,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/mastery.py",
+        "function": "evaluate",
+        "line": 9,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/planning.py",
+        "function": "build_baseline_plan",
+        "line": 13,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/typesetting.py",
+        "function": "check",
+        "line": 38,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/typesetting.py",
+        "function": "render_text",
+        "line": 77,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "apply",
+        "line": 236,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_micro_quiz",
+        "line": 371,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "inspect_content_bundle_typesetting",
+        "line": 634,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_content_bundle",
+        "line": 820,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_apply_content_bundle",
+        "line": 1177,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_content_bundle",
+        "line": 1387,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_figure_is_referenced",
+        "line": 1451,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_conflicts",
+        "line": 1523,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_gate_report",
+        "line": 1873,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "rollback_batch",
+        "line": 2087,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_flash_cards",
+        "line": 2240,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_current_recovery_pending",
+        "line": 2379,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_current_recovery_patch",
+        "line": 2396,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_content_patch",
+        "line": 2417,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_accounting",
+        "line": 2594,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/context.py",
+        "function": "build",
+        "line": 23,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/context.py",
+        "function": "_practice",
+        "line": 71,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/context.py",
+        "function": "_selected_scope",
+        "line": 341,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "knowledge_relations",
+    "pk": [
+      "relation_id"
+    ],
+    "columns": [
+      {
+        "name": "relation_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "source_kp_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "target_kp_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "relation_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "direction",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "strength",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [
+      [
+        0,
+        0,
+        "knowledge_points",
+        "target_kp_id",
+        "kp_id",
+        "NO ACTION",
+        "NO ACTION",
+        "NONE"
+      ],
+      [
+        1,
+        0,
+        "knowledge_points",
+        "source_kp_id",
+        "kp_id",
+        "NO ACTION",
+        "NO ACTION",
+        "NONE"
+      ]
+    ],
+    "source_functions": [
+      {
+        "path": "workbench/data/content.py",
+        "function": "delete",
+        "line": 542,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_kp",
+        "line": 582,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "relations",
+        "line": 207,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "create",
+        "line": 17,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "update",
+        "line": 48,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "delete",
+        "line": 91,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "apply",
+        "line": 107,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "_plan",
+        "line": 175,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "_duplicate_errors",
+        "line": 369,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "_get",
+        "line": 398,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_content_bundle",
+        "line": 1387,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_conflicts",
+        "line": 1523,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_accounting",
+        "line": 2594,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "kp_experience_problems",
+    "pk": [
+      "kp_id",
+      "problem_id"
+    ],
+    "columns": [
+      {
+        "name": "kp_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "problem_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "position",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "0"
+      }
+    ],
+    "foreign_keys": [
+      [
+        0,
+        0,
+        "problems",
+        "problem_id",
+        "problem_id",
+        "NO ACTION",
+        "CASCADE",
+        "NONE"
+      ],
+      [
+        1,
+        0,
+        "kp_experiences",
+        "kp_id",
+        "kp_id",
+        "NO ACTION",
+        "CASCADE",
+        "NONE"
+      ]
+    ],
+    "source_functions": [
+      {
+        "path": "workbench/data/experience.py",
+        "function": "get",
+        "line": 8,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/experience.py",
+        "function": "delete",
+        "line": 62,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/experience.py",
+        "function": "_replace_links",
+        "line": 110,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "kp_experiences",
+    "pk": [
+      "kp_id"
+    ],
+    "columns": [
+      {
+        "name": "kp_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "content",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "1"
+      },
+      {
+        "name": "updated_by",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [
+      [
+        0,
+        0,
+        "knowledge_points",
+        "kp_id",
+        "kp_id",
+        "NO ACTION",
+        "CASCADE",
+        "NONE"
+      ]
+    ],
+    "source_functions": [
+      {
+        "path": "workbench/data/experience.py",
+        "function": "get",
+        "line": 8,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/experience.py",
+        "function": "create",
+        "line": 27,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/experience.py",
+        "function": "update",
+        "line": 41,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/experience.py",
+        "function": "delete",
+        "line": 62,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "kp_progress",
+    "pk": [
+      "kp_id"
+    ],
+    "columns": [
+      {
+        "name": "kp_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "mastery_state",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'new'"
+      },
+      {
+        "name": "self_assessment",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [
+      [
+        0,
+        0,
+        "knowledge_points",
+        "kp_id",
+        "kp_id",
+        "NO ACTION",
+        "NO ACTION",
+        "NONE"
+      ]
+    ],
+    "source_functions": [
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_kp",
+        "line": 582,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "learner_signals",
+    "pk": [
+      "signal_id"
+    ],
+    "columns": [
+      {
+        "name": "signal_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "target_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "target_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "signal_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "weight",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'medium'"
+      },
+      {
+        "name": "evidence_count",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "1"
+      },
+      {
+        "name": "note",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "last_practice_kind",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'other'"
+      },
+      {
+        "name": "last_practice_ref",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_snapshot",
+        "line": 724,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_restore",
+        "line": 762,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "history",
+        "line": 159,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_kp",
+        "line": 582,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "signals",
+        "line": 173,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "upsert_signal",
+        "line": 302,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "delete",
+        "line": 91,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/relations.py",
+        "function": "apply",
+        "line": 107,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "learning_current_state",
+    "pk": [
+      "item_type",
+      "item_id"
+    ],
+    "columns": [
+      {
+        "name": "item_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "item_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "state",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_snapshot",
+        "line": 724,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_restore",
+        "line": 762,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "history",
+        "line": 159,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_learning_rows",
+        "line": 574,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "current_state",
+        "line": 279,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "current_states",
+        "line": 286,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "upsert_current_state",
+        "line": 292,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/pages.py",
+        "function": "kps_page",
+        "line": 681,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "paper_state",
+    "pk": [
+      "paper_id"
+    ],
+    "columns": [
+      {
+        "name": "paper_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "generation",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "1"
+      },
+      {
+        "name": "checkpoint_json",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "pending_json",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "pending_delete",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "0"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_require_schema",
+        "line": 29,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "start_saved",
+        "line": 840,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "available",
+        "line": 9,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "_changed",
+        "line": 30,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "state",
+        "line": 79,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "ensure_state",
+        "line": 85,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "park",
+        "line": 93,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "reset",
+        "line": 112,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "queue_file",
+        "line": 123,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "flush_files",
+        "line": 131,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "guard",
+        "line": 150,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "saved_attempt",
+        "line": 216,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "bind_attempts",
+        "line": 389,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "attempt_paper",
+        "line": 501,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "remove_question",
+        "line": 603,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "_next_saved_id",
+        "line": 175,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "append_saved",
+        "line": 427,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "part_attempt_context",
+    "pk": [
+      "attempt_id"
+    ],
+    "columns": [
+      {
+        "name": "attempt_id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "execution_id",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "part_json",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/grading_jobs.py",
+        "function": "target",
+        "line": 16,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "_submit_item",
+        "line": 83,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "part_grading_jobs",
+    "pk": [
+      "attempt_id"
+    ],
+    "columns": [
+      {
+        "name": "attempt_id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "execution_id",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'pending'"
+      },
+      {
+        "name": "error",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "conversation_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "turn_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/bridge/grading.py",
+        "function": "dispatch_pending",
+        "line": 121,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/grading_jobs.py",
+        "function": "owns_conversation",
+        "line": 8,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/grading_jobs.py",
+        "function": "get",
+        "line": 31,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/grading_jobs.py",
+        "function": "update",
+        "line": 38,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/grading_jobs.py",
+        "function": "pending",
+        "line": 49,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/grading_jobs.py",
+        "function": "retry",
+        "line": 54,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/grading_jobs.py",
+        "function": "claim_next",
+        "line": 62,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "_submit_item",
+        "line": 83,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "project",
+        "line": 145,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "part_grading_revisions",
+    "pk": [
+      "attempt_id",
+      "revision"
+    ],
+    "columns": [
+      {
+        "name": "attempt_id",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "operation_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "request_json",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "payload_json",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "withdrawn",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "0"
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/part_grading.py",
+        "function": "has_revisions",
+        "line": 37,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_grading.py",
+        "function": "ensure_schema",
+        "line": 47,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_grading.py",
+        "function": "get",
+        "line": 66,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_grading.py",
+        "function": "list_revisions",
+        "line": 74,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_grading.py",
+        "function": "mutate",
+        "line": 81,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "practice_execution_ids",
+    "pk": [
+      "id"
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "create",
+        "line": 253,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "bind_attempts",
+        "line": 389,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "practice_request_operations",
+    "pk": [
+      "request_id"
+    ],
+    "columns": [
+      {
+        "name": "request_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "payload",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "result",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_require_browser_schema",
+        "line": 651,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_browser_replay",
+        "line": 663,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_save_browser_operation",
+        "line": 676,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "practice_runs",
+    "pk": [
+      "id"
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "source_kind",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "source_ref",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "source_label",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "kp_ids_json",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'[]'"
+      },
+      {
+        "name": "practice_mode",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "rating_mode",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "items_json",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "started_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "finished_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "execution_id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "paper_generation",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "1"
+      },
+      {
+        "name": "reveal_timing",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_require_schema",
+        "line": 29,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_require_reveal_timing_schema",
+        "line": 56,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "_archive",
+        "line": 319,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "replay",
+        "line": 369,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/active_practice.py",
+        "function": "get_run",
+        "line": 751,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "guard",
+        "line": 150,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "saved_attempt",
+        "line": 216,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "attempt_paper",
+        "line": 501,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "_next_saved_id",
+        "line": 175,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_runs",
+        "line": 47,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_practice_sets",
+        "line": 187,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "problem_attempts",
+    "pk": [
+      "id"
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "problem_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "note",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "part_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "content_revision",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "answer_text",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "verdict",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "choices",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [
+      [
+        0,
+        0,
+        "problems",
+        "problem_id",
+        "problem_id",
+        "NO ACTION",
+        "NO ACTION",
+        "NONE"
+      ]
+    ],
+    "source_functions": [
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "correct",
+        "line": 244,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "correction_conflict",
+        "line": 398,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "record_browser_attempt",
+        "line": 497,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "history",
+        "line": 159,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/evidence.py",
+        "function": "_recent_attempts",
+        "line": 56,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/grading_jobs.py",
+        "function": "target",
+        "line": 16,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/mastery.py",
+        "function": "snapshot",
+        "line": 6,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_grading.py",
+        "function": "mutate",
+        "line": 81,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_practice.py",
+        "function": "_submit_item",
+        "line": 83,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "attempts",
+        "line": 213,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "attempt",
+        "line": 220,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "insert_attempt",
+        "line": 226,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "latest_attempt_statuses",
+        "line": 270,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_summary",
+        "line": 70,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_trend",
+        "line": 103,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_activity",
+        "line": 142,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_rating_distribution",
+        "line": 170,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "_practice_sets",
+        "line": 187,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "overview",
+        "line": 265,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "problem_progress",
+    "pk": [
+      "problem_id"
+    ],
+    "columns": [
+      {
+        "name": "problem_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "status",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'new'"
+      },
+      {
+        "name": "note",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [
+      [
+        0,
+        0,
+        "problems",
+        "problem_id",
+        "problem_id",
+        "NO ACTION",
+        "NO ACTION",
+        "NONE"
+      ]
+    ],
+    "source_functions": [
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "get_attempt",
+        "line": 685,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_snapshot",
+        "line": 724,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_restore",
+        "line": 762,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "history",
+        "line": 159,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "upsert_problem_progress",
+        "line": 254,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "problem_progress_rows",
+        "line": 264,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/queries.py",
+        "function": "planning_facts",
+        "line": 25,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "problem_revisions",
+    "pk": [
+      "problem_id"
+    ],
+    "columns": [
+      {
+        "name": "problem_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "revision",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "1"
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "revision",
+        "line": 13,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "_changed",
+        "line": 30,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "problems",
+    "pk": [
+      "problem_id"
+    ],
+    "columns": [
+      {
+        "name": "problem_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "kp_ids",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "problem_text",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "solution",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "problem_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "source_kind",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "origin_kind",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'source_problem'"
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "updated_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      },
+      {
+        "name": "figure_paths",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "display_title",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "display_summary",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "practice_modes",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "micro_quiz",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "ingest_batch_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "difficulty",
+        "type": "REAL",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "difficulty_knowledge_breadth",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "difficulty_reasoning_depth",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "difficulty_transfer_distance",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "difficulty_construction_openness",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "difficulty_model",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "source_evidence",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "source_answer",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "solution_origin",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "exam_year",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "deleted_at",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "parts",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/bridge/conversations.py",
+        "function": "_prompt",
+        "line": 735,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/content_bundle.py",
+        "function": "_selection_items",
+        "line": 105,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/content_bundle.py",
+        "function": "_planned_problem_map",
+        "line": 144,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/content_bundle.py",
+        "function": "_applied_problem_map",
+        "line": 156,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/content_bundle.py",
+        "function": "_render_selection",
+        "line": 190,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "cmd_ls",
+        "line": 181,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "cmd_pull",
+        "line": 240,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "_compose_plan",
+        "line": 310,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "_pull_payload",
+        "line": 344,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "_write_sheets",
+        "line": 352,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "_selected_chapters",
+        "line": 366,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "_base_name",
+        "line": 376,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "_practice_title",
+        "line": 383,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "cmd_experiment",
+        "line": 838,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "cmd_doctor",
+        "line": 941,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/cli/main.py",
+        "function": "build_parser",
+        "line": 953,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "exam_year_column_error",
+        "line": 86,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_apply_problem_update",
+        "line": 312,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "decode_problem",
+        "line": 348,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_problem",
+        "line": 567,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_kp",
+        "line": 582,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_audit.py",
+        "function": "audit",
+        "line": 30,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_audit.py",
+        "function": "_duplicate_findings",
+        "line": 54,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_audit.py",
+        "function": "_fragment_findings",
+        "line": 74,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_audit.py",
+        "function": "_unmarked_findings",
+        "line": 139,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_audit.py",
+        "function": "_untitled_findings",
+        "line": 157,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_audit.py",
+        "function": "_figure_findings",
+        "line": 167,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_audit.py",
+        "function": "_orphan_figure_findings",
+        "line": 188,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content_mirror.py",
+        "function": "_apply_problem_patch",
+        "line": 718,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/difficulty.py",
+        "function": "apply",
+        "line": 42,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/display_metadata.py",
+        "function": "apply",
+        "line": 29,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/evidence.py",
+        "function": "for_kp",
+        "line": 14,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/mastery.py",
+        "function": "snapshot",
+        "line": 6,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "update_question",
+        "line": 49,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "_paper_for_binding",
+        "line": 233,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/paper_progress.py",
+        "function": "read",
+        "line": 53,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/part_grading.py",
+        "function": "missing_schema",
+        "line": 13,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "problems_for_kps",
+        "line": 95,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "problems_all",
+        "line": 112,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "problem",
+        "line": 118,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "next_free_content_ids",
+        "line": 157,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "chapters",
+        "line": 186,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "build",
+        "line": 23,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "resolve",
+        "line": 54,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "check",
+        "line": 95,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "_figures",
+        "line": 130,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "render",
+        "line": 140,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "_plan_from_ids",
+        "line": 296,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/practice_sets.py",
+        "function": "append_saved",
+        "line": 427,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/queries.py",
+        "function": "hub_stats",
+        "line": 12,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/queries.py",
+        "function": "planning_facts",
+        "line": 25,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/queries.py",
+        "function": "search_problems",
+        "line": 144,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/queries.py",
+        "function": "kp_detail",
+        "line": 176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/queries.py",
+        "function": "graph_model",
+        "line": 191,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/records.py",
+        "function": "overview",
+        "line": 265,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/mastery.py",
+        "function": "evaluate",
+        "line": 9,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/planning.py",
+        "function": "build_baseline_plan",
+        "line": 13,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/practice_set.py",
+        "function": "render_practice_set",
+        "line": 14,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/practice_set.py",
+        "function": "render_solutions",
+        "line": 22,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/practice_set.py",
+        "function": "leaks",
+        "line": 31,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/pull.py",
+        "function": "select",
+        "line": 15,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/pull.py",
+        "function": "coverage_first",
+        "line": 221,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/domain/pull.py",
+        "function": "_balanced",
+        "line": 286,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "prepare",
+        "line": 90,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "recipe",
+        "line": 198,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "apply",
+        "line": 236,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_micro_quiz",
+        "line": 371,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_apply_patch",
+        "line": 553,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_has_exam_year",
+        "line": 757,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_has_parts_column",
+        "line": 761,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_problem_identity_errors",
+        "line": 765,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_content_bundle",
+        "line": 820,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_apply_content_bundle",
+        "line": 1177,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_content_bundle",
+        "line": 1387,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_figure_is_referenced",
+        "line": 1451,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_conflicts",
+        "line": 1523,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_figure_patch",
+        "line": 1641,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_problem_patch",
+        "line": 1712,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_apply_problem_patch",
+        "line": 1786,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_problem_patch",
+        "line": 1851,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_gate_report",
+        "line": 1873,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_apply_figure_patch",
+        "line": 1922,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "build_legacy_figure_manifest",
+        "line": 1997,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "rollback_batch",
+        "line": 2087,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_figure_patch",
+        "line": 2160,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_gate_data",
+        "line": 2329,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_current_recovery_pending",
+        "line": 2379,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_accounting",
+        "line": 2594,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/api.py",
+        "function": "_grading_errors",
+        "line": 36,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/context.py",
+        "function": "_experience_context",
+        "line": 253,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/context.py",
+        "function": "_practice_sets",
+        "line": 374,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/experience_api.py",
+        "function": "_record",
+        "line": 7,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/experience_page.py",
+        "function": "_panel",
+        "line": 38,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/pages.py",
+        "function": "hub_page",
+        "line": 188,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/pages.py",
+        "function": "kp_page",
+        "line": 608,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/server/pages.py",
+        "function": "_linked_problems",
+        "line": 1109,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "question_progress",
+    "pk": [
+      "id"
+    ],
+    "columns": [
+      {
+        "name": "id",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "q_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "note",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "mastery_state",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'new'"
+      },
+      {
+        "name": "created_at",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "datetime('now')"
+      }
+    ],
+    "foreign_keys": [
+      [
+        0,
+        0,
+        "questions",
+        "q_id",
+        "q_id",
+        "NO ACTION",
+        "NO ACTION",
+        "NONE"
+      ]
+    ],
+    "source_functions": [
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_kp",
+        "line": 582,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "questions",
+    "pk": [
+      "q_id"
+    ],
+    "columns": [
+      {
+        "name": "q_id",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "question_text",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "answer_key",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "answer_explanation",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "kp_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "difficulty",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [
+      [
+        0,
+        0,
+        "knowledge_points",
+        "kp_id",
+        "kp_id",
+        "NO ACTION",
+        "NO ACTION",
+        "NONE"
+      ]
+    ],
+    "source_functions": [
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_problem",
+        "line": 567,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_kp",
+        "line": 582,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  },
+  {
+    "name": "review_schedule",
+    "pk": [
+      "item_type",
+      "item_id",
+      "direction"
+    ],
+    "columns": [
+      {
+        "name": "item_type",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "item_id",
+        "type": "TEXT",
+        "not_null": true,
+        "default": null
+      },
+      {
+        "name": "direction",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "''"
+      },
+      {
+        "name": "state",
+        "type": "TEXT",
+        "not_null": true,
+        "default": "'learning'"
+      },
+      {
+        "name": "repetitions",
+        "type": "INTEGER",
+        "not_null": true,
+        "default": "0"
+      },
+      {
+        "name": "ease",
+        "type": "REAL",
+        "not_null": true,
+        "default": "2.5"
+      },
+      {
+        "name": "interval_days",
+        "type": "REAL",
+        "not_null": true,
+        "default": "0"
+      },
+      {
+        "name": "due_at",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "last_rating",
+        "type": "INTEGER",
+        "not_null": false,
+        "default": null
+      },
+      {
+        "name": "last_reviewed_at",
+        "type": "TEXT",
+        "not_null": false,
+        "default": null
+      }
+    ],
+    "foreign_keys": [],
+    "source_functions": [
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_snapshot",
+        "line": 724,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/attempts.py",
+        "function": "_restore",
+        "line": 762,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "history",
+        "line": 159,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/content.py",
+        "function": "_delete_learning_rows",
+        "line": 574,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/mastery.py",
+        "function": "snapshot",
+        "line": 6,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "schedule_get",
+        "line": 318,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "schedule_upsert",
+        "line": 326,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/data/pool.py",
+        "function": "schedule_rows",
+        "line": 342,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      },
+      {
+        "path": "workbench/ingest/__init__.py",
+        "function": "_rollback_blockers",
+        "line": 2176,
+        "evidence": "static reference; dynamic SQL requires manual review"
+      }
+    ]
+  }
+]

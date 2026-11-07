@@ -29,6 +29,14 @@ TABLES = {
 }
 IDENTITY_TABLES = {"problem_attempts", "feedback_events", "practice_runs",
                    "practice_execution_ids", "content_mirror_log", "question_progress"}
+INTEGER_REFERENCES = {"attempt_id": "problem_attempts", "execution_id": "practice_execution_ids"}
+REFERENCE_JSON_FIELDS = {
+    "practice_runs": {"items_json"},
+    "paper_state": {"checkpoint_json"},
+    "attempt_operations": {"result", "pre_state", "post_state"},
+    "practice_request_operations": {"payload", "result"},
+    "part_grading_revisions": {"request_json", "payload_json"},
+}
 WINDOWS_DEVICE_NAMES = {"con", "prn", "aux", "nul"} | {
     prefix + str(number) for prefix in ("com", "lpt") for number in range(1, 10)}
 
@@ -172,9 +180,50 @@ def _database_projection(pool, state):
                                     "depends_on": []}
                 if table == "problems" and row.get("deleted_at"):
                     assets[identity]["deleted"] = True
+        _portable_integer_references(assets)
         return assets, inventory
     finally:
         snapshot.close()
+
+
+def _portable_integer_references(assets):
+    records = {}
+    for identity, asset in assets.items():
+        content = asset["content"]
+        if content["table"] in IDENTITY_TABLES:
+            records[(content["table"], content["row"]["id"])] = identity
+
+    def reference(table, value):
+        if value is None:
+            return None
+        if type(value) is not int or (table, value) not in records:
+            raise ValueError(f"unresolved course record reference: {table}/{value}")
+        return records[(table, value)]
+
+    def nested(value):
+        if isinstance(value, list):
+            return [nested(item) for item in value]
+        if isinstance(value, dict):
+            return {key: reference(INTEGER_REFERENCES[key], item)
+                    if key in INTEGER_REFERENCES else nested(item)
+                    for key, item in value.items()}
+        return value
+
+    for identity, asset in assets.items():
+        content = asset["content"]
+        table, row = content["table"], content["row"]
+        if table in IDENTITY_TABLES:
+            row["id"] = identity
+        for field, target in INTEGER_REFERENCES.items():
+            if field in row:
+                row[field] = reference(target, row[field])
+        for field in REFERENCE_JSON_FIELDS.get(table, ()):
+            if not row.get(field):
+                continue
+            value = json.loads(row[field])
+            converted = nested(value)
+            if converted != value:
+                row[field] = json.dumps(converted, ensure_ascii=False, separators=(",", ":"))
 
 
 def _managed_files(pool, assets):
