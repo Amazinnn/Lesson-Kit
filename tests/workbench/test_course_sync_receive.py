@@ -381,7 +381,7 @@ def test_an_imported_deletion_keeps_the_writer_side_effects(pair, tmp_path):
     connection.execute("INSERT INTO learner_signals VALUES (1,'card-1')")
     right.commit()
     publish(left, tmp_path / "bundle")
-    receive(right, tmp_path / "bundle")
+    receive(right, tmp_path / "bundle", {"associate": True})
 
     manifest_path = tmp_path / "bundle/manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -819,3 +819,67 @@ def test_middle_chunk_commit_failure_keeps_prior_history_and_retry_deduplicates(
     assert len(attempts)==301
     assert len({row["answer_text"] for row in attempts})==301
     assert receive(right,tmp_path/"bundle")[1]["applied"]==[]
+
+
+def test_incoming_file_cannot_replace_the_open_course_database(pair,tmp_path):
+    left,right=pair;publish(left,tmp_path/"bundle")
+    asset={"kind":"file","content":{"path":right.db_path.relative_to(right.root).as_posix(),"encoding":"base64","data":base64.b64encode(b"not a database").decode()},"depends_on":[]}
+    plan={"changes":[{"identity":"file/course.db","action":"create","asset":asset}],"conflicts":[]}
+    result=apply_exchange(right,workspace(right),plan)
+    assert result["status"]=="partial"
+    assert any("database" in item["message"] for item in result["failed"])
+    assert right.connect().execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+    right.close()
+    reopened=sqlite3.connect(right.db_path)
+    try:
+        assert reopened.execute("PRAGMA integrity_check").fetchone()[0]=="ok"
+    finally:
+        reopened.close()
+
+
+def test_untracked_nonempty_course_requires_explicit_lineage_association(pair,tmp_path):
+    left,right=pair;publish(left,tmp_path/"bundle")
+    right.connect().execute("INSERT INTO knowledge_points(kp_id,body) VALUES ('independent-kp','local independent course')")
+    right.commit()
+    inspection=inspect_exchange(right,workspace(right),tmp_path/"bundle")
+    assert inspection["association_required"]
+    with pytest.raises(ValueError,match="lineage"):
+        apply_exchange(right,workspace(right),inspection)
+    assert [row['kp_id'] for row in rows(right,'knowledge_points')]==['independent-kp']
+    result=apply_exchange(right,workspace(right),inspection,{"associate":True})
+    assert result["status"]=="success",result["failed"]
+    assert {row['kp_id'] for row in rows(right,'knowledge_points')}=={'independent-kp','math-kp-1'}
+
+
+def test_grouped_execution_waits_for_new_attempt_dependency(pair,tmp_path):
+    left,right=pair
+    running_paper(left);bundle=tmp_path/"bundle"
+    publish(left,bundle)
+    initial=receive(right,bundle)[1]
+    assert initial["status"]=="success",initial["failed"]
+    left.connect().execute("INSERT INTO problem_attempts VALUES (2,'math-prob-1','second answer')")
+    left.connect().execute("UPDATE active_practice_items SET state='answered',attempt_id=2,draft_sequence=3 WHERE position=0")
+    left.connect().execute("UPDATE active_practice SET cursor=1")
+    left.commit();publish(left,bundle)
+    result=receive(right,bundle)[1]
+    assert result["status"]=="success",result["failed"]
+    item=rows(right,"active_practice_items")[0]
+    attempt=next(row for row in rows(right,"problem_attempts") if row["answer_text"]=="second answer")
+    assert item["attempt_id"]==attempt["id"]
+    assert len(rows(right,"problem_attempts"))==2
+    assert receive(right,bundle)[1]["applied"]==[]
+
+
+def test_associated_existing_facts_keep_execution_references(pair,tmp_path):
+    left,right=pair
+    # Both files came from one prior copy before exchange metadata existed.
+    left.connect().backup(right.connect())
+    right.commit()
+    from shutil import copytree
+    copytree(left.root/".lessonkit",right.root/".lessonkit",dirs_exist_ok=True)
+    running_paper(left);bundle=tmp_path/"bundle"
+    publish(left,bundle)
+    result=receive(right,bundle,{"associate":True})[1]
+    assert result["status"]=="success",result["failed"]
+    assert len(rows(right,"problem_attempts"))==1
+    assert rows(right,"active_practice_items")[0]["attempt_id"]==1

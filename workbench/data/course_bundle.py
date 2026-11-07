@@ -24,7 +24,10 @@ def pack(assets, export_id, previous_manifest=None, previous_assets=None):
     """Return the descriptors and physical files for one export projection.
 
     ``files`` maps a physical relative JSON path to its JSON value. ``written``
-    and ``reused`` count assets, not physical files.
+    and ``reused`` count assets, not physical files. A caller that passes
+    ``previous_manifest`` and ``previous_assets`` must have loaded that manifest
+    first: reuse copies its descriptors verbatim, so an inconsistent one would be
+    carried forward rather than repaired here.
     """
     identities = sorted(assets)
     previous_manifest = previous_manifest if isinstance(previous_manifest, dict) else {}

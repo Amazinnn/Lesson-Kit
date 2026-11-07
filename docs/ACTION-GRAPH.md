@@ -393,3 +393,5 @@ flowchart LR
 - 2026-11-07 学习偏好成为课程已确认投影（expand-file-mediated-course-sync / WP01）：练习与试卷的显示评价、显示来源、提交粒度、揭晓时机四项从「仅浏览器本地偏好」**改级**为课程数据——显式改动经课程 writer 写入 `.lessonkit/course-preferences.json`，浏览器记录降为交互镜像；接收端以已确认值为准，新试卷按已确认揭晓时机起步（开始页显式选择优先，继续未完成的一轮保持冻结）。新增 L2 两条路由与 L3「修改学习偏好」动作；不新增学习事实、不写池。GLOSSARY、DATA_MODEL、FILE_CONTRACT、surface 与 PRODUCT-MANUAL 同步。
 
 - 2026-11-07 课程交换 CLI（expand-file-mediated-course-sync / WP01 续）：新增 `lesson-kit course-sync <工作区> export|receive|check|sync|status|schedule` 与 `--all-configured sync`。回执顶层 `status` 为 success/partial/conflict/failed，退出码 0 完整成功、2 输入或格式错误、3 待选侧、4 部分完成或传输失败（2 > 3 > 4）；`local` 与 `remote` 分开报告，推送被拒不得冒充远端成功。Git 仓库是可选媒介，任务只 stage 包内受管理路径。新增 L2 两条命令与 L3 两条动作；未决冲突只通知一次并去重；不新增学习动作、不改池内容。
+
+- 2026-11-07 课程交换首次接收（expand-file-mediated-course-sync / WP01 续）：既有 receive 增加未注册工作区的 `--to` 创建与注册编排，复用规范建库入口；先校验包再创建，已注册目标只允许同目录。提交边界异常保存本次部分结果并要求检查落盘状态；未新增审批动作。

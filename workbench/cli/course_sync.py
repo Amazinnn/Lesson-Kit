@@ -38,7 +38,7 @@ def build_parser(prog="lesson-kit course-sync"):
     parser.add_argument("action", nargs="?", metavar="{export,receive,check,sync,status,schedule}")
     parser.add_argument("schedule_action", nargs="?",
                         choices=["install", "enable", "disable", "remove"])
-    parser.add_argument("--to", help="package directory to write (export)")
+    parser.add_argument("--to", help="export package directory, or new workspace directory on first receive")
     parser.add_argument("--from", dest="source", help="package directory to read")
     parser.add_argument("--keep", choices=["local", "incoming"],
                         help="side to take for every genuine conflict")
@@ -77,14 +77,19 @@ def run(args):
             return _run_every_course(args)
         if not args.name:
             raise ValueError("a workspace name or --all-configured is required")
-        pool, workspace = _open(args.name)
+        pool, workspace, created = _receive_target(args)
         try:
+            if created:
+                return _receive(args, pool, workspace, registration=workspace)
             return _dispatch(args, pool, workspace)
         finally:
             pool.close()
     except (ValueError, OSError, json.JSONDecodeError) as exc:
         print(json.dumps({"status": "failed", "errors": [str(exc)]}, ensure_ascii=False))
         return 2
+    except (RuntimeError, sqlite3.Error) as exc:
+        print(json.dumps({"status": "failed", "errors": [git_sync.sanitize(str(exc))]}, ensure_ascii=False))
+        return 4
 
 
 class _InputError(ValueError):
@@ -100,6 +105,33 @@ def _open(name):
         raise _InputError(str(exc) or f"unknown workspace: {name}") from exc
     pool = cli._pool(workspace)
     return pool, workspace
+
+
+def _receive_target(args):
+    """Orchestrate explicit first reception without changing existing registrations."""
+    if args.action != "receive" or not args.to:
+        pool, workspace = _open(args.name)
+        return pool, workspace, False
+    target = Path(args.to).expanduser().resolve()
+    try:
+        workspace = registry.get_workspace(args.name)
+    except KeyError:
+        workspace = None
+    if workspace is not None:
+        if Path(workspace["path"]).resolve() != target:
+            raise _InputError("--to does not match this registered workspace")
+        pool, workspace = _open(args.name)
+        return pool, workspace, False
+    source = Path(_required(args.source, "--from")).expanduser().resolve()
+    package = exchange.read_exchange(source)
+    if target.is_relative_to(source) or source.is_relative_to(target):
+        raise _InputError("new course and exchange package need separate directories")
+    from workbench.data import course_workspace
+    database = course_workspace.bootstrap(target, package["course"]["id"])
+    workspace = registry.register(target, name=args.name, db=database,
+                                  course=package["course"]["id"], chapter="")
+    pool, workspace = _open(args.name)
+    return pool, workspace, True
 
 
 def _dispatch(args, pool, workspace, media=None, emit=True):
@@ -120,15 +152,27 @@ def _export(args, pool, workspace, emit=True):
                    emit=emit)
 
 
-def _receive(args, pool, workspace, dry_run=False, emit=True):
+def _receive(args, pool, workspace, dry_run=False, emit=True, registration=None):
     source = _required(args.source, "--from")
     inspection = exchange.inspect_exchange(pool, workspace, source)
     if dry_run:
         receipt = _inspection_receipt(inspection)
         return _finish(args, pool, receipt, _inspection_exit(inspection), emit=emit)
     choices = _choices(args)
-    result = exchange.apply_exchange(pool, workspace, inspection, choices)
+    try:
+        result = exchange.apply_exchange(pool, workspace, inspection, choices)
+    except (OSError, RuntimeError, sqlite3.Error) as exc:
+        receipt = _inspection_receipt(inspection)
+        receipt.update(status="partial", operation="receive-" + str(uuid4()),
+                       local={"verification_required": True}, remote=None)
+        receipt["errors"].append({"code": "receive_failed", "message": git_sync.sanitize(str(exc))})
+        if registration is not None:
+            receipt["registration"] = registration
+        return _finish(args, pool, receipt, 4, emit=emit)
     receipt = _receive_receipt(inspection, result)
+    if registration is not None:
+        receipt["registration"] = registration
+        receipt["required_configuration"] = []
     _notice(pool, receipt)
     return _finish(args, pool, receipt, _exit_code(receipt["status"]), emit=emit)
 
@@ -336,8 +380,8 @@ def _materialize(receipt, repo, commit, package, staging):
     if not isinstance(descriptors, list):
         raise _InputError("the remote manifest has no asset descriptors")
     prefix = "" if manifest_path == "manifest.json" else package + "/"
-    wanted = [manifest_path] + [prefix + item["path"] for item in descriptors
-                                if isinstance(item, dict) and isinstance(item.get("path"), str)]
+    wanted = list(dict.fromkeys([manifest_path] + [prefix + item["path"] for item in descriptors
+                                if isinstance(item, dict) and isinstance(item.get("path"), str)]))
     files = git_sync.read_remote_files(repo, commit, wanted)
     if files["missing"]:
         receipt["errors"].append({"code": "missing_asset",
@@ -359,7 +403,28 @@ def _materialize(receipt, repo, commit, package, staging):
             path = exchange._relative(target, relative)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
+    _materialize_new_tutor_files(receipt, repo, commit, prefix, target)
     return target
+
+
+def _materialize_new_tutor_files(receipt, repo, commit, prefix, target):
+    """A Tutor may add a plain file without touching the manifest.
+
+    The readable tree is listed at the commit so such a file reaches `read_exchange`,
+    which turns an undeclared plain copy into an explicit `file/<path>` creation.
+    """
+    paths = git_sync.list_remote_files(repo, commit, f"{prefix}{exchange.READABLE_DIR}")
+    extra = [path for path in paths if not (target / path[len(prefix):]).exists()]
+    if not extra:
+        return
+    files = git_sync.read_remote_files(repo, commit, extra)
+    if files["missing"]:
+        receipt["errors"].append({"code": "missing_asset",
+                                  "message": ", ".join(files["missing"])})
+    for name, data in files["files"].items():
+        path = exchange._relative(target, name[len(prefix):])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
 
 
 def _package_paths(repo, package):
@@ -369,13 +434,14 @@ def _package_paths(repo, package):
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     prefix = "" if package in {"", "."} else package + "/"
     paths = [prefix + "manifest.json", prefix + tutor_handoff.FILE_NAME]
-    for item in payload["assets"]:
-        paths.append(prefix + item["path"])
-        if item["kind"] == "file":
-            asset = json.loads((manifest.parent / item["path"]).read_text(encoding="utf-8"))
-            if not asset.get("deleted"):
-                paths.append(prefix + exchange.READABLE_DIR + "/" + asset["content"]["path"])
-    return paths
+    paths.extend(prefix + item["path"] for item in payload["assets"])
+    package_data = exchange.read_exchange(manifest.parent)
+    if package_data["errors"]:
+        raise _InputError("the exported package contains invalid assets")
+    paths.extend(prefix + exchange.READABLE_DIR + "/" + asset["content"]["path"]
+                 for asset in package_data["assets"].values()
+                 if asset["kind"] == "file" and not asset.get("deleted"))
+    return list(dict.fromkeys(paths))
 
 
 def _sync_status(receipt):

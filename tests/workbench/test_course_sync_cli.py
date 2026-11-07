@@ -438,3 +438,86 @@ def test_export_receipt_retains_the_actual_projection_result(workspace,tmp_path,
     assert receipt["cleanup_errors"]==[]
     saved=json.loads((workspace/".lessonkit/course-sync/last-receipt.json").read_text(encoding="utf-8"))
     assert saved["assets"]==receipt["assets"]
+
+
+def test_new_device_receives_and_registers_a_canonical_course(workspace,tmp_path,capsys):
+    from workbench.data.pool import Pool
+    from workbench.data import course_sync as exchange
+    from workbench import registry
+    root=tmp_path/"canonical";root.mkdir();database=root/"course.db"
+    script=Path(__file__).resolve().parents[2]/"pipeline/scripts/create-tables.py"
+    built=subprocess.run([sys.executable,str(script),"--db",str(database)],capture_output=True)
+    assert built.returncode==0,built.stderr
+    source=Pool(root,database,"dmath","")
+    try:
+        source.connect().execute("INSERT INTO knowledge_points(kp_id,knowledge_item,knowledge_type,importance,body) VALUES ('dmath-ch01-kp-1','title','concept-property','core','body')")
+        source.commit();bundle=tmp_path/"bundle"
+        exchange.export_course(source,{"name":"canonical","path":str(root),"db":"course.db","active_course":"dmath"},bundle)
+    finally:
+        source.close()
+    target=tmp_path/"new-device"
+    code=cli("fresh","receive","--from",str(bundle),"--to",str(target),"--json-output")
+    receipt=json.loads(capsys.readouterr().out)
+    assert code==0,receipt
+    registered=registry.get_workspace("fresh")
+    assert registered["path"]==str(target.resolve())
+    assert registered["active_course"]=="dmath"
+    connection=sqlite3.connect(target/registered["db"])
+    try:
+        assert connection.execute("SELECT body FROM knowledge_points").fetchone()[0]=="body"
+    finally:
+        connection.close()
+    assert receipt["registration"]["name"]=="fresh"
+
+
+def test_invalid_new_course_package_never_creates_or_registers_target(workspace,tmp_path,capsys):
+    from workbench import registry
+    bundle=tmp_path/"bad-bundle";bundle.mkdir()
+    (bundle/"manifest.json").write_text('{"format_version":999}',encoding="utf-8")
+    target=tmp_path/"must-not-exist"
+    assert cli("fresh","receive","--from",str(bundle),"--to",str(target),"--json-output")==2
+    receipt=json.loads(capsys.readouterr().out)
+    assert "format_version" in str(receipt)
+    assert not target.exists()
+    with pytest.raises(KeyError):registry.get_workspace("fresh")
+
+
+def test_receive_runtime_failure_keeps_a_truthful_latest_receipt(workspace,tmp_path,capsys,monkeypatch):
+    bundle=tmp_path/"bundle"
+    assert cli("math","export","--to",str(bundle))==0
+    capsys.readouterr()
+    def failed(*args,**kwargs):
+        raise sqlite3.OperationalError("commit boundary unavailable")
+    monkeypatch.setattr(course_sync.exchange,"apply_exchange",failed)
+    assert cli("math","receive","--from",str(bundle),"--json-output")==4
+    receipt=json.loads(capsys.readouterr().out)
+    assert receipt["status"]=="partial"
+    assert receipt["local"]["verification_required"] is True
+    assert "commit boundary" in str(receipt["errors"])
+    latest=json.loads((workspace/".lessonkit/course-sync/last-receipt.json").read_text(encoding="utf-8"))
+    assert latest["operation"].startswith("receive-")
+    assert latest["exit_code"]==4
+
+
+def test_sync_receives_new_tutor_file_from_git_without_envelope_edit(workspace,tmp_path,monkeypatch,capsys):
+    repo=_repo(tmp_path)
+    monkeypatch.setattr(course_sync,"_toast",lambda *a:True)
+    assert cli("math","sync","--repo",str(repo),"--path","sync")==0
+    capsys.readouterr()
+    other=tmp_path/"tutor-new"
+    git(tmp_path,"clone",str(tmp_path/"remote.git"),str(other))
+    git(other,"config","user.name","Tutor Test")
+    git(other,"config","user.email","tutor@example.com")
+    git(other,"config","commit.gpgsign","false")
+    relative="sync/files/.lessonkit/learning/new-summary.md"
+    note=other/relative;note.parent.mkdir(parents=True,exist_ok=True)
+    note.write_text("Tutor 新总结 $x=1$\n",encoding="utf-8",newline="\n")
+    git(other,"add","--",relative);git(other,"commit","-m","Tutor new note")
+    git(other,"push","origin","main")
+    code=cli("math","sync","--repo",str(repo),"--path","sync","--json-output")
+    receipt=json.loads(capsys.readouterr().out)
+    assert code==0,receipt
+    local=workspace/".lessonkit/learning/new-summary.md"
+    assert local.is_file(),receipt
+    assert local.read_bytes()==note.read_bytes()
+    assert git(repo,"status","--porcelain").stdout==""

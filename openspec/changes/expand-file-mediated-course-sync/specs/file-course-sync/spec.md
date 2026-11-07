@@ -27,6 +27,11 @@ The receiver SHALL support additions, updates, explicit deletions and restoratio
 - **WHEN** the target has no course registration
 - **THEN** one receive operation validates and registers the course and reports required configuration
 
+#### Scenario: Existing untracked course needs association input
+
+- **WHEN** a registered nonempty course has no proven shared origin with the received package
+- **THEN** receiving requires explicit association input or a separate new target and never silently adopts the package origin
+
 #### Scenario: Deletion and modification conflict
 
 - **WHEN** one side explicitly deletes an entity and the other modifies it after the shared base
@@ -59,6 +64,11 @@ The receiver SHALL apply Independent Valid Mutation Units, retain invalid items 
 
 - **WHEN** valid independent items accompany an invalid reference
 - **THEN** valid units complete while the invalid dependency group stays unchanged
+
+#### Scenario: Crashed writer does not leave permanent lock ownership
+
+- **WHEN** an exchange process exits abnormally while owning the course write lock
+- **THEN** a later exchange can acquire ownership without guessing PID liveness or deleting another owner's lock
 
 #### Scenario: Interrupted reception is retried
 
@@ -102,3 +112,17 @@ External Tutor Handoff SHALL carry original question and answer identities, unan
 
 - **WHEN** saved preferences travel with the course files
 - **THEN** the receiving normal practice entry uses the received submission and reveal preferences
+
+### Requirement: Tutor file additions use the ordinary return path
+
+A newly added ordinary file under the readable files tree SHALL declare a new safe course file identity without manual manifest editing. A missing readable file SHALL NOT authorize deletion. Excluded runtime, credentials and database paths SHALL remain protected, and a readable file SHALL NOT bypass an invalid declared envelope.
+
+#### Scenario: Tutor returns a new learning note
+
+- **WHEN** an external Tutor adds a new learning Markdown file under the package files tree
+- **THEN** the same receive command saves the exact text and later export carries it onward while preserving original learner attempts
+
+#### Scenario: New course creation validates input first
+
+- **WHEN** a new workspace is received with an explicit new target directory
+- **THEN** package and course identity validation precede creation and registration, and invalid input leaves no target or registration

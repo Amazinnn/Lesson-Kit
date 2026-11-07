@@ -30,4 +30,6 @@
 
 CR01/CR02：接收先写sidecar再提交SQLite的确认错误已改为同事务的增量单元记录，文件使用可恢复发布意图；并发本地修改受到检查版本保护。新增职责记录见DATA_MODEL/FILE_CONTRACT/ARCHITECTURE及本change设计，证据为2026-11-07-04。可读Git文件的收发、冲突不发布、旧交换文件删除暂存已补回归。
 
-尚未结案：附件A→B→C及删除记录再传播（F03实测失败）、嵌套整数引用与请求缓存（R02）、F2性能（首轮导出125.441s）、真实入口验收。当前不得宣称完整课程交换已闭合。
+附件A→B→C及显式删除再传播已由9e24990c补齐回归；完整规模700文件逐字节一致。尚未结案：嵌套整数引用与请求缓存（R02）、导出及无变化检查F2性能、原生任务完整配置课验证、真实远端/浏览器验收，以及真实Tutor回写发现的新增文件遗漏。当前不得宣称完整课程交换已闭合。
+
+CR01 followup2026-11-07: real free-model Tutor return exposed a new-file gap: FILE_CONTRACT restricted undeclared readable files even though Q006/Q106 require course-file additions. WP01 now specifies explicit creation by a new safe file under files/, preserving absence protection and invalid-envelope isolation. Implementation and replay acceptance pending.

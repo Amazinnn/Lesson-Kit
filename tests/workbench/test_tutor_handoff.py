@@ -129,3 +129,17 @@ def test_tutor_written_learning_files_are_received(course, tmp_path, capsys):
 
     assert (pool.root / ".lessonkit/learning/misconceptions.md").read_text(
         encoding="utf-8").endswith("（已用文氏图纠正）\n")
+
+
+def test_new_tutor_learning_file_is_received_without_hand_editing_manifest(course,tmp_path,capsys):
+    pool,workspace=course;bundle=tmp_path/"bundle"
+    assert course_sync.main(["math","export","--to",str(bundle)])==0
+    capsys.readouterr()
+    note=bundle/"files/.lessonkit/learning/new-summary.md"
+    note.write_text("# 新总结\n\n原始答案与诊断分开。\n",encoding="utf-8")
+    assert course_sync.main(["math","receive","--from",str(bundle)])==0
+    target=pool.root/".lessonkit/learning/new-summary.md"
+    assert target.is_file(),capsys.readouterr().out
+    assert target.read_bytes()==note.read_bytes()
+    assert course_sync.main(["math","export","--to",str(tmp_path/"returned")])==0
+    assert (tmp_path/"returned/files/.lessonkit/learning/new-summary.md").read_bytes()==note.read_bytes()

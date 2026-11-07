@@ -3,7 +3,7 @@
 This module moves bytes and reports what the repository and the remote actually
 contain. It never merges course content, never touches SQLite and only fast-forwards media ancestry and never resets,
 checks out or force-pushes anything: the coordinator compares the file set that
-`fetch_remote`/`read_remote_files` expose and composes the receipt. Every Git
+`fetch_remote`/`list_remote_files`/`read_remote_files` expose and composes the receipt. Every Git
 call is an argument array with an explicit working directory, so no URL, branch
 or course path is ever interpreted by a shell.
 """
@@ -104,36 +104,42 @@ def _remote_name(remote):
     return remote
 
 
+def _relative_path(root, raw):
+    """Validate one explicit repository-relative path spelling."""
+    if not isinstance(raw, str) or not raw.strip():
+        raise ValueError('managed path must be a non-empty string')
+    relative = posixpath.normpath(raw.replace('\\', '/'))
+    if (
+        posixpath.isabs(relative)
+        or relative in ('.', '..')
+        or relative.startswith('../')
+        or re.match(r'^[A-Za-z]:', raw)
+    ):
+        raise ValueError(f'managed path escapes repository: {raw!r}')
+    if any(part.lower().rstrip(' .') == '.git' for part in relative.split('/')):
+        raise ValueError(f'managed path targets Git metadata: {raw!r}')
+    if ':' in relative or any(part != part.rstrip(' .') for part in relative.split('/')):
+        raise ValueError(f'managed path has an ambiguous Windows spelling: {raw!r}')
+    target = os.path.realpath(os.path.join(root, *relative.split('/')))
+    try:
+        inside = os.path.normcase(os.path.commonpath(
+            [os.path.normcase(root), os.path.normcase(target)])) == os.path.normcase(root)
+    except ValueError:
+        inside = False
+    if not inside:
+        raise ValueError(f'managed path escapes repository: {raw!r}')
+    if os.path.islink(target):
+        raise ValueError(f'managed path is a symbolic link: {raw!r}')
+    return relative, target
+
+
 def _managed_paths(root, paths):
     """Validate explicit relative paths and normalize them for Git."""
     if isinstance(paths, str) or not paths:
         raise ValueError('managed_paths must be a list of relative file paths')
     validated = []
     for raw in paths:
-        if not isinstance(raw, str) or not raw.strip():
-            raise ValueError('managed path must be a non-empty string')
-        relative = posixpath.normpath(raw.replace('\\', '/'))
-        if (
-            posixpath.isabs(relative)
-            or relative in ('.', '..')
-            or relative.startswith('../')
-            or re.match(r'^[A-Za-z]:', raw)
-        ):
-            raise ValueError(f'managed path escapes repository: {raw!r}')
-        if any(part.lower().rstrip(' .') == '.git' for part in relative.split('/')):
-            raise ValueError(f'managed path targets Git metadata: {raw!r}')
-        if ':' in relative or any(part != part.rstrip(' .') for part in relative.split('/')):
-            raise ValueError(f'managed path has an ambiguous Windows spelling: {raw!r}')
-        target = os.path.realpath(os.path.join(root, *relative.split('/')))
-        try:
-            inside = os.path.normcase(os.path.commonpath(
-                [os.path.normcase(root), os.path.normcase(target)])) == os.path.normcase(root)
-        except ValueError:
-            inside = False
-        if not inside:
-            raise ValueError(f'managed path escapes repository: {raw!r}')
-        if os.path.islink(target):
-            raise ValueError(f'managed path is a symbolic link: {raw!r}')
+        relative, target = _relative_path(root, raw)
         if os.path.isdir(target):
             raise ValueError(f'managed path is a directory: {raw!r}')
         if relative not in validated:
@@ -233,9 +239,7 @@ def fetch_remote(repo, branch, remote='origin'):
     return {'repo': root, 'branch': branch, 'remote': remote, 'ref': ref, 'commit': commit}
 
 
-def read_remote_files(repo, commit, paths):
-    """Read managed files at a fetched commit as raw bytes."""
-    root = _repository_root(repo)
+def _commit(root, commit):
     if not isinstance(commit, str) or not commit or commit.startswith('-') or any(
         character.isspace() for character in commit
     ):
@@ -244,7 +248,13 @@ def read_remote_files(repo, commit, paths):
                     check=False)
     if resolved.returncode:
         raise ValueError(sanitize(f'unknown commit: {commit}'))
-    resolved_commit = _text(resolved)
+    return _text(resolved)
+
+
+def read_remote_files(repo, commit, paths):
+    """Read managed files at a fetched commit as raw bytes."""
+    root = _repository_root(repo)
+    resolved_commit = _commit(root, commit)
     wanted = _managed_paths(root, paths)
     listing = _git(root, 'ls-tree', '-z', resolved_commit, '--', *wanted)
     entries = {}
@@ -265,6 +275,33 @@ def read_remote_files(repo, commit, paths):
             raise ValueError(f'managed path is not a regular file: {path!r}')
         files[path] = _git(root, 'cat-file', 'blob', sha).stdout
     return {'commit': resolved_commit, 'files': files, 'missing': missing}
+
+
+def list_remote_files(repo, commit, directory):
+    """List the regular files under one directory at a fetched commit.
+
+    Paths are repository-relative and sorted, so ordinary files an external
+    Tutor created are visible without reading their bytes. A directory that is
+    absent from the commit lists nothing; a file, symbolic link or submodule at
+    that path, or any such entry inside it, is refused instead of followed or
+    silently omitted.
+    """
+    root = _repository_root(repo)
+    resolved_commit = _commit(root, commit)
+    relative, _target = _relative_path(root, directory)
+    listing = _git(root, 'ls-tree', '-r', '-z', resolved_commit, '--', relative)
+    paths = []
+    for record in _records(listing):
+        meta, _, name = record.partition('\t')
+        mode, kind, _sha = meta.split(' ')
+        if name == relative:
+            raise ValueError(f'remote path is not a directory: {directory!r}')
+        if not name.startswith(f'{relative}/'):
+            raise ValueError(f'remote path is outside {directory!r}: {name!r}')
+        if kind != 'blob' or mode not in ('100644', '100755'):
+            raise ValueError(f'remote path is not a regular file: {name!r}')
+        paths.append(name)
+    return sorted(paths)
 
 
 def fast_forward(repo, branch, commit):

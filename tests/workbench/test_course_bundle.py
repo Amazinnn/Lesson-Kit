@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from workbench.data.course_bundle import load, pack
+from workbench.data.course_bundle import _size, load, pack
 from workbench.data.course_sync import _read_json, _relative
 
 SMALL_LIMIT = 512
@@ -261,3 +261,65 @@ def test_unknown_format_versions_and_descriptor_shapes_are_rejected(tmp_path):
             load(tmp_path, [], version, _relative, _read_json)
     with pytest.raises(ValueError):
         load(tmp_path, {"a": 1}, 1, _relative, _read_json)
+
+
+def test_a_changed_small_envelope_gets_a_new_path_and_loads_the_new_projection(tmp_path):
+    """A regression that reused a v1 path for a changed envelope would ship stale bytes."""
+    assets = {"row/a": envelope(1), "row/b": envelope(2), "row/c": envelope(3)}
+    first = pack(assets, "export-one")
+    publish(tmp_path, first)
+    changed = dict(assets)
+    changed["row/b"] = envelope(2, "changed")
+    again = pack(changed, "export-two",
+                 previous_manifest={"format_version": 1, "assets": first["descriptors"]},
+                 previous_assets=assets)
+    assert again["written"] == 1 and again["reused"] == 2
+    new_paths = {item["identity"]: item["path"] for item in again["descriptors"]}
+    stale = {item["identity"]: item["path"] for item in first["descriptors"]}
+    assert new_paths["row/b"] != stale["row/b"]
+    assert new_paths["row/a"] == stale["row/a"] and new_paths["row/c"] == stale["row/c"]
+    publish(tmp_path, again)
+    loaded, errors = read(tmp_path, again)
+    assert errors == []
+    assert loaded == changed
+
+
+def test_a_mixed_generation_reads_the_new_projection(tmp_path):
+    """Reused old paths and fresh paths must load together as the committed image."""
+    assets = {f"row/{number}": envelope(number) for number in range(4)}
+    first = pack(assets, "export-one")
+    publish(tmp_path, first)
+    changed = dict(assets)
+    changed["row/1"] = envelope(1, "第二版")
+    again = pack(changed, "export-two",
+                 previous_manifest={"format_version": 1, "assets": first["descriptors"]},
+                 previous_assets=assets)
+    publish(tmp_path, again)
+    loaded, errors = read(tmp_path, again)
+    assert errors == []
+    assert loaded == changed
+    assert loaded["row/1"]["content"]["text"] == "第二版"
+
+
+def test_the_byte_target_boundary_is_inclusive_and_exact():
+    """Exactly GROUP_BYTES keeps two members; one more byte splits them."""
+    assets = large_assets()
+    base = _size({"assets": {}})
+    first, second = "row/0000", "row/0001"
+    natural = _size(first) + 2 + _size(envelope(0)) + 2 + _size(second) + 2 + _size(envelope(1))
+    slack = GROUP_BYTES - base - natural
+    assert slack >= 0
+    padded = dict(assets)
+    padded[first] = envelope(0, "x" * slack)
+    result = pack(padded, "export-exact")
+    (path, payload), = [(name, value) for name, value in result["files"].items()
+                        if first in value["assets"]]
+    assert len(payload["assets"]) == 2
+    assert _size(payload) == GROUP_BYTES
+
+    bigger = dict(padded)
+    bigger[first] = envelope(0, "x" * (slack + 1))
+    split = pack(bigger, "export-split")
+    (path, payload), = [(name, value) for name, value in split["files"].items()
+                        if first in value["assets"]]
+    assert len(payload["assets"]) == 1

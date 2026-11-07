@@ -12,12 +12,15 @@ from pathlib import Path, PurePosixPath
 from uuid import uuid4
 
 from workbench.data.pool import ensure_course_sync_schema
+from workbench.data.course_sync_lock import exclusive
 
 from workbench import registry
 from workbench.data import content as content_data
+from workbench.data import course_bundle
 from workbench.data import figure_mirror
 from workbench.data import paper_progress
 from workbench.domain import course_sync as planning
+from workbench.domain import course_sync_references as references
 
 
 FORMAT_VERSION = 1
@@ -55,13 +58,13 @@ def _read_json(path):
         raise ValueError(f"invalid JSON in {path.name}: {exc}") from exc
 
 
-def _atomic_json(path, value):
+def _atomic_json(path, value, *, indent=2):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     handle, name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
     try:
         with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as stream:
-            stream.write(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
+            stream.write(json.dumps(value, ensure_ascii=False, indent=indent) + "\n")
         os.replace(name, path)
     finally:
         Path(name).unlink(missing_ok=True)
@@ -104,20 +107,9 @@ def _relative(root, value):
 
 @contextmanager
 def course_lock(root):
-    """Serialize CLI exchange writers without guessing whether an old owner died."""
-    folder = Path(root) / ".lessonkit/course-sync"
-    folder.mkdir(parents=True, exist_ok=True)
-    path = folder / "write.lock"
-    try:
-        descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-    except FileExistsError as exc:
-        raise ValueError("course exchange is locked by another operation") from exc
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-            stream.write(str(os.getpid()))
+    """Serialize exchange writers with ownership released by the operating system."""
+    with exclusive(Path(root) / ".lessonkit/course-sync/write.lock"):
         yield
-    finally:
-        path.unlink()
 
 
 def _installation_origin(*, read_only=False):
@@ -126,17 +118,9 @@ def _installation_origin(*, read_only=False):
         return "unassigned-local"
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
-        lock = path.with_suffix(".lock")
-        try:
-            descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-        except FileExistsError as exc:
-            raise ValueError("installation origin is being initialized by another operation") from exc
-        try:
-            os.close(descriptor)
+        with exclusive(path.with_suffix(".lock")):
             if not path.exists():
                 _atomic_json(path, {"origin": "installation-" + str(uuid4())})
-        finally:
-            lock.unlink()
     value = _read_json(path)
     if not isinstance(value, dict) or not isinstance(value.get("origin"), str) or not value["origin"]:
         raise ValueError("invalid installation origin")
@@ -209,6 +193,7 @@ def _complete_pending_files(pool, state, identities=None):
             remaining.append(change)
             continue
         try:
+            _file_payload(pool.root, change, db_path=pool.db_path)
             _write_file(pool.root, change)
         except (OSError, ValueError) as exc:
             remaining.append(change)
@@ -291,21 +276,6 @@ def _portable_integer_references(assets, state):
         dependencies.add(identity)
         return identity
 
-    def nested(value):
-        if isinstance(value, list):
-            return [nested(item) for item in value]
-        if isinstance(value, dict):
-            result = {}
-            for key, item in value.items():
-                if key in INTEGER_REFERENCES:
-                    result[key] = reference(INTEGER_REFERENCES[key], item)
-                elif key in {"draft", "draft_json", "answer_text", "answer", "choices", "note"}:
-                    result[key] = item
-                else:
-                    result[key] = nested(item)
-            return result
-        return value
-
     for identity, asset in list(assets.items()):
         dependencies = set()
         content = asset["content"]
@@ -321,9 +291,9 @@ def _portable_integer_references(assets, state):
             if not row.get(field):
                 continue
             value = json.loads(row[field])
-            converted = nested(value)
+            converted = references.convert_json(table, field, value, reference)
             if converted != value:
-                row[field] = json.dumps(converted, ensure_ascii=False, separators=(",", ":"))
+                row[field] = references.serialize_json(table, field, converted)
         if any(key in INTEGER_REFERENCES for key in content["key"]):
             portable_key = json.dumps([row[key] for key in content["key"]],
                                       ensure_ascii=False, separators=(",", ":"))
@@ -473,6 +443,16 @@ def _execution_projection(assets, state):
             item_dependencies = [identity]
             if item.get("attempt_id"):
                 item_dependencies.append(item["attempt_id"])
+            def draft_reference(table, value):
+                if type(value) is int:
+                    key = table + "/" + json.dumps([value], separators=(",", ":"))
+                    value = state["row_identities"].get(key)
+                if not isinstance(value, str) or value not in assets:
+                    raise ValueError("unresolved part draft attempt reference")
+                item_dependencies.append(value)
+                return value
+            if "draft" in item:
+                item["draft"] = references.convert_draft(item["draft"], draft_reference)
             key = identity + "/item/" + str(item["position"])
             if key in assets:
                 raise ValueError("duplicate execution item position")
@@ -518,20 +498,18 @@ def export_course(pool, workspace, destination):
         _save_state(pool, state)
         # An unchanged projection keeps its export generation, so a repeated
         # export of the same content does not manufacture a new commit.
-        export_id = ("export-" + str(uuid4()) if previous_assets != assets
-                     else (previous_manifest or {}).get("export_id") or "export-" + str(uuid4()))
-        descriptors = []
-        written = 0
-        for number, (identity, asset) in enumerate(sorted(assets.items()), 1):
-            if previous_assets.get(identity) == asset:
-                relative = previous_paths[identity]
-            else:
-                relative = f"{export_id}/assets/{number:06d}.json"
-                _atomic_json(_relative(destination, relative), asset)
-                written += 1
-            descriptors.append({"identity": identity, "kind": asset["kind"], "path": relative,
-                                "depends_on": asset["depends_on"]})
-        manifest = {"format_version": FORMAT_VERSION, "course": state["course"],
+        version = (course_bundle.FORMAT_VERSION_INDIVIDUAL
+                   if len(assets) <= course_bundle.INDIVIDUAL_LIMIT
+                   else course_bundle.FORMAT_VERSION_GROUPED)
+        new_generation = previous_assets != assets or (previous_manifest or {}).get("format_version") != version
+        export_id = ("export-" + str(uuid4()) if new_generation
+                     else previous_manifest["export_id"])
+        layout = course_bundle.pack(assets, export_id, previous_manifest, previous_assets)
+        for relative, value in layout["files"].items():
+            _atomic_json(_relative(destination, relative), value,
+                         indent=None if version == course_bundle.FORMAT_VERSION_GROUPED else 2)
+        descriptors, written = layout["descriptors"], layout["written"]
+        manifest = {"format_version": version, "course": state["course"],
                     "origin": state["origin"], "export_id": export_id,
                     "assets": descriptors, "base": state["base"], "tables": inventory}
         changed = previous_manifest != manifest
@@ -572,7 +550,7 @@ def _write_readable_files(destination, assets):
     """
     folder = Path(destination) / READABLE_DIR
     wanted = {asset["content"]["path"]: asset for asset in assets.values()
-              if asset["kind"] == "file"}
+              if asset["kind"] == "file" and not asset.get("deleted")}
     written, errors = set(), []
     for relative, asset in sorted(wanted.items()):
         try:
@@ -600,9 +578,13 @@ def _database_guard(pool):
             connection.total_changes]
 
 
+class StaleInspection(ValueError):
+    """The course changed after inspection, so no later unit can be applied."""
+
+
 def _check_database_guard(pool, expected):
     if expected is not None and _database_guard(pool) != expected:
-        raise ValueError("course changed after inspection; inspect again before applying")
+        raise StaleInspection("course changed after inspection; inspect again before applying")
 
 
 def inspect_exchange(pool, workspace, source):
@@ -648,6 +630,7 @@ def inspect_exchange(pool, workspace, source):
     association_required = bool(local) and state["course"]["origin"] != package["course"]["origin"]
     return {"course": package["course"], "local": local, "incoming": incoming,
             "database_guard": database_guard,
+            "row_identities": dict(state["row_identities"]),
             "source": str(Path(source).resolve()),
             "base": base, "tables": inventory, "errors": errors, "plan": plan,
             "changes": plan["changes"], "outgoing": plan["outgoing"],
@@ -691,19 +674,20 @@ def _same_projection(left, right):
         return False
 
 
-def _adopt_course_origin(state, inspection, choices, unassigned=False):
+def _adopt_course_origin(state, inspection, choices):
     """Keep the lineage of a received course; a different lineage needs input."""
     package = inspection.get("course") or {}
     origin = package.get("origin")
     if not isinstance(origin, str) or not origin:
         return
-    if unassigned or not inspection.get("local"):
+    if not inspection.get("local"):
         # Nothing recorded a lineage here yet, so the package supplies it.
         state["course"]["origin"] = origin
         return
     if state["course"]["origin"] != origin and not choices.get("associate"):
         raise ValueError("the package belongs to a different course lineage; "
                          "explicit association input is required")
+    state["course"]["origin"] = origin
 
 
 def _side_choices(plan, choices):
@@ -798,28 +782,11 @@ def _local_row(asset, index):
         if not row.get(field):
             continue
         value = json.loads(row[field])
-        converted = _local_nested(value, index)
+        converted = references.convert_json(table, field, value,
+                                             lambda target, item: _local_identifier(item, index))
         if converted != value:
-            row[field] = json.dumps(converted, ensure_ascii=False, separators=(",", ":"))
+            row[field] = references.serialize_json(table, field, converted)
     return table, row
-
-
-def _local_nested(value, index):
-    if isinstance(value, list):
-        return [_local_nested(item, index) for item in value]
-    if isinstance(value, dict):
-        result = {}
-        for key, item in value.items():
-            if key in INTEGER_REFERENCES and isinstance(item, str):
-                if item not in index:
-                    raise ValueError(f"unresolved incoming reference: {item}")
-                result[key] = index[item][1]
-            elif key in {"draft", "draft_json", "answer_text", "answer", "choices", "note"}:
-                result[key] = item
-            else:
-                result[key] = _local_nested(item, index)
-        return result
-    return value
 
 
 def _identity_key(identity):
@@ -853,10 +820,13 @@ def apply_exchange(pool, workspace, inspection, choices=None):
         database_guard = list(inspection["database_guard"]) if inspection.get("database_guard") else None
         _check_database_guard(pool, database_guard)
         state_path = pool.root / ".lessonkit/course-sync/state.json"
-        unassigned = (not state_path.exists() and not _table_exists(pool.connect(), "course_sync_checkpoint"))
         state = _state(pool.root, pool.course, pool=pool)
-        _adopt_course_origin(state, inspection, choices, unassigned=unassigned)
+        _adopt_course_origin(state, inspection, choices)
         state["initialized"] = True
+        unchanged = set(plan.get("unchanged") or [])
+        state["row_identities"].update({key: identity for key, identity in
+                                        inspection.get("row_identities", {}).items()
+                                        if identity in unchanged})
         _save_state(pool, state)
         publication_errors = _complete_pending_files(pool, state)
         connection = pool.connect()
@@ -864,7 +834,14 @@ def apply_exchange(pool, workspace, inspection, choices=None):
             database_guard[2] = connection.total_changes
         index = _identity_index(connection, state)
         local_assets = inspection.get("local") or {}
-        ordered, blocked = _dependency_order(supported)
+        # A malformed execution envelope is a unit failure, not a crash after the
+        # checkpoint row was written (C05 F4); a header waits for its items' own
+        # dependencies, which grouping removed from the unit list (C05 F1a).
+        malformed = [change for change in supported
+                     if change["asset"]["kind"] in {"execution", "execution_item"}
+                     and not _execution_unit_ready(change["asset"])]
+        supported = [change for change in supported if change not in malformed]
+        ordered, blocked = _dependency_order(_with_group_dependencies(supported))
         headers, executions = _execution_units(ordered, local_assets)
         invalid_headers = {change["identity"].rsplit("/item/", 1)[0] for change in supported
                            if change["identity"] in blocked and change["asset"]["kind"] == "execution_item"}
@@ -878,6 +855,9 @@ def apply_exchange(pool, workspace, inspection, choices=None):
         failed.extend({"identity": identity, "code": "unsupported_kind",
                        "message": "this receiver cannot write that asset yet"}
                       for identity in sorted(unsupported))
+        failed.extend({"identity": change["identity"], "code": "invalid_asset",
+                       "message": "the execution envelope is incomplete"}
+                      for change in malformed)
         applied = []
         failed_identities = {item["identity"] for item in failed}
         grouped_ack = {header: {} for header in headers}
@@ -919,7 +899,7 @@ def apply_exchange(pool, workspace, inspection, choices=None):
                             elif change["asset"]["kind"] == "execution_item":
                                 _write_execution_item(connection, unit_index, identity, change["asset"])
                             elif change["asset"]["kind"] == "file":
-                                _file_payload(pool.root, change)
+                                _file_payload(pool.root, change, db_path=pool.db_path)
                                 pending = change
                             else:
                                 _write_unit(pool, connection, unit_state, unit_index, change)
@@ -951,6 +931,15 @@ def apply_exchange(pool, workspace, inspection, choices=None):
                             failed_identities.add(identity)
                 if database_guard is not None:
                     database_guard[2] = connection.total_changes
+                if isinstance(exc, StaleInspection):
+                    # Every later chunk must fail the same re-check; report the
+                    # remainder once instead of opening doomed transactions (C05 F3).
+                    remaining = [item["identity"] for item in independent
+                                 if item["identity"] not in failed_identities]
+                    failed.append({"identity": "", "code": "stale_inspection",
+                                   "message": f"{str(exc)}; {len(remaining)} units were not attempted"})
+                    failed_identities.update(remaining)
+                    break
                 continue
             state["row_identities"].update(chunk_mappings)
             state["base"].update(chunk_ack)
@@ -982,6 +971,46 @@ def apply_exchange(pool, workspace, inspection, choices=None):
                               for item in unresolved],
                 "base_size": len(state["base"]),
                 "local": {"applied": len(applied)}, "remote": None}
+
+
+def _execution_unit_ready(asset):
+    """A unit this receiver can rebuild, checked before any write is attempted."""
+    content = asset.get("content")
+    if not isinstance(content, dict):
+        return False
+    if asset["kind"] == "execution_item":
+        return isinstance(content.get("position"), int) and isinstance(content.get("execution_id"), str)
+    return isinstance(content.get("execution_id"), str)
+
+
+def _with_group_dependencies(changes):
+    """A header also waits for the dependencies its grouped items declare.
+
+    `_execution_units` moves items out of the unit list, so the header alone would
+    be ordered only by its own `depends_on` and could run before an attempt row it
+    must resolve (C05 F1a).
+    """
+    grouped = {}
+    for change in changes:
+        if change["asset"]["kind"] == "execution_item":
+            grouped.setdefault(change["identity"].rsplit("/item/", 1)[0], set()).update(
+                key for key in change["asset"].get("depends_on", []) if key)
+    if not grouped:
+        return changes
+    extended = []
+    for change in changes:
+        identity = change["identity"]
+        # An item always depends on its own header; keeping that edge would make
+        # the header wait for itself and block the whole group.
+        extra = {key for key in grouped.get(identity, ())
+                 if key != identity and not key.startswith(identity + "/item/")}
+        if not extra:
+            extended.append(change)
+            continue
+        asset = dict(change["asset"])
+        asset["depends_on"] = sorted(set(asset.get("depends_on", [])) | extra)
+        extended.append({**change, "asset": asset})
+    return extended
 
 
 def _receive_chunks(ordered):
@@ -1074,7 +1103,8 @@ def _item_record(asset, index):
         item.pop(key, None)
     item.pop("execution_id", None)
     item["attempt_id"] = _local_identifier(item.get("attempt_id"), index)
-    item["draft"] = item.pop("draft", {}) or {}
+    item["draft"] = references.convert_draft(item.pop("draft", {}) or {},
+                                             lambda target, value: _local_identifier(value, index))
     item["draft_sequence"] = (asset.get("presentation") or {}).get("draft_sequence", 0)
     return item
 
@@ -1339,11 +1369,13 @@ def _update_row(connection, table, row, where):
         tuple(row[name] for name in assignments) + tuple(row[name] for name in where))
 
 
-def _file_payload(root, change):
+def _file_payload(root, change, *, db_path=None):
     content = change["asset"]["content"]
     root = Path(root).resolve()
     target = _relative(root, content.get("path"))
     relative = target.relative_to(root)
+    if db_path is not None and target == Path(db_path).resolve():
+        raise ValueError("a portable file cannot replace the course database")
     if any(part in {"jobs", ".git", "course-sync"} for part in relative.parts) \
             or target.name in {".env", ".credentials.yaml"}:
         raise ValueError(f"path is not a portable course asset: {relative.as_posix()}")
@@ -1371,7 +1403,7 @@ def read_exchange(source):
     source = Path(source).resolve()
     manifest = _read_json(source / "manifest.json")
     if not isinstance(manifest, dict) or type(manifest.get("format_version")) is not int \
-            or manifest["format_version"] != FORMAT_VERSION:
+            or manifest["format_version"] not in {1, 2}:
         raise ValueError("unsupported course exchange format_version")
     if not isinstance(manifest.get("course"), dict) or not all(
             isinstance(manifest["course"].get(key), str) and manifest["course"][key]
@@ -1381,27 +1413,14 @@ def read_exchange(source):
         raise ValueError("invalid course identifier")
     if not isinstance(manifest.get("assets"), list) or not isinstance(manifest.get("base"), dict):
         raise ValueError("invalid asset manifest or base")
-    assets, errors, identities, paths = {}, [], set(), set()
+    loaded, errors = course_bundle.load(source, manifest["assets"], manifest["format_version"],
+                                        _relative, _read_json)
+    assets = {}
     for descriptor in manifest["assets"]:
-        if not isinstance(descriptor, dict) or not isinstance(descriptor.get("identity"), str):
-            raise ValueError("invalid asset descriptor")
         identity = descriptor["identity"]
-        if not identity or identity in identities:
-            raise ValueError("duplicate or empty asset identity")
-        identities.add(identity)
-        path = _relative(source, descriptor.get("path"))
-        normalized_path = path.relative_to(source).as_posix().lower()
-        if normalized_path in paths:
-            raise ValueError("duplicate asset path")
-        paths.add(normalized_path)
-        if not path.is_file():
-            errors.append({"identity": identity, "code": "missing_asset", "message": "asset file is absent"})
+        if identity not in loaded:
             continue
-        try:
-            asset = _read_json(path)
-        except (ValueError, OSError) as exc:
-            errors.append({"identity": identity, "code": "invalid_asset", "message": str(exc)})
-            continue
+        asset = loaded[identity]
         if not isinstance(asset, dict) or asset.get("kind") not in {"row", "file", "execution", "execution_item"} \
                 or asset.get("kind") != descriptor.get("kind") \
                 or not (isinstance(asset.get("content"), dict)
@@ -1453,11 +1472,11 @@ def read_exchange(source):
                 errors.append({"identity": identity, "code": "invalid_asset", "message": str(exc)})
                 continue
         assets[identity] = asset
-    _adopt_edited_copies(source, assets)
+    _adopt_edited_copies(source, assets, {item["identity"] for item in manifest["assets"]}, errors)
     return {**manifest, "assets": assets, "errors": errors}
 
 
-def _adopt_edited_copies(source, assets):
+def _adopt_edited_copies(source, assets, declared, errors):
     """A Tutor edits the plain copy; an edited copy is the asset's content.
 
     The envelopes stay the exchange format, so a readable folder that disagrees
@@ -1482,3 +1501,22 @@ def _adopt_edited_copies(source, assets):
             continue
         asset["content"] = {**content, "data": base64.b64encode(data).decode("ascii")}
         asset["readable_copy"] = True
+
+    # A new plain file is an explicit creation. Missing files never imply deletion;
+    # an invalid declared envelope cannot be bypassed by its readable copy.
+    for path in sorted(folder.rglob("*")):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(folder).as_posix()
+        identity = "file/" + relative
+        if identity in declared or identity in assets:
+            continue
+        try:
+            target = _relative(folder, relative)
+            asset = {"kind": "file", "content": {"path": relative, "encoding": "base64",
+                     "data": base64.b64encode(target.read_bytes()).decode("ascii")}, "depends_on": []}
+            _file_payload(folder, {"asset": asset, "action": "create"})
+        except (OSError, ValueError) as exc:
+            errors.append({"identity": identity, "code": "invalid_asset", "message": str(exc)})
+            continue
+        assets[identity] = asset

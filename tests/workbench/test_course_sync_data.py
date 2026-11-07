@@ -299,10 +299,10 @@ def test_failed_republication_keeps_previous_manifest_and_asset_bytes(course, tm
     pool.commit()
     writer = course_sync._atomic_json
 
-    def interrupted(path, value):
+    def interrupted(path, value, **kwargs):
         if Path(path) == folder / "manifest.json":
             raise OSError("interrupted before publishing manifest")
-        return writer(path, value)
+        return writer(path, value, **kwargs)
 
     with monkeypatch.context() as patch:
         patch.setattr(course_sync, "_atomic_json", interrupted)
@@ -326,3 +326,57 @@ def test_standalone_and_installed_checkpoint_schemas_match():
     finally:
         first.close()
         second.close()
+
+
+def test_export_does_not_keep_readable_copy_of_deleted_file(course,tmp_path):
+    import base64
+    from workbench.data import course_sync
+    pool,workspace=course
+    destination=tmp_path/"package";file=destination/"files/.lessonkit/learning/gone.md"
+    file.parent.mkdir(parents=True);file.write_bytes(b"old")
+    assets={"file/.lessonkit/learning/gone.md":{"kind":"file","content":{"path":".lessonkit/learning/gone.md","encoding":"base64","data":base64.b64encode(b"old").decode()},"deleted":True,"depends_on":[]}}
+    assert course_sync._write_readable_files(destination,assets)==[]
+    assert not file.exists()
+
+
+def test_large_export_groups_assets_and_reuses_unchanged_files(course,tmp_path):
+    pool,workspace=course
+    pool.connect().executemany("INSERT INTO knowledge_points VALUES (?,?,NULL)",
+                              [(f"math-extra-{n}","body") for n in range(520)])
+    pool.commit();target=tmp_path/"grouped"
+    first=export_course(pool,workspace,target)
+    manifest=json.loads((target/"manifest.json").read_text(encoding="utf-8"))
+    assert manifest["format_version"]==2
+    physical={item["path"] for item in manifest["assets"]}
+    assert len(physical)<len(manifest["assets"])/100
+    assert len(read_exchange(target)["assets"])==first["assets"]
+    snapshot={name:(target/name).read_bytes() for name in physical}
+    second=export_course(pool,workspace,target)
+    assert second["written"]==0
+    assert second["manifest_changed"] is False
+    assert snapshot=={name:(target/name).read_bytes() for name in physical}
+
+
+def test_layout_transition_never_overwrites_files_of_published_generation(course,tmp_path,monkeypatch):
+    from workbench.data import course_bundle,course_sync
+    pool,workspace=course
+    pool.connect().executemany("INSERT INTO knowledge_points VALUES (?,?,NULL)",
+                              [(f"math-extra-{n}","body") for n in range(520)])
+    pool.commit();target=tmp_path/"transition"
+    monkeypatch.setattr(course_bundle,"INDIVIDUAL_LIMIT",10000)
+    export_course(pool,workspace,target)
+    before=read_exchange(target)
+    manifest=json.loads((target/"manifest.json").read_text(encoding="utf-8"))
+    assert manifest["format_version"]==1
+    physical={item["path"] for item in manifest["assets"]}
+    snapshot={name:(target/name).read_bytes() for name in physical}
+    monkeypatch.setattr(course_bundle,"INDIVIDUAL_LIMIT",512)
+    atomic=course_sync._atomic_json
+    def interrupt(path,value,**kwargs):
+        if Path(path).name=="manifest.json":raise OSError("publication interrupted")
+        return atomic(path,value,**kwargs)
+    monkeypatch.setattr(course_sync,"_atomic_json",interrupt)
+    with pytest.raises(OSError,match="publication interrupted"):
+        export_course(pool,workspace,target)
+    assert snapshot=={name:(target/name).read_bytes() for name in physical}
+    assert read_exchange(target)["assets"]==before["assets"]
