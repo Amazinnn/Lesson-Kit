@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from workbench import registry
 from workbench.data import figure_mirror
+from workbench.domain import course_sync as planning
 
 
 FORMAT_VERSION = 1
@@ -454,7 +455,7 @@ def inspect_exchange(pool, workspace, source):
     schema = {item["table"]: item for item in inventory}
     incoming = dict(package["assets"])
     for identity, asset in list(incoming.items()):
-        if asset["kind"] != "row":
+        if asset["kind"] != "row" or not asset.get("content"):
             continue
         content = asset["content"]
         table = schema.get(content["table"])
@@ -466,17 +467,372 @@ def inspect_exchange(pool, workspace, source):
             errors.append({"identity": identity, "code": "invalid_asset",
                            "message": "row does not match the target course schema"})
             del incoming[identity]
-    base = state["base"]
-    if state["course"]["origin"] and package["base"] != base:
-        if package["base"] == state.get("last_export", {}).get("assets"):
-            base = package["base"]
-        else:
-            errors.append({"identity": "", "code": "baseline_mismatch",
-                           "message": "a common exchange baseline has not been established"})
+    base = _common_base(state, local, package, errors)
+    plan = planning.plan_exchange(base, local, incoming)
+    errors.extend(plan["errors"])
     association_required = bool(local) and state["course"]["origin"] != package["course"]["origin"]
     return {"course": package["course"], "local": local, "incoming": incoming,
-            "base": base, "tables": inventory, "errors": errors,
-            "association_required": association_required, "export_id": package.get("export_id")}
+            "base": base, "tables": inventory, "errors": errors, "plan": plan,
+            "changes": plan["changes"], "outgoing": plan["outgoing"],
+            "conflicts": plan["conflicts"], "unchanged": plan["unchanged"],
+            "association_required": association_required,
+            "export_id": package.get("export_id")}
+
+
+def _common_base(state, local, package, errors):
+    """The projection this installation has acknowledged, cross-checked against
+    the sender's claim.
+
+    Export never advances the base; only a completed reception acknowledges an
+    asset, so a repeated export cannot speak for the other installation. The
+    sender's base is used as an extra witness: an asset it calls shared that we
+    hold with different content was never acknowledged on this side, which
+    makes a later comparison ambiguous and is reported instead of guessed.
+    """
+    base = dict(state["base"])
+    for identity, ancestor in package["base"].items():
+        if identity in base or identity not in local:
+            continue
+        if _same_projection(local[identity], ancestor):
+            base[identity] = ancestor
+            continue
+        errors.append({"identity": identity, "code": "baseline_mismatch",
+                       "message": "the package calls this asset shared but this "
+                                  "installation never acknowledged it"})
+        base[identity] = ancestor
+    return base
+
+
+def _same_projection(left, right):
+    def semantic(asset):
+        return {"kind": asset.get("kind"), "content": asset.get("content"),
+                "depends_on": sorted(set(asset.get("depends_on") or [])),
+                "deleted": bool(asset.get("deleted"))}
+    try:
+        return semantic(left) == semantic(right)
+    except AttributeError:
+        return False
+
+
+def _adopt_course_origin(state, inspection, choices):
+    """Keep the lineage of a received course; a different lineage needs input."""
+    package = inspection.get("course") or {}
+    origin = package.get("origin")
+    if not isinstance(origin, str) or not origin:
+        return
+    if not inspection.get("local"):
+        state["course"]["origin"] = origin
+        return
+    if state["course"]["origin"] != origin and not choices.get("associate"):
+        raise ValueError("the package belongs to a different course lineage; "
+                         "explicit association input is required")
+
+
+def _side_choices(plan, choices):
+    """Split conflicts into incoming changes and kept-local units."""
+    choices = choices or {}
+    if not isinstance(choices, dict):
+        raise ValueError("conflict choices must be an object")
+    default = choices.get("side")
+    items = choices.get("items") or {}
+    if default not in {None, "local", "incoming"} or not isinstance(items, dict):
+        raise ValueError("a conflict side is local or incoming")
+    changes = list(plan.get("changes") or [])
+    kept = []
+    unresolved = []
+    for conflict in plan.get("conflicts") or []:
+        identity = conflict["identity"]
+        side = items.get(identity, default)
+        if side not in {None, "local", "incoming"}:
+            raise ValueError(f"invalid side for conflict {identity!r}")
+        if side == "incoming":
+            action = "update" if conflict.get("local") else "create"
+            changes.append({"identity": identity, "action": action,
+                            "asset": conflict["incoming"]})
+        elif side == "local":
+            kept.append(identity)
+        else:
+            unresolved.append(conflict)
+    return changes, kept, unresolved
+
+
+def _dependency_order(changes):
+    """Apply prerequisites first; an asset waiting on a blocked one is skipped."""
+    pending = {item["identity"]: item for item in changes}
+    ordered, blocked = [], set()
+    while pending:
+        progress = False
+        for identity, item in sorted(pending.items()):
+            depends = [key for key in item["asset"].get("depends_on", []) if key]
+            if any(key in blocked for key in depends):
+                blocked.add(identity)
+                del pending[identity]
+                progress = True
+                continue
+            if any(key in pending for key in depends):
+                continue
+            ordered.append(item)
+            del pending[identity]
+            progress = True
+        if not progress:
+            blocked.update(pending)
+            break
+    return ordered, blocked
+
+
+def _identity_index(connection, state):
+    """Persistent asset identity -> the local integer record holding it."""
+    index = {}
+    for table in sorted(IDENTITY_TABLES):
+        if not _table_exists(connection, table):
+            continue
+        keys = _primary_key(connection, table)
+        for row in connection.execute(f'SELECT * FROM "{table}"'):
+            key = json.dumps([row[name] for name in keys],
+                             ensure_ascii=False, separators=(",", ":"))
+            identity = state["row_identities"].get(table + "/" + key)
+            if identity:
+                index[identity] = (table, row["id"])
+    return index
+
+
+def _table_exists(connection, table):
+    return connection.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)).fetchone() is not None
+
+
+def _primary_key(connection, table):
+    columns = list(connection.execute(f'PRAGMA table_info("{table}")'))
+    return [row["name"] for row in sorted(columns, key=lambda row: row["pk"]) if row["pk"]]
+
+
+def _local_row(asset, index):
+    """The projected row with its record references turned back into local ids."""
+    content = asset["content"]
+    table, row = content["table"], dict(content["row"])
+    for field, target in INTEGER_REFERENCES.items():
+        if row.get(field) is None:
+            continue
+        if row[field] not in index:
+            raise ValueError(f"unresolved incoming reference: {row[field]}")
+        row[field] = index[row[field]][1]
+    for field in REFERENCE_JSON_FIELDS.get(table, ()):
+        if not row.get(field):
+            continue
+        value = json.loads(row[field])
+        converted = _local_nested(value, index)
+        if converted != value:
+            row[field] = json.dumps(converted, ensure_ascii=False, separators=(",", ":"))
+    return table, row
+
+
+def _local_nested(value, index):
+    if isinstance(value, list):
+        return [_local_nested(item, index) for item in value]
+    if isinstance(value, dict):
+        result = {}
+        for key, item in value.items():
+            if key in INTEGER_REFERENCES and isinstance(item, str):
+                if item not in index:
+                    raise ValueError(f"unresolved incoming reference: {item}")
+                result[key] = index[item][1]
+            elif key in {"draft", "draft_json", "answer_text", "answer", "choices", "note"}:
+                result[key] = item
+            else:
+                result[key] = _local_nested(item, index)
+        return result
+    return value
+
+
+def _identity_key(identity):
+    """The ordered key encoded by `row/<table>[/<origin>]/[<values>]`."""
+    if not identity.startswith("row/"):
+        return None
+    marker = identity.find("[")
+    if marker < 0:
+        return None
+    body = identity[len("row/"):marker]
+    table = body.split("/", 1)[0]
+    try:
+        return table, json.loads(identity[marker:])
+    except json.JSONDecodeError:
+        return None
+
+
+def apply_exchange(pool, workspace, inspection, choices=None):
+    """Apply the incoming units of one inspection; every unit commits on its own."""
+    if not isinstance(inspection, dict):
+        raise ValueError("an inspection result is required")
+    plan = inspection.get("plan") if isinstance(inspection.get("plan"), dict) else inspection
+    if not isinstance(plan.get("changes"), list):
+        raise ValueError("an exchange plan is required")
+    if not pool.db_path.is_file():
+        raise ValueError("target course database does not exist")
+    choices = choices or {}
+    changes, kept, unresolved = _side_choices(plan, choices)
+    supported, unsupported = _supported_units(changes)
+    with course_lock(pool.root):
+        state = _state(pool.root, pool.course)
+        _adopt_course_origin(state, inspection, choices)
+        _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
+        connection = pool.connect()
+        index = _identity_index(connection, state)
+        ordered, blocked = _dependency_order(supported)
+        failed = [{"identity": identity, "code": "invalid_dependency",
+                   "message": "the unit depends on an unavailable asset"}
+                  for identity in sorted(blocked)]
+        failed.extend({"identity": identity, "code": "unsupported_kind",
+                       "message": "this receiver cannot write that asset yet"}
+                      for identity in sorted(unsupported))
+        applied = []
+        for change in ordered:
+            identity = change["identity"]
+            try:
+                with pool.transaction(immediate=True):
+                    _write_unit(pool, connection, state, index, change)
+                    # The acknowledgement and the record mapping are written
+                    # before the commit they describe: a retry then sees either
+                    # both or neither, and a mapping without its row is ignored
+                    # because the index only lists rows that exist.
+                    state["base"][identity] = change["asset"]
+                    _atomic_json(pool.root / ".lessonkit/course-sync/state.json", state)
+            except Exception as exc:  # one unit never blocks independent ones
+                failed.append({"identity": identity, "code": "apply_failed", "message": str(exc)})
+                continue
+            applied.append(identity)
+        status = "conflict" if unresolved else ("partial" if failed else "success")
+        return {"status": status, "course": state["course"], "origin": state["origin"],
+                "applied": applied, "kept": kept, "failed": failed,
+                "conflicts": [{"identity": item["identity"], "base": item.get("base"),
+                               "local": item.get("local"), "incoming": item.get("incoming")}
+                              for item in unresolved],
+                "base_size": len(state["base"]),
+                "local": {"applied": len(applied)}, "remote": None}
+
+
+def _supported_units(changes):
+    """Units this receiver can write today; the rest are reported, never skipped silently."""
+    unsupported = set()
+    for change in changes:
+        if change["asset"]["kind"] in {"execution", "execution_item"}:
+            unsupported.add(change["identity"])
+    paper_ids = {change["asset"]["content"].get("paper_id")
+                 for change in changes
+                 if change["asset"]["kind"] == "execution" and change["asset"].get("content")}
+    paper_ids.discard(None)
+    supported = []
+    for change in changes:
+        asset = change["asset"]
+        if change["identity"] in unsupported:
+            continue
+        row = asset.get("content", {}).get("row") if asset["kind"] == "row" else None
+        if row is not None and asset["content"]["table"] == "paper_state" \
+                and row.get("paper_id") in paper_ids:
+            # Its checkpoint was projected out; writing the stripped row would
+            # drop the parked execution this receiver cannot rebuild yet.
+            unsupported.add(change["identity"])
+            continue
+        supported.append(change)
+    return supported, unsupported
+
+
+def _write_unit(pool, connection, state, index, change):
+    asset = change["asset"]
+    if asset["kind"] == "file":
+        _write_file(pool.root, change)
+        return
+    if asset["kind"] != "row":
+        raise ValueError(f"unsupported asset kind: {asset['kind']}")
+    identity = change["identity"]
+    if change["action"] == "delete" and not asset.get("content"):
+        _delete_row(connection, index, identity)
+        return
+    table, row = _local_row(asset, index)
+    keys = _primary_key(connection, table)
+    if not keys:
+        raise ValueError(f"target table has no persistent key: {table}")
+    if table in IDENTITY_TABLES:
+        if change["action"] == "delete" or asset.get("deleted"):
+            # A tombstone keeps the row (problems) or is already gone.
+            if identity not in index:
+                return
+            row["id"] = index[identity][1]
+            change = {**change, "action": "update"}
+        elif change["action"] == "create":
+            row.pop("id", None)
+            columns = [name for name in row]
+            connection.execute(
+                f'INSERT INTO "{table}" ({",".join(f'"{name}"' for name in columns)}) '
+                f'VALUES ({",".join("?" for _ in columns)})',
+                tuple(row[name] for name in columns))
+            row["id"] = connection.execute("SELECT last_insert_rowid()").fetchone()[0]
+            key = json.dumps([row[name] for name in keys],
+                             ensure_ascii=False, separators=(",", ":"))
+            index[identity] = (table, row["id"])
+            state["row_identities"][table + "/" + key] = identity
+            return
+        existing = index.get(identity)
+        if existing is None:
+            raise ValueError(f"unknown local record for {identity}")
+        row["id"] = existing[1]
+        _update_row(connection, table, row, ("id",))
+        return
+    if change["action"] == "create":
+        columns = [name for name in row]
+        connection.execute(
+            f'INSERT INTO "{table}" ({",".join(f'"{name}"' for name in columns)}) '
+            f'VALUES ({",".join("?" for _ in columns)})',
+            tuple(row[name] for name in columns))
+        return
+    _update_row(connection, table, row, tuple(keys))
+
+
+def _delete_row(connection, index, identity):
+    """Remove one entity named only by its persisted identity."""
+    encoded = _identity_key(identity)
+    if encoded is None:
+        raise ValueError(f"cannot address the deleted asset: {identity}")
+    table, key = encoded
+    if table in IDENTITY_TABLES:
+        if identity in index:
+            connection.execute(f'DELETE FROM "{table}" WHERE id=?', (index[identity][1],))
+        return
+    keys = _primary_key(connection, table)
+    if len(keys) != len(key):
+        raise ValueError(f"cannot address the deleted asset: {identity}")
+    connection.execute(
+        f'DELETE FROM "{table}" WHERE ' + " AND ".join(f'"{name}"=?' for name in keys),
+        tuple(key))
+
+
+def _update_row(connection, table, row, where):
+    assignments = [name for name in row if name not in where]
+    connection.execute(
+        f'UPDATE "{table}" SET {",".join(f'"{name}"=?' for name in assignments)} '
+        f'WHERE {" AND ".join(f'"{name}"=?' for name in where)}',
+        tuple(row[name] for name in assignments) + tuple(row[name] for name in where))
+
+
+def _write_file(root, change):
+    content = change["asset"]["content"]
+    root = Path(root).resolve()
+    target = _relative(root, content.get("path"))
+    relative = target.relative_to(root)
+    if any(part in {"jobs", ".git", "course-sync"} for part in relative.parts) \
+            or target.name in {".env", ".credentials.yaml"}:
+        raise ValueError(f"path is not a portable course asset: {relative.as_posix()}")
+    if change["action"] == "delete":
+        target.unlink(missing_ok=True)
+        return
+    data = base64.b64decode(content["data"], validate=True)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    handle, name = tempfile.mkstemp(prefix=target.name + ".", suffix=".tmp", dir=target.parent)
+    try:
+        with os.fdopen(handle, "wb") as stream:
+            stream.write(data)
+        os.replace(name, target)
+    finally:
+        Path(name).unlink(missing_ok=True)
 
 
 def read_exchange(source):
@@ -517,13 +873,17 @@ def read_exchange(source):
             continue
         if not isinstance(asset, dict) or asset.get("kind") not in {"row", "file", "execution", "execution_item"} \
                 or asset.get("kind") != descriptor.get("kind") \
-                or not isinstance(asset.get("content"), dict) \
+                or not (isinstance(asset.get("content"), dict)
+                        or asset.get("deleted") is True and "content" not in asset) \
                 or type(asset.get("deleted", False)) is not bool \
                 or not isinstance(asset.get("depends_on", []), list) \
                 or not all(isinstance(key, str) and key for key in asset.get("depends_on", [])):
             errors.append({"identity": identity, "code": "invalid_asset", "message": "invalid asset envelope"})
             continue
-        content = asset["content"]
+        content = asset.get("content")
+        if content is None:
+            assets[identity] = asset
+            continue
         if asset["kind"] == "row" and (content.get("table") not in TABLES
                                         or not isinstance(content.get("row"), dict)
                                         or not isinstance(content.get("key"), list)):

@@ -156,15 +156,24 @@ def test_inspection_reports_schema_mismatch_without_discarding_other_assets(cour
     assert result['incoming']
 
 
-def test_inspection_refuses_unestablished_common_base(course, tmp_path):
+def test_inspection_reports_a_shared_asset_this_side_never_acknowledged(course, tmp_path):
+    """The sender's base cannot vouch for a value this installation never received."""
     pool, workspace = course
     export_course(pool, workspace, tmp_path / 'bundle')
     manifest_path = tmp_path / 'bundle/manifest.json'
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-    manifest['base'] = {'unrelated': {'kind': 'file', 'content': {}}}
+    identity = next(key for key in manifest['base'] if 'knowledge_points/' in key)
+    manifest['base'][identity]['content']['row']['body'] = '另一个安装的说法'
     manifest_path.write_text(json.dumps(manifest), encoding='utf-8')
+    state_path = pool.root / '.lessonkit/course-sync/state.json'
+    state = json.loads(state_path.read_text(encoding='utf-8'))
+    state['base'].pop(identity)
+    state_path.write_text(json.dumps(state), encoding='utf-8')
+
     result = inspect_exchange(pool, workspace, tmp_path / 'bundle')
-    assert any(error['code'] == 'baseline_mismatch' for error in result['errors'])
+
+    assert [error['identity'] for error in result['errors']
+            if error['code'] == 'baseline_mismatch'] == [identity]
 
 
 def test_repeat_export_reuses_unchanged_files_and_cleans_replaced_envelopes(course, tmp_path):
