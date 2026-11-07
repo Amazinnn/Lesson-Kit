@@ -1,0 +1,16 @@
+[
+  {
+    "node": 25088,
+    "reason": "explicit user pause for handoff",
+    "runner": 17364,
+    "worker": "P01",
+    "at": "2026-11-07T11:48:13.0568332+08:00"
+  },
+  {
+    "node": 29280,
+    "reason": "explicit user pause for handoff",
+    "runner": 25728,
+    "worker": "R01",
+    "at": "2026-11-07T11:48:13.7936686+08:00"
+  }
+]

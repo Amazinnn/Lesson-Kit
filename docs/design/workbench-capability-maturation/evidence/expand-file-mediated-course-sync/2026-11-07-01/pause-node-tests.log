@@ -1,0 +1,155 @@
+✖ no preference request is made before the surface that shows them opens (9.0783ms)
+✖ a practice page with the Paper entry hydrates the confirmed projection once (2.0081ms)
+✖ received course preferences win over a stale browser mirror (1.3682ms)
+✖ an absent server projection adopts the explicit browser learning keys once (1.0885ms)
+✖ an unreadable preference projection never authorizes overwriting it (3.1365ms)
+✖ a settings change is saved through the course preference writer (1.6756ms)
+✖ a rejected save is reported and never counted as confirmed (1.6923ms)
+✖ the Paper setup shows the confirmed reveal preference (2.4993ms)
+✖ a new Paper starts with the confirmed reveal timing once hydration settles (2.0464ms)
+✔ an explicit setup choice wins over the saved preference (1.2312ms)
+✔ a continuing execution keeps its frozen reveal timing (1.3424ms)
+✔ a Paper without a confirmed projection keeps the setup default (0.9053ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 3
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 128.4066
+
+✖ failing tests:
+
+test at tests\workbench\course-preferences.test.js:163:1
+✖ no preference request is made before the surface that shows them opens (9.0783ms)
+  TypeError: Cannot read properties of undefined (reading 'ready')
+      at TestContext.<anonymous> (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:171:54)
+      at async Test.run (node:internal/test_runner/test:1110:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+
+test at tests\workbench\course-preferences.test.js:174:1
+✖ a practice page with the Paper entry hydrates the confirmed projection once (2.0081ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:186:10)
+      at async Test.run (node:internal/test_runner/test:1110:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\workbench\course-preferences.test.js:195:1
+✖ received course preferences win over a stale browser mirror (1.3682ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  false !== true
+  
+      at TestContext.<anonymous> (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:220:10)
+      at async Test.run (node:internal/test_runner/test:1110:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\workbench\course-preferences.test.js:234:1
+✖ an absent server projection adopts the explicit browser learning keys once (1.0885ms)
+  AssertionError [ERR_ASSERTION]: the migration is one explicit save, not a stream of them
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:262:10)
+      at async Test.run (node:internal/test_runner/test:1110:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\workbench\course-preferences.test.js:275:1
+✖ an unreadable preference projection never authorizes overwriting it (3.1365ms)
+  TypeError: Cannot read properties of undefined (reading 'values')
+      at TestContext.<anonymous> (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:295:47)
+      at async Test.run (node:internal/test_runner/test:1110:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:785:7)
+
+test at tests\workbench\course-preferences.test.js:300:1
+✖ a settings change is saved through the course preference writer (1.6756ms)
+  ReferenceError: Event is not defined
+      at workbench.js:1528:34
+      at FakeElement.trigger (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:40:56)
+      at TestContext.<anonymous> (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:325:46)
+      at async Test.run (node:internal/test_runner/test:1110:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:785:7)
+
+test at tests\workbench\course-preferences.test.js:338:1
+✖ a rejected save is reported and never counted as confirmed (1.6923ms)
+  AssertionError [ERR_ASSERTION]: the learner sees one short failure, no panel
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:362:10)
+      at async Test.run (node:internal/test_runner/test:1110:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\workbench\course-preferences.test.js:526:1
+✖ the Paper setup shows the confirmed reveal preference (2.4993ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'per_item'
+  - 'on_submit'
+  
+      at TestContext.<anonymous> (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:532:10)
+      at async Test.run (node:internal/test_runner/test:1110:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'per_item',
+    expected: 'on_submit',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests\workbench\course-preferences.test.js:535:1
+✖ a new Paper starts with the confirmed reveal timing once hydration settles (2.0464ms)
+  AssertionError [ERR_ASSERTION]: no execution is created before the truth arrives
+  + actual - expected
+  
+  + {
+  +   practice_mode: 'exam',
+  +   rating_mode: 'immediate',
+  +   reveal_timing: 'per_item'
+  + }
+  - undefined
+  
+      at TestContext.<anonymous> (D:\.codex\worktrees\course-sync\lesson-kit\tests\workbench\course-preferences.test.js:548:10)
+      at async Test.run (node:internal/test_runner/test:1110:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:785:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: { practice_mode: 'exam', rating_mode: 'immediate', reveal_timing: 'per_item' },
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
