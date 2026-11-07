@@ -325,6 +325,7 @@ def test_a_deleted_knowledge_point_travels_as_an_explicit_tombstone(devices, tmp
 
 
 def test_receiving_a_knowledge_point_tombstone_twice_is_idle(devices, tmp_path):
+    """A repeated delete must not write anything a second time."""
     from workbench.data import content
     left, right = devices
     round_trip(left, right, tmp_path / "hop1")
@@ -333,9 +334,13 @@ def test_receiving_a_knowledge_point_tombstone_twice_is_idle(devices, tmp_path):
 
     inspection = course_sync.inspect_exchange(
         right(), workspace(right()), tmp_path / "hop2")
+    again = course_sync.apply_exchange(right(), workspace(right()), inspection)
 
-    assert inspection["plan"]["changes"] == []
-    assert inspection["plan"]["outgoing"] == []
+    assert again["status"] == "success", again["failed"]
+    assert again["applied"] == []
+    assert right().connect().execute(
+        "SELECT COUNT(*) FROM knowledge_points WHERE kp_id=?",
+        ("dmath-ch06-kp-001",)).fetchone()[0] == 0
 
 
 def test_a_moved_chapter_survives_the_exchange(devices, tmp_path):
