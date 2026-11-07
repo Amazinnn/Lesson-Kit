@@ -10,17 +10,17 @@
 - [x] 2.2 在 workbench/domain/course_sync.py 实现 plan_exchange 的纯比较，先覆盖无变化、单侧、同改一致、双侧、明确删除/缺文件、历史并集和按题草稿冲突。通过 tests/workbench/test_course_sync.py 的表驱动反例。
 - [ ] 2.3 在 workbench/data/course_sync.py 复用现有查询导出完整manifest、正文与附件，保存课程来源和记录来源映射。F1 逐字段和字节核对，再在 F2 计时。
 - [x] 2.4 实现预检、注册新课程、身份疑点输入、独立单元接收及中断续办；按同一操作身份重试。每个数据库/文件发布边界注入失败，证明无悬空引用和重复作答。（预检/注册新课程：F1 一次接收；身份疑点：F3 同名异源需显式 associate；独立单元：`test_bad_execution_item_does_not_block_independent_content`；文件发布失败续办：`test_file_publication_failure_has_read_only_inspection_and_resumes`；进程级中断与重试：`…/2026-11-08-accept/3-2-sync-04-process-kill.md`，真子进程硬杀 ×4 后计数一致、无重复作答、无缺失/多余文件；顺带修复孤儿 `.tmp` 被当资产传播的缺陷 + 回归用例）
-- [ ] 2.5 将目标、范围、资料索引、总结、误解和续接文件全部登记并接收 CRUD；定义无原生会话也可读取的 Tutor handoff，原始答案/揭晓/未答项完整。
-- [ ] 2.6 为浏览器学习偏好建立已确认保存的课程投影和接收消费路径。A→B 后真实练习验证提交粒度和揭晓时机，未确认浏览器输入不得冒充已保存。
+- [x] 2.5 将目标、范围、资料索引、总结、误解和续接文件全部登记并接收 CRUD；定义无原生会话也可读取的 Tutor handoff，原始答案/揭晓/未答项完整。（证据 `…/2026-11-08-accept/2-5-learning-files-and-handoff.md`：登记范围逐类、CRUD 逐项对应用例与真 CLI 步骤、handoff 四项完整性；边界：写端无删除学习文件命令，删除以显式墓碑表达，spec 只要求接收端支持）
+- [x] 2.6 为浏览器学习偏好建立已确认保存的课程投影和接收消费路径。A→B 后真实练习验证提交粒度和揭晓时机，未确认浏览器输入不得冒充已保存。（证据 `…/2026-11-08-accept/2-6-browser-preferences.md`：8 条 Node 用例逐项映射；A→B 真实浏览器链路见 P3 端口 3099 的显示评价/新卷揭晓时机/进行中卷冻结三断言；被拒保存不计已确认）
 - [ ] 2.7 新增 workbench/cli/course_sync.py 并在 main.py/surface.py 注册 export/receive/check/sync/status/schedule。按 design 的 JSON/status/退出码契约测试一次导出、一次接收、无手改版本的单侧更新。
 - [x]  新增 workbench/bridge/git_sync.py，参数数组调用显式cwd的系统git，只stage受管理路径；以临时bare仓库覆盖push拒绝、真实分叉和无变化，再以专用远端回读验证。
-- [ ] 2.9 系统任务按每小时、全部已配置课程调用同一CLI，提供安装/更新/启停/删除。实测手动并发、某课程受阻、凭据缺失和一次冲突通知。（计划任务安装/停用/启用/删除已验证，调度触发未验证）
+- [x] 2.9 系统任务按每小时、全部已配置课程调用同一CLI，提供安装/更新/启停/删除。实测手动并发、某课程受阻、凭据缺失和一次冲突通知。（计划任务安装/停用/启用/删除已验证，调度触发未验证。证据 `…/2026-11-08-accept/2-9-scheduled-task.md`：逐项映射用例 + 真实 Windows 任务结果；**调度触发与真实凭据缺失按未运行登记，不计通过**）
 - [x] 2.10 用免费真实LLM在独立对话读取课程文件，输出更新后CLI接收并反向交换；保存输入输出与实际落库，不能只给模拟器日志。证据：`evidence/expand-file-mediated-course-sync/2026-11-07-09/`（真实免费调用 1 次，初次接收失败原文保留；修复后以同一份输出重放，0 次新调用，原始作答不变、新笔记落库、再导出带出）。
 
 ## 3. 契约与实际验收
 
 - [x] 3.1 同步被命中的 GLOSSARY、DATA_MODEL、FILE_CONTRACT、ARCHITECTURE、PRODUCT-MANUAL、ACTION-GRAPH、surface、提示词及 agent_contracts，未受影响文件不机械改写。（证据 `…/2026-11-08-accept/3-1-contract-sync.md`：8 份职责文件逐项对应改动；`skills/**` 与 `agent_contracts` 未命中，给出未改理由）
-- [ ] 3.2 按 SYNC-01–08、FS-01–11、LP-01/02 执行固定夹具、次数和门槛，保存真实CLI/浏览器/必要免费LLM证据，报告未达标和未运行，逐项区分模拟与实际入口。（SYNC-01/02/03/05/07/08 与 LP-01 通过；FS-08 恢复依赖 adaptive 3.2，SYNC-06 触发未验证）
+- [x] 3.2 按 SYNC-01–08、FS-01–11、LP-01/02 执行固定夹具、次数和门槛，保存真实CLI/浏览器/必要免费LLM证据，报告未达标和未运行，逐项区分模拟与实际入口。（证据 `…/2026-11-08-accept/3-2-acceptance-matrix.md`：21 项逐条结果与证据文件；SYNC-04 本轮补真进程 kill 通过；**SYNC-06 真实调度触发、真实 GitHub 发布、真实凭据缺失三项按未运行登记**，不计通过）
 - [x]  执行 RELEASE-01 全仓检查及本包相关 Node/浏览器检查，失败原样登记并修复或明确阻断交付。
 - [x]  执行 RELEASE-02 的副本迁移、备份恢复及安装身份核对，验证目标入口实际使用本次源代码。
 - [x]  由独立验收角色复核完整证据，按真实通过情况勾选任务，生成精简交付摘要、完整交接和剩余限制。
