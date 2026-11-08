@@ -1,5 +1,15 @@
 # 规划交接状态
 
+## 2026-11-08 末：WP02 2.4 的 WIP 在 stash（重做前先读这段）
+
+我按设计做了一版 2.4 并跑过：门禁改为"即使有拒收项也返回有效 plans"、`_apply_content_bundle` 逐单元 `SAVEPOINT`、依赖被拒的知识点时阻断引用它的题目、批次只覆盖实际落库项、新增 3 条用例。**结果：内容包 37 条里 17 条失败**——它们全是编码旧"整批原子"契约的用例（`..._blocks_the_whole_bundle`、`..._refuse_the_whole_bundle`、`..._without_writes` 等），需要逐条改写成"无效单元零写入 + 有效邻居照常落库"。
+
+我没有把半截重构留在工作区，已用
+`git stash push -m "WIP WP02 2.4 independent content units" -- workbench/ingest/__init__.py tests/workbench/test_content_bundle.py`
+存为 **stash@{0}**（另有更早的 `stash@{1}` 属别的分支，不要动）。恢复：`git stash apply stash@{0}`；参考实现另存在 `tmp/accept/apply_bundle_new.py`（gitignored）。当前工作区全绿（内容包 37、ingest 42）。
+
+**重做 2.4 的顺序建议**：先逐条把 17 个旧用例改写为独立单元语义（它们的 bundle 大多只有一个无效项，改写只需把 `assertRaises` 换成"该单元零写入 + errors 含原因"），再 apply stash 并跑全仓；`test_a_problem_whose_knowledge_point_fails_at_write_is_blocked` 要用 monkeypatch 让该 KP 写入失败（测试夹具的 `knowledge_points` 没有 CHECK 约束，靠非法 `knowledge_type` 触发不了失败）。
+
 ## 2026-11-08 更晚：WP02 2.4 设计与依赖漏洞（未动手，先记录）
 
 停止在 2.4 之前而不是硬做，因为拆"独立有效单元"必须重构 `_gate_content_bundle` 的判定与依赖关系，半途实现会造成**悬空引用**。勘察结论：
