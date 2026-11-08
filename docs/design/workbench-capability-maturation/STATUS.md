@@ -1,5 +1,17 @@
 # 规划交接状态
 
+## 2026-11-08 更晚：WP02 2.4 设计与依赖漏洞（未动手，先记录）
+
+停止在 2.4 之前而不是硬做，因为拆"独立有效单元"必须重构 `_gate_content_bundle` 的判定与依赖关系，半途实现会造成**悬空引用**。勘察结论：
+
+1. **现状是整批原子**：`_apply_content_bundle`（`workbench/ingest/__init__.py:1185`）先 `_gate_content_bundle`，`if not verified["ok"]: raise`，整批零写入；每章一个批次、一份备份、一个事务。
+2. **门禁已经逐条累积错误**（`errors.append(f"{label}: …")`），并返回成功项的 plans（`knowledge_points`/`problems`/`flash_cards`/`chapters`/`typesetting`）。所以"应用有效项"本身只需要把 `raise` 改成"应用 plans + 报告 errors"。
+3. 🔴 **必须先解决的依赖漏洞**：门禁的 `known_kps = 库内 KP ∪ 本包全部 kp_ids`（`:913-914`），而 `:943` 只检查 `kp_id in known_kps`。也就是说，**一个被拒收的知识点，它的 id 仍会让引用它的题目通过校验**。整批原子时无害（反正都不写），一旦改成独立单元，就会写出指向不存在知识点的题目。做 2.4 时必须在应用前算出"被拒收的 kp id 集合"，把 `kp_ids` 命中该集合的题目一并拒绝并记为依赖阻断，同时补一条"依赖被拒 → 题目保留不写"的用例。
+4. 改动面：`_apply_content_bundle` 的 errors/ok 语义（改为 `errors` + `partial`，只在**完全没有有效项**时才抛）、批次分配只对已应用的分章、`apply_batch` 透传 `errors`、CLI/桥回执展示逐条失败；`problem-patch` / card / quiz / figure 的应用是否同样拆单元需逐个确认（`_apply_problem_patch`、`_apply_patch`）。
+5. 会被改写的既有测试：`tests/workbench/test_content_bundle.py` 里"任一条不合法即整批零写入"的断言；新用例至少覆盖：2 有效 + 1 无效 → 2 条落库 + 1 条报错 + 备份仍是一份；依赖被拒的题目不落库；重试同一清单幂等。
+
+**仍未做**：2.2 提炼复用（同义已有点优先 + 新模型带条件/公式/步骤 + 自动追加原题关联，8 个标注案例）、2.6（20 个映射/完整性标注案例）。WP02 当前 3/15。
+
 ## 2026-11-08 收尾：WP02 2.5 完成（3/15），批次 undo 已退役
 
 - 一次性撤除显式成功批次撤销：CLI `ingest rollback`、`POST /ingest/rollback`（surface/app/api）、结果卡「整批回滚」按钮与确认面、`rollback_batch` 及 7 个专用助手（净删 362 行）、`agent_contracts` 两处提示。
