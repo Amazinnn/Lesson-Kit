@@ -4696,8 +4696,8 @@
         aiRemoveOutbox(context.conversation_id, record.submission_id);
         aiRenderOutbox();
       }, "dismiss");
-      wbApplyCollapse(card, true);
       recoveryList.appendChild(card);
+      wbApplyCollapse(card, true);
     });
     if (queueEditRecovery) {
       var edit = queueEditRecovery;
@@ -4727,6 +4727,7 @@
         aiRenderOutbox();
       }, "restore-queue-edit");
       recoveryList.appendChild(editCard);
+      wbApplyCollapse(editCard, true);
     }
   }
 

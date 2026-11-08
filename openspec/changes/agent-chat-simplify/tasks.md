@@ -35,6 +35,6 @@
 - [x] 6.1 `python -m pytest tests -q`、`node --test` 全套件、`python -m compileall -q lessonkit.py workbench pipeline pool tests` 全绿。
 - [x] 6.2 `openspec validate --specs --strict` 通过。
 - [x] 6.3 `python lessonkit.py guard extract-problems --course dmath --chapter ch06` PASS。
-- [ ] 6.4 真实浏览器验收：Enter/Ctrl+Enter 发送、Shift+Enter 换行、满宽输入框、无影响行、审批单卡、空队列审批后直发、三类长卡折叠/展开、`#ai-status` 可见；临时 workspace，不写真实学习记录。
+- [x] 6.4 真实浏览器验收：Enter/Ctrl+Enter 发送、Shift+Enter 换行、满宽输入框、无影响行、审批单卡、空队列审批后直发、三类长卡折叠/展开、`#ai-status` 可见；临时 workspace，不写真实学习记录。
   - 2026-11-01 实测（Playwright，临时 workspace `wb-acceptance`，fetch 拦截不触达 provider）：`data-plain-text` 生效、输入行无 CodeMirror 接管且满宽（input 318px 贴满 387px 行、左缘对齐）、Enter 发送捕获 POST 且清空、Shift+Enter 换行不发送、Ctrl+Enter 发送、IME keyCode 229 不发送、发送失败直接显示在 `#ai-status`、对话/输入/`#paper-answer` 16px、chips/kicker/side-label/placeholder 全部消失、2864px 长气泡默认展开且箭头开合/aria 翻转/视觉 28px 命中区伪元素外扩。
-  - 未执行：真实 provider 轮次下工具卡输出/审批详情/恢复卡的浏览器折叠（node 契约已钉）、审批单卡与空队列直发的浏览器级走查（pytest 125 项覆盖后端语义）、真实触控设备。补齐后方可归档。
+  - 2026-11-08 补齐（隔离临时工作区 `wb64` + daemon 3123，`source_root`=主检出，协议忠实假 provider 走真实 bridge/HTTP/落库链路）：8 项全过——Enter/Ctrl+Enter 真实 POST 发送、Shift+Enter 原生键盘换行不发送、满宽、无影响行（`#ai-handoff-status` 保留为 stop-wait 功能指示）、审批单卡（pending 仅 composer 一处，批准真实改卷 ps-001 题序）、空队列审批后直发、三类长卡折叠/展开（工具输出 2590px、审批详情 643px、恢复卡 690px，aria 翻转）。发现并修复恢复卡折叠缺陷：`wbApplyCollapse` 在 `appendChild` 前调用导致 scrollHeight=0 永不折叠（editCard 同类缺失已补挂）；回归 312 pytest + node 全绿。证据 `docs/design/workbench-capability-maturation/evidence/agent-chat-simplify/2026-11-08-64-browser/summary.md`。未运行：真实 LLM provider 轮次、真实触控设备。
