@@ -4942,3 +4942,31 @@ test("source defaults hidden and display preferences synchronize both entry poin
   app.window.trigger("storage", { key: "wb_settings_alpha" });
   assert.equal(app.document.documentElement.getAttribute("data-show-source"), "on");
 });
+
+test("run replay restarts directly with replace and never asks a second confirmation", async () => {
+  const calls = [];
+  const recordsCenter = new FakeElement("records-center");
+  const replayButton = new FakeElement("button", { dataset: { runReplay: "7" } });
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const app = runWorkbench({
+    elements,
+    selectors: { ".records-center": recordsCenter },
+    fetch: (url, options) => {
+      calls.push({ url, body: options && options.body != null ? String(options.body) : "" });
+      return jsonResponse({ items: [] });
+    },
+    confirmFn: () => { throw new Error("window.confirm must not be called on replay"); },
+  });
+  recordsCenter.trigger("click", {
+    target: {
+      closest: (selector) => (selector === "[data-run-replay]" ? replayButton : null),
+    },
+  });
+  await flush();
+
+  const replayCalls = calls.filter((call) => call.url.endsWith("/practice/runs/7/replay"));
+  assert.equal(replayCalls.length, 1,
+    "exactly one replay request is sent");
+  assert.deepEqual(JSON.parse(replayCalls[0].body), { replace: true },
+    "the already-chosen restart replaces the unfinished run without a second ask");
+});

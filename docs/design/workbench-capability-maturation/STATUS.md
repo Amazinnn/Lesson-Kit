@@ -2,6 +2,12 @@
 
 > **下一阶段决策（2026-11-08，所有者确认）**：大任务 = WP03 `retire-project-approval-gates`（0/13）；前置 = 推送授权确认 + `agent-chat-simplify` 6.4 浏览器验收（同套浏览器环境）。交接文档：`%TEMP%\handoff-wp03-approval-retirement.md`。
 
+## 2026-11-08：前置收口（推送 + 6.4 归档）；WP03 开工
+
+- **推送已完成**（所有者本轮明示授权）：`3dca0cc0..b6881510` → origin/main，main 与远端同步。
+- **agent-chat-simplify 6.4 全过并归档**：隔离临时工作区 `wb64`（fixture 库 + 真实 CLI 存卷 ps-001）+ daemon 3123（`source_root` 核对=主检出）+ 协议忠实假 provider（`tests/workbench/fake_pi_rpc.py` 派生，真实 bridge/HTTP/落库链路）——8 项清单全过（Enter/Ctrl+Enter 真实 POST、Shift+Enter 原生键盘换行、满宽、无影响行、审批单卡、空队列直发、三类长卡折叠/展开、status 可见）；**发现并修复真缺陷**：恢复卡 `wbApplyCollapse` 在 `appendChild` 前调用致 scrollHeight=0 永不折叠（editCard 同类补挂），312 pytest + node 全绿（`e5d5c757`）。`openspec archive --yes` → `2026-11-08-agent-chat-simplify`，workbench-ui +1 ADDED/~3 MODIFIED 并入 live，strict 25/25（`b508995c`）。证据 `evidence/agent-chat-simplify/2026-11-08-64-browser/summary.md`。
+- **editable 安装纠正**：`.pth` 实际指向 `D:\.codex\worktrees\course-sync\lesson-kit`（此前"editable=主检出"是 cwd 污染误判）；已 `pip install -e . --no-deps` 重装回主检出并经中性 cwd 探针 + `/api/runtime` 双核。daemon 3123 + wb64 环境保留，WP03 2.3 复用。
+
 ## 2026-11-09：stable-runtime-live-reload 归档；agent-chat-simplify 6.4 部分验收
 
 - **stable-runtime-live-reload 3.2 勾选并归档**（`ca9363b8`）：全仓多轮绿（最新 1582）+ 真实隔离验收（真子进程 harness 4/4 + 3097/3098 端口 daemon 探针）+ 独立复核；`runtime-live-reload` 能力进入 live specs（25/25 strict）。

@@ -287,7 +287,7 @@ class DirectPaperUpdateTests(unittest.TestCase):
         self.assertEqual(json.loads((folder / "turn-002.json").read_text(
             encoding="utf-8"))["status"], "queued")
 
-    def test_legacy_approval_route_reports_conflict_without_pending(self):
+    def test_obsolete_approval_callback_has_no_entry(self):
         from workbench.server import app
 
         paper = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
@@ -312,21 +312,14 @@ class DirectPaperUpdateTests(unittest.TestCase):
             )
             with self.assertRaises(urllib.error.HTTPError) as caught:
                 urllib.request.urlopen(request)
-            self.assertEqual(caught.exception.code, 409,
-                             "an obsolete callback resolves nothing and writes nothing")
+            self.assertEqual(caught.exception.code, 404,
+                             "the retired approval route no longer exists; "
+                             "the obsolete callback writes nothing")
             self.assertEqual(self.saved_order(paper["practice_set_id"]),
                              ["dmath-ch06-prob-002", "dmath-ch06-prob-001"])
         finally:
             server.shutdown()
             server.server_close()
-
-    def test_api_rejects_non_string_decision(self):
-        with self.assertRaises(self.api.ApiError) as caught:
-            self.api.ai_paper_approval(
-                self.pool, self.workspace, {"conversation_id": "conv-001"},
-                {"turn_id": "turn-001", "expected_revision": 1, "decision": []},
-            )
-        self.assertEqual(caught.exception.status, 400)
 
 
 if __name__ == "__main__":

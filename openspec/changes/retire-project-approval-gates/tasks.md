@@ -8,7 +8,7 @@
 
 - [x] 2.1 修改 Bridge action/提示词，沿既有 Data Paper 更新直接执行，去除额外批准状态和派发阻断；无页面时也完成，目标历史/其他Paper保留。`_apply_paper_update_action` + `_notice_outcome` 回执 + `_prompt`/agent_contracts 措辞；提交点 revalidation 由 preview+update_saved 承担。
 - [x] 2.2 实现一次性 pending approval 迁移，校验真实workspace/turn/Paper及操作身份，已执行不重写，失效输入真实记录未完成。两次恢复证明最多写入一次。`_reconcile_legacy_paper_approvals` 挂 get()/start_turn()/interrupt_pending()；证据 `evidence/retire-project-approval-gates/2026-11-08-impl/2-1-2-2-direct-and-reconcile.md`。
-- [ ] 2.3 删除回滚/改卷/重做等审批卡、批准按钮和composer替换；删除审批暂停保留用户主动停止暂停。逐旧入口截图与可访问树确认 FLOW-01。
+- [x] 2.3 删除回滚/改卷/重做等审批卡、批准按钮和composer替换；删除审批暂停保留用户主动停止暂停。逐旧入口截图与可访问树确认 FLOW-01。证据 `evidence/retire-project-approval-gates/2026-11-08-impl/2-3-ui-retirement.md`（浏览器：审批元素不在 DOM、proposal 直执行、legacy pending 重开自动迁移最多一次、重做零弹窗直开；node：DOM 契约全改写）。
 - [ ] 2.4 准备、备份和副本验证通过后的部署直接切换；验证 installed CLI、source_root、进程身份及资源版本，不等待另一批准。
 
 ## 3. 契约与实际验收
