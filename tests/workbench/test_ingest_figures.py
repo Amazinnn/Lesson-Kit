@@ -81,6 +81,46 @@ class FigurePatchTests(unittest.TestCase):
         self.assertFalse(
             (self.fixture.ws / ".lessonkit" / "figures" / "dmath" / "ch06").exists())
 
+    def test_a_refused_figure_unit_keeps_the_other_problem(self):
+        import hashlib
+        source2 = Path(self.fixture.tmp.name) / "second.png"
+        source2.write_bytes(b"second-bytes")
+        name2 = hashlib.sha256(b"second-bytes").hexdigest() + ".png"
+        logical2 = f"dmath/ch06/{name2}"
+        conn = sqlite3.connect(self.db)
+        conn.execute(
+            "INSERT INTO problems"
+            " (problem_id, kp_ids, problem_text, solution, problem_type, source_kind)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            ("dmath-ch06-prob-002", '["dmath-ch06-kp-001"]', "P2", "S2",
+             "calculation", "textbook"))
+        conn.commit()
+        conn.close()
+        before = self.row()
+        before2 = self.row("dmath-ch06-prob-002")
+        manifest = self.manifest()
+        manifest["items"][0]["text"] = chr(10).join(
+            ["看图作答。", f"![]({self.logical})"])
+        manifest["items"].append({
+            "owner_type": "problem", "owner_id": "dmath-ch06-prob-002",
+            "figure_files": [{"source_path": str(Path(self.fixture.tmp.name) / "absent.png")}],
+
+            "text": chr(10).join(["看图作答。", f"![]({logical2})"]),
+        })
+        path = Path(self.fixture.tmp.name) / "unit.json"
+        path.write_text(json.dumps(manifest), encoding="utf-8")
+
+        applied = self.apply(self.db, path)
+
+        self.assertFalse(applied["ok"])
+        self.assertTrue(applied["partial"])
+        self.assertEqual(applied["counts"]["problems"], 1)
+        self.assertIn("missing source file", chr(10).join(applied["errors"]))
+        # The kept unit lands: text and figure reference are both written.
+        self.assertEqual(self.row()[0], chr(10).join(["看图作答。", f"![]({self.logical})"]))
+        self.assertIn(self.logical, self.row()[1])
+        self.assertEqual(self.row("dmath-ch06-prob-002"), before2)  # refused unit untouched
+
     def test_a_foreign_course_or_escaping_chapter_is_refused(self):
         outside = Path(self.fixture.tmp.name) / "escaped"
         for course, chapter in (("c01", "ch06"), ("dmath", "../../escaped")):

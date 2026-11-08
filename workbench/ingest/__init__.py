@@ -385,7 +385,9 @@ def _gate_micro_quiz(conn, manifest, course=""):
     existing_ids = {row[0] for row in conn.execute("SELECT problem_id FROM problems")}
     seen_ids = set()
     identity_candidates = []
+    accepted = []
     for item in items:
+        refused_before = len(errors)
         problem_id = item.get("problem_id") if isinstance(item, dict) else None
         if not isinstance(problem_id, str) or not MICRO_QUIZ_ID.match(problem_id):
             errors.append(f"{problem_id}: id must look like <course>-<chapter>-mq-NNN")
@@ -428,9 +430,16 @@ def _gate_micro_quiz(conn, manifest, course=""):
                 f"{problem_id}: this pool has no exam_year column yet — run: "
                 "python pool/scripts/migrate-progress.py --db pool/<course>.db"
             )
-    identity_errors, _refused = _problem_identity_errors(conn, identity_candidates)
+        if len(errors) > refused_before:
+            continue
+        accepted.append(item)
+    identity_errors, refused = _problem_identity_errors(conn, identity_candidates)
     errors.extend(identity_errors)
-    return {"ok": not errors, "errors": errors, "accounting": _accounting(conn)}
+    # Plans carry only accepted units; `ok` still means "the whole patch is valid".
+    items = [item for item in items
+             if item.get("problem_id") not in refused and item in accepted]
+    return {"ok": not errors, "errors": errors, "items": items,
+            "accounting": _accounting(conn)}
 
 
 def _micro_quiz_row(item):
@@ -554,64 +563,76 @@ def _course_prefix(course, errors):
 
 
 def _apply_patch(database, manifest, backup, kind, course=None):
+    """Apply every accepted patch unit; a refused unit writes nothing."""
     if backup.exists():
         raise FileExistsError(f"recoverable copy already exists: {backup}")
     course = course or database.stem          # the pool file name is the course id
     conn = sqlite3.connect(database)
+    errors = []
     try:
         conn.execute("BEGIN IMMEDIATE")
         verified = (
             _gate_micro_quiz(conn, manifest, course)
             if kind == MICRO_QUIZ_KIND else _gate_flash_cards(conn, manifest, course)
         )
-        if not verified["ok"]:
-            raise ValueError("\n".join(verified["errors"]))
+        errors = list(verified.get("errors") or [])
+        items = verified.get("items") or []
+        if not items:
+            raise ValueError("\n".join(errors) or f"{kind} has no valid item")
         batch_id = _allocate_batch_id(conn)
-        manifest_path = _write_manifest_snapshot(database, batch_id, manifest)
         _backup_database(database, backup)
-        if kind == MICRO_QUIZ_KIND:
-            fields = _problem_fields(conn)
-            for item in manifest["items"]:
-                row = _micro_quiz_row(item)
-                values = [
-                    row["problem_id"],
-                    json.dumps(row["kp_ids"], ensure_ascii=False),
-                    row["problem_text"],
-                    row["problem_type"],
-                    row["source_kind"],
-                    row["origin_kind"],
-                    row.get("display_title"),
-                    row.get("display_summary"),
-                    json.dumps(row["practice_modes"], ensure_ascii=False),
-                    json.dumps(row["micro_quiz"], ensure_ascii=False),
-                ]
-                if _has_exam_year(conn):
-                    values.append(row.get("exam_year"))
-                values.append(batch_id)
-                conn.execute(
-                    f"INSERT INTO problems ({', '.join(fields)}, solution)"
-                    f" VALUES ({', '.join('?' for _ in values)}, NULL)",
-                    values,
-                )
-            counts = {"problems": len(manifest["items"])}
-        else:
-            for item in manifest["items"]:
-                row = _flash_card_row(item)
-                conn.execute(
-                    "INSERT INTO flash_cards (card_id, kp_id, front, back, source_evidence,"
-                    " topic_label, directions, ingest_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (row["card_id"], row["kp_id"], row["front"], row["back"],
-                     row["source_evidence"], row.get("topic_label"),
-                     json.dumps(row["directions"]), batch_id),
-                )
-            counts = {"flash_cards": len(manifest["items"])}
-        snapshot = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+        id_column = "problem_id" if kind == MICRO_QUIZ_KIND else "card_id"
+        applied = []
+        for item in items:
+            try:
+                with _unit(conn):
+                    if kind == MICRO_QUIZ_KIND:
+                        row = _micro_quiz_row(item)
+                        fields = _problem_fields(conn)
+                        values = [
+                            row["problem_id"],
+                            json.dumps(row["kp_ids"], ensure_ascii=False),
+                            row["problem_text"],
+                            row["problem_type"],
+                            row["source_kind"],
+                            row["origin_kind"],
+                            row.get("display_title"),
+                            row.get("display_summary"),
+                            json.dumps(row["practice_modes"], ensure_ascii=False),
+                            json.dumps(row["micro_quiz"], ensure_ascii=False),
+                        ]
+                        if _has_exam_year(conn):
+                            values.append(row.get("exam_year"))
+                        values.append(batch_id)
+                        conn.execute(
+                            f"INSERT INTO problems ({', '.join(fields)}, solution)"
+                            f" VALUES ({', '.join('?' for _ in values)}, NULL)",
+                            values,
+                        )
+                    else:
+                        row = _flash_card_row(item)
+                        conn.execute(
+                            "INSERT INTO flash_cards (card_id, kp_id, front, back,"
+                            " source_evidence, topic_label, directions, ingest_batch_id)"
+                            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                            (row["card_id"], row["kp_id"], row["front"], row["back"],
+                             row["source_evidence"], row.get("topic_label"),
+                             json.dumps(row["directions"]), batch_id),
+                        )
+            except Exception as exc:
+                errors.append(f"{item.get(id_column)}: {exc}")
+                continue
+            applied.append(item)
+        if not applied:
+            raise ValueError("\n".join(errors) or f"{kind} has no valid item")
+        counts = ({"problems": len(applied)} if kind == MICRO_QUIZ_KIND
+                  else {"flash_cards": len(applied)})
+        snapshot = {**manifest, "items": applied}
+        manifest_path = _write_manifest_snapshot(database, batch_id, snapshot)
         table = "problems" if kind == MICRO_QUIZ_KIND else "flash_cards"
-        id_column = "problem_id" if table == "problems" else "card_id"
-        ids = [item[id_column] for item in manifest["items"]]
         _save_post_state(
             conn, database, manifest_path, snapshot,
-            {table: {"id_column": id_column, "ids": ids}},
+            {table: {"id_column": id_column, "ids": [item[id_column] for item in applied]}},
             batch_id=batch_id,
         )
         _record_batch(conn, batch_id, kind, manifest_path, counts, backup)
@@ -621,9 +642,10 @@ def _apply_patch(database, manifest, backup, kind, course=None):
         raise
     finally:
         conn.close()
-    return {"ok": True, "applied": True, "batch_id": batch_id, "kind": kind,
+    return {"ok": not errors, "applied": True, "batch_id": batch_id, "kind": kind,
             "counts": counts, "backup_path": str(backup),
-            "accounting": verified["accounting"]}
+            "accounting": verified["accounting"], "errors": errors,
+            "partial": bool(errors)}
 
 
 def apply_content_bundle(db_path, manifest, backup_path=None, course=None):
@@ -1578,12 +1600,15 @@ def _gate_figure_patch(conn, manifest, course=""):
     if not isinstance(chapter, str) or not CHAPTER_ID.fullmatch(chapter):
         errors.append("figure-patch requires a chapter identifier (lowercase ASCII)")
     items = manifest.get("items")
-    if not isinstance(items, list) or not items:
+    if errors or not isinstance(items, list) or not items:
+        # Course and chapter errors are manifest-wide: refuse everything.
         return {"ok": False,
-                "errors": errors + ["figure-patch requires a non-empty items list"]}
+                "errors": errors + ([] if isinstance(items, list) else
+                                    ["figure-patch requires a non-empty items list"])}
     plans = []
     for index, item in enumerate(items):
         label = f"item {index}"
+        refused_before = len(errors)
         if not isinstance(item, dict):
             errors.append(f"{label}: must be an object")
             continue
@@ -1625,12 +1650,11 @@ def _gate_figure_patch(conn, manifest, course=""):
                 continue
             landed.append({"name": name, "logical": logical,
                            "source": str(path), "content": content})
-        if landed or not files:
-            plans.append({"owner_id": owner_id, "previous": row,
-                          "files": landed})
-    if errors:
-        return {"ok": False, "errors": errors}
-    return {"ok": True, "errors": [], "plans": plans}
+        if len(errors) > refused_before:
+            continue
+        plans.append({"owner_id": owner_id, "previous": row,
+                      "files": landed})
+    return {"ok": not errors, "errors": errors, "plans": plans}
 
 
 def _gate_problem_patch(conn, manifest, course=""):
@@ -1690,9 +1714,9 @@ def _gate_problem_patch(conn, manifest, course=""):
             "clear_difficulty": plan["clear_difficulty"],
             "previous": _problem_previous(row, plan),
         })
-    if errors:
-        return {"ok": False, "errors": errors}
-    return {"ok": True, "errors": [], "plans": plans, "accounting": _accounting(conn)}
+    # Plans carry only accepted units; `ok` still means "the whole patch is valid".
+    return {"ok": not errors, "errors": errors, "plans": plans,
+            "accounting": _accounting(conn)}
 
 
 def _problem_previous(row, plan):
@@ -1708,58 +1732,72 @@ def _problem_previous(row, plan):
 
 
 def _apply_problem_patch(database, manifest, backup, course=None):
-    """Apply one problem patch in a single transaction, keeping the previous values."""
+    """Apply every accepted patch unit; a refused unit writes nothing."""
     if backup.exists():
         raise FileExistsError(f"recoverable copy already exists: {backup}")
     course = course or database.stem          # the pool file name is the course id
     conn = sqlite3.connect(database)
     conn.row_factory = sqlite3.Row
+    errors = []
     try:
         conn.execute("BEGIN IMMEDIATE")
         verified = _gate_problem_patch(conn, manifest, course)
-        if not verified["ok"]:
-            raise ValueError("\n".join(verified["errors"]))
+        errors = list(verified.get("errors") or [])
+        plans = verified.get("plans") or []
+        if not plans:
+            raise ValueError("\n".join(errors) or "problem-patch has no valid item")
         batch_id = _allocate_batch_id(conn)
+        _backup_database(database, backup)
+        applied = []
+        cleared = 0
+        for plan in plans:
+            assignments = [f"{field}=?" for field in plan["fields"]]
+            values = [content_data._db_value(field, value)
+                      for field, value in plan["fields"].items()]
+            if plan["clear_difficulty"]:
+                assignments.extend(f"{field}=NULL"
+                                   for field in content_data.DIFFICULTY_COLUMNS)
+            assignments.append("updated_at=datetime('now')")
+            loses_difficulty = (plan["clear_difficulty"]
+                                and plan["previous"].get("difficulty") is not None)
+            try:
+                with _unit(conn):
+                    cursor = paper_progress.update_question(conn,
+                        f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
+                        (*values, plan["problem_id"]),
+                    )
+                    if cursor.rowcount != 1:
+                        raise ValueError(f"missing formal problem: {plan['problem_id']}")
+            except Exception as exc:
+                errors.append(f"{plan['problem_id']}: {exc}")
+                continue
+            applied.append(plan)
+            if loses_difficulty:
+                cleared += 1
+        if not applied:
+            raise ValueError("\n".join(errors) or "problem-patch has no valid item")
         snapshot = {
             "kind": PROBLEM_PATCH_KIND,
             "items": manifest["items"],
             "previous": [
                 {"problem_id": plan["problem_id"], "fields": plan["previous"]}
-                for plan in verified["plans"]
+                for plan in applied
+            ],
+            "post": [
+                {"problem_id": plan["problem_id"],
+                 "fields": {
+                     field: content_data._db_value(field, value)
+                     for field, value in plan["fields"].items()
+                 } | (
+                     {field: None for field in content_data.DIFFICULTY_COLUMNS}
+                     if plan["clear_difficulty"] else {}
+                 ),
+                 } for plan in applied
             ],
         }
         manifest_path = _write_manifest_snapshot(database, batch_id, snapshot)
-        _backup_database(database, backup)
-        cleared = 0
-        for plan in verified["plans"]:
-            assignments = [f"{field}=?" for field in plan["fields"]]
-            values = [content_data._db_value(field, value)
-                      for field, value in plan["fields"].items()]
-            if plan["clear_difficulty"]:
-                assignments.extend(f"{field}=NULL" for field in content_data.DIFFICULTY_COLUMNS)
-                if plan["previous"].get("difficulty") is not None:
-                    cleared += 1
-            assignments.append("updated_at=datetime('now')")
-            cursor = paper_progress.update_question(conn,
-                f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
-                (*values, plan["problem_id"]),
-            )
-            if cursor.rowcount != 1:
-                raise ValueError(f"missing formal problem: {plan['problem_id']}")
-        snapshot["post"] = []
-        for plan in verified["plans"]:
-            fields = {
-                field: content_data._db_value(field, value)
-                for field, value in plan["fields"].items()
-            }
-            if plan["clear_difficulty"]:
-                fields.update({field: None for field in content_data.DIFFICULTY_COLUMNS})
-            snapshot["post"].append({
-                "problem_id": plan["problem_id"], "fields": fields,
-            })
         _save_post_state(conn, database, manifest_path, snapshot, {})
-        counts = {"problems": len(verified["plans"]),
-                  "difficulty_cleared": cleared}
+        counts = {"problems": len(applied), "difficulty_cleared": cleared}
         _record_batch(conn, batch_id, PROBLEM_PATCH_KIND, manifest_path, counts, backup)
         conn.commit()
     except Exception:
@@ -1767,9 +1805,10 @@ def _apply_problem_patch(database, manifest, backup, course=None):
         raise
     finally:
         conn.close()
-    return {"ok": True, "applied": True, "batch_id": batch_id,
+    return {"ok": not errors, "applied": True, "batch_id": batch_id,
             "kind": PROBLEM_PATCH_KIND, "counts": counts,
-            "backup_path": str(backup), "accounting": verified["accounting"]}
+            "backup_path": str(backup), "accounting": verified["accounting"],
+            "errors": errors, "partial": bool(errors)}
 
 
 def _figures_root(database, course, chapter):
@@ -1800,78 +1839,101 @@ def apply_figure_patch(db_path, manifest_path, backup_path=None, course=None):
 
 
 def _apply_figure_patch(database, manifest, backup_path=None, course=None):
+    """Apply every accepted figure unit; a refused unit writes nothing."""
     backup = (Path(backup_path) if backup_path
               else database.with_name(database.name + ".ingest-backup"))
     if backup.exists():
         raise FileExistsError(f"recoverable copy already exists: {backup}")
     course = course or database.stem          # the pool file name is the course id
     conn = sqlite3.connect(database)
+    errors = []
+    unit_files = []
     try:
         conn.execute("BEGIN IMMEDIATE")
         verified = _gate_figure_patch(conn, manifest, course)
-        if not verified["ok"]:
-            raise ValueError("\n".join(verified["errors"]))
+        errors = list(verified.get("errors") or [])
+        plans = verified.get("plans") or []
+        if not plans:
+            raise ValueError("\n".join(errors) or "figure-patch has no valid item")
         batch_id = _allocate_batch_id(conn)
+        _backup_database(database, backup)
+        figures_root = _figures_root(database, manifest["course"], manifest["chapter"])
+        figures_root.mkdir(parents=True, exist_ok=True)
+        applied = []
+        counts = {"problems": 0, "figures": 0}
+        applied_logicals = []
+        for plan in plans:
+            item = next(i for i in manifest["items"] if i.get("owner_id") == plan["owner_id"])
+            copied = []
+            try:
+                with _unit(conn):
+                    for entry in plan["files"]:
+                        dest = figures_root / entry["name"]
+                        if dest.exists() and dest.read_bytes() != entry["content"]:
+                            raise ValueError(
+                                f"{plan['owner_id']}: destination conflict for {entry['name']}")
+                        if not dest.exists():
+                            shutil.copyfile(entry["source"], dest)
+                            copied.append(dest)
+                    paths = _merge_figure_paths(
+                        plan["previous"][1],
+                        [entry["logical"] for entry in plan["files"]])
+                    paper_progress.update_question(conn,
+                        "UPDATE problems SET problem_text=?, figure_paths=? WHERE problem_id=?",
+                        (item["text"], json.dumps(paths, ensure_ascii=False),
+                         plan["owner_id"]),
+                    )
+            except Exception as exc:
+                for path in copied:
+                    path.unlink(missing_ok=True)
+                errors.append(f"{plan['owner_id']}: {exc}")
+                continue
+            unit_files.extend(copied)
+            applied.append((plan, item))
+            counts["problems"] += 1
+            counts["figures"] += len(plan["files"])
+            applied_logicals.extend(entry["logical"] for entry in plan["files"])
+        if not applied:
+            raise ValueError("\n".join(errors) or "figure-patch has no valid item")
         snapshot = dict(manifest)
         snapshot["previous"] = [
             {"owner_id": plan["owner_id"],
              "text": plan["previous"][0],
              "figure_paths": plan["previous"][1]}
-            for plan in verified["plans"]
+            for plan, _item in applied
+        ]
+        snapshot["post"] = [
+            {"owner_id": plan["owner_id"],
+             "fields": {
+                 "problem_text": item["text"],
+                 "figure_paths": json.dumps(
+                     _merge_figure_paths(
+                         plan["previous"][1],
+                         [entry["logical"] for entry in plan["files"]],
+                     ), ensure_ascii=False,
+                 ),
+             },
+             } for plan, item in applied
         ]
         manifest_path = _write_manifest_snapshot(database, batch_id, snapshot)
-        _backup_database(database, backup)
-        figures_root = _figures_root(database, manifest["course"], manifest["chapter"])
-        figures_root.mkdir(parents=True, exist_ok=True)
-        for plan in verified["plans"]:
-            for entry in plan["files"]:
-                dest = figures_root / entry["name"]
-                if dest.exists() and dest.read_bytes() != entry["content"]:
-                    raise ValueError(
-                        f"{plan['owner_id']}: destination conflict for {entry['name']}")
-                if not dest.exists():
-                    shutil.copyfile(entry["source"], dest)
-        counts = {"problems": 0, "figures": 0}
-        for plan in verified["plans"]:
-            item = next(i for i in manifest["items"] if i.get("owner_id") == plan["owner_id"])
-            paths = _merge_figure_paths(
-                plan["previous"][1], [entry["logical"] for entry in plan["files"]])
-            paper_progress.update_question(conn,
-                "UPDATE problems SET problem_text=?, figure_paths=? WHERE problem_id=?",
-                (item["text"], json.dumps(paths, ensure_ascii=False), plan["owner_id"]),
-            )
-            counts["problems"] += 1
-            counts["figures"] += len(plan["files"])
-        snapshot["post"] = []
-        for plan in verified["plans"]:
-            item = next(i for i in manifest["items"] if i.get("owner_id") == plan["owner_id"])
-            snapshot["post"].append({
-                "owner_id": plan["owner_id"],
-                "fields": {
-                    "problem_text": item["text"],
-                    "figure_paths": json.dumps(
-                        _merge_figure_paths(
-                            plan["previous"][1],
-                            [entry["logical"] for entry in plan["files"]],
-                        ), ensure_ascii=False,
-                    ),
-                },
-            })
         _save_post_state(
             conn, database, manifest_path, snapshot, {},
-            figures=[entry["logical"] for plan in verified["plans"]
-                     for entry in plan["files"]],
+            figures=applied_logicals,
         )
         _record_batch(conn, batch_id, FIGURE_PATCH_KIND, manifest_path, counts, backup)
         accounting = _accounting(conn)
         conn.commit()
     except Exception:
         conn.rollback()
+        for path in unit_files:
+            path.unlink(missing_ok=True)
         raise
     finally:
         conn.close()
-    return {"ok": True, "applied": True, "batch_id": batch_id, "kind": FIGURE_PATCH_KIND,
-            "counts": counts, "backup_path": str(backup), "accounting": accounting}
+    return {"ok": not errors, "applied": True, "batch_id": batch_id,
+            "kind": FIGURE_PATCH_KIND, "counts": counts,
+            "backup_path": str(backup), "accounting": accounting,
+            "errors": errors, "partial": bool(errors)}
 
 
 def build_legacy_figure_manifest(db_path, workspace_path):
@@ -1984,7 +2046,9 @@ def _gate_flash_cards(conn, manifest, course=""):
         if cards_table else set()
     )
     seen_ids = set()
+    accepted = []
     for item in items:
+        refused_before = len(errors)
         card_id = item.get("card_id") if isinstance(item, dict) else None
         if not card_rules.is_valid_card_id(card_id):
             errors.append(f"{card_id}: id must look like <scope>-fc-NNN")
@@ -2015,7 +2079,12 @@ def _gate_flash_cards(conn, manifest, course=""):
         errors.extend(
             f"{card_id}: {reason}" for reason in card_rules.validate_card_row(row)
         )
-    return {"ok": not errors, "errors": errors, "accounting": _accounting(conn)}
+        if len(errors) > refused_before:
+            continue
+        accepted.append(item)
+    # Plans carry only accepted units; `ok` still means "the whole patch is valid".
+    return {"ok": not errors, "errors": errors, "items": accepted,
+            "accounting": _accounting(conn)}
 
 
 def _flash_card_row(item):

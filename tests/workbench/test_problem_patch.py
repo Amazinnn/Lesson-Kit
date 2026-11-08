@@ -137,19 +137,37 @@ class ProblemPatchTests(unittest.TestCase):
 
     # -- gate -------------------------------------------------------------
 
-    def test_the_whole_batch_writes_nothing_when_one_item_is_bad(self):
+    def test_a_rejected_patch_unit_keeps_its_neighbour(self):
+        self.seed()
+
+        applied = self.apply([
+            patch_item("dmath-ch06-prob-002", display_title="好标题"),
+            patch_item("dmath-ch06-prob-002", display_title="改两次同字段",
+                       solution="另一个解析"),
+            patch_item("dmath-ch06-prob-009", display_title="没有这题"),
+        ])
+
+        self.assertFalse(applied["ok"])
+        self.assertTrue(applied["partial"])
+        self.assertEqual(applied["counts"]["problems"], 1)
+        self.assertIn("unknown problem", chr(10).join(applied["errors"]))
+        self.assertIn("listed twice", chr(10).join(applied["errors"]))
+
+    def test_an_unknown_problem_refuses_only_its_unit(self):
         self.seed()
         before = self.row("dmath-ch06-prob-002")
 
-        with self.assertRaises(ValueError) as caught:
-            self.apply([
-                patch_item("dmath-ch06-prob-002", display_title="好标题"),
-                patch_item("dmath-ch06-prob-003", display_title="没有这题"),
-            ])
+        applied = self.apply([
+            patch_item("dmath-ch06-prob-002", display_title="好标题"),
+            patch_item("dmath-ch06-prob-003", display_title="没有这题"),
+        ])
 
-        self.assertIn("unknown problem", str(caught.exception))
-        self.assertEqual(self.row("dmath-ch06-prob-002"), before)
-        self.assertEqual(self.query("SELECT batch_id FROM ingest_batches"), [])
+        self.assertFalse(applied["ok"])
+        self.assertTrue(applied["partial"])
+        self.assertIn("unknown problem", chr(10).join(applied["errors"]))
+        self.assertNotEqual(self.row("dmath-ch06-prob-002"), before)
+        self.assertEqual(applied["counts"]["problems"], 1)
+        self.assertEqual(len(self.query("SELECT batch_id FROM ingest_batches")), 1)
 
     def test_the_gate_names_every_reason(self):
         self.seed()
