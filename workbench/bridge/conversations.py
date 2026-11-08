@@ -174,6 +174,7 @@ def get(pool, conversation_id):
     record = _recover_interrupted(
         pool, _read_json(_conversation_file(pool, conversation_id))
     )
+    record = _reconcile_legacy_paper_approvals(pool, record)
     record.setdefault("title", "")
     record.setdefault("title_source", "unset")
     transcript_by_turn = {}
@@ -479,6 +480,74 @@ def _approval_pause_for_retained(folder, conversation):
     return True
 
 
+def _reconcile_legacy_paper_approvals(pool, record):
+    """Consume persisted legacy pending approvals once (Q098/S008).
+
+    A still-valid unapplied action executes with its original identity: the
+    stored confirmation is revalidated against the live Paper at the true
+    commit point, so the same action can never write twice — a replay after a
+    lost status flip hits a changed confirmation and reports stale instead.
+    A target that no longer exists or no longer matches the recorded input is
+    reported truthfully as incomplete and never rewritten onto another Paper.
+    """
+    conversation_id = record["conversation_id"]
+    folder = _conversation_dir(pool, conversation_id)
+    consumed = False
+    for path in sorted(folder.glob("turn-*.json"),
+                       key=lambda p: _turn_id_number({"turn_id": p.stem})):
+        try:
+            turn = _read_json(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        approval = turn.get("paper_approval")
+        if not isinstance(approval, dict) or approval.get("status") != "pending":
+            continue
+        proposal = approval.get("proposal") or {}
+        practice_set_id = proposal.get("practice_set_id")
+        problem_ids = proposal.get("problem_ids")
+        try:
+            _, confirmation = _paper_update_preview(
+                pool, conversation_id, turn.get("turn_id") or path.stem,
+                approval.get("workspace_name"),
+                int(approval.get("revision") or 1),
+                practice_set_id, problem_ids,
+            )
+        except Exception as exc:
+            approval["status"] = "invalid"
+            approval["error"] = conversation_providers._pi_safe_text(
+                str(exc), conversation_providers._PI_SUMMARY_LIMIT,
+            )
+        else:
+            if confirmation != approval.get("confirmation"):
+                approval["status"] = "invalid"
+                approval["error"] = "记录的预览已过期：试卷当前内容不再对应原提议，未执行写入。"
+            else:
+                try:
+                    practice_sets.update_saved(
+                        pool, practice_set_id, problem_ids=list(problem_ids),
+                        confirmation=confirmation,
+                    )
+                    approval["status"] = "applied"
+                    approval["resolved_at"] = _now()
+                except Exception as exc:
+                    approval["status"] = "invalid"
+                    approval["error"] = conversation_providers._pi_safe_text(
+                        str(exc), conversation_providers._PI_SUMMARY_LIMIT,
+                    )
+        turn["paper_approval"] = approval
+        turn["updated_at"] = _now()
+        _write_json(path, turn)
+        consumed = True
+    if not consumed:
+        return record
+    with _LOCK:
+        current = _read_json(_conversation_file(pool, conversation_id))
+        current["queue_paused"] = _approval_pause_for_retained(folder, current)
+        current["updated_at"] = _now()
+        _write_json(_conversation_file(pool, conversation_id), current)
+        return current
+
+
 def find_submission(pool, conversation_id, message, submission_id, submitted_fields):
     """Return an accepted turn for an idempotent retry, or raise on changed input."""
     if submission_id is None:
@@ -765,7 +834,8 @@ def _prompt(message, context):
         "改/删评价前必须先 feedback get，再用 --expected-rating/--expected-note 写入；"
         "改分只改评价行，不会自动重放掌握度。"
         "普通教学问答无需读取无关契约。若学生明确要求调整现有已保存试卷的题目成员或顺序，"
-        "读取 actions 并提交 paper_update_proposal 请求人工批准；不得直接运行 papers update 或修改试卷文件。\n"
+        "读取 actions 并提交 paper_update_proposal，服务端校验输入后直接应用，无需学生批准；"
+        "不得直接运行 papers update 或修改试卷文件。\n"
         "若学生明确要求选择或安排练习范围，可在回答末尾附一个 lessonkit-action JSON 区块；"
         "普通问答不要附带动作。格式为 ```lessonkit-action {\"type\":\"replace_practice_selection\","
         "\"kp_ids\":[\"知识点ID\"]} ```。"
@@ -875,6 +945,14 @@ def _notice_outcome(action):
             f"上一轮回复附带了 lessonkit-action 区块，但未被接受（{action['ignored']}），"
             "未写入任何内容。不要向学生声称已写入；只有收到批次确认才算成功。"
         )
+    result = action.get("result")
+    if action.get("type") == "paper_update_proposal" and isinstance(result, dict):
+        return (
+            "上一轮试卷更新已直接应用："
+            + str(result.get("title") or result.get("practice_set_id"))
+            + f"（{result.get('practice_set_id')}）。不要重复提交相同更新；"
+            "可以如实向学生报告更新已完成。"
+        )
     error = action.get("error")
     if not isinstance(error, str):
         return None
@@ -897,7 +975,8 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
         if _RUNTIME_CLOSED:
             raise ConversationConflict("runtime update pending; retry shortly")
         _recover_interrupted(pool, _read_json(conversation_path))
-        conversation = _read_json(conversation_path)
+        conversation = _reconcile_legacy_paper_approvals(
+            pool, _read_json(conversation_path))
         approval_pending = _pending_paper_approval(folder) is not None
         fields = submitted_fields if isinstance(submitted_fields, dict) else {}
         if queue_action not in {"queue", "interrupt"}:
@@ -1233,7 +1312,8 @@ def interrupt_pending(pool, workspace, conversation_id, turn_id, *, expected_rev
     _recover_interrupted(pool, _read_json(conversation_path))
     with _LOCK:
         _recover_interrupted(pool, _read_json(conversation_path))
-        conversation = _read_json(conversation_path)
+        conversation = _reconcile_legacy_paper_approvals(
+            pool, _read_json(conversation_path))
         turn_path = _turn_file_from_folder(folder, turn_id)
         if not turn_path.is_file():
             raise ConversationConflict("pending message is no longer available")
@@ -1747,21 +1827,15 @@ def _invalid_paper_approval(conversation_id, turn_id, workspace_name,
     }
 
 
-def _prepare_paper_approval(action, root, workspace, conversation_id, turn_id):
-    workspace_name = workspace.get("name")
-    revision = 1
-    proposal = None
-    if "error" not in action:
-        proposal = {
-            "practice_set_id": action["practice_set_id"],
-            "problem_ids": list(action["problem_ids"]),
-        }
-    if proposal is None:
-        return _invalid_paper_approval(
-            conversation_id, turn_id, workspace_name, proposal, revision,
-            action.get("error") or "invalid Paper update proposal",
-        )
+def _apply_paper_update_action(action, root, workspace, conversation_id, turn_id):
+    """Apply one requested Paper update directly (Q098/S008: no approval gate).
 
+    The Data preview validates the actual inputs and produces the current
+    confirmation; ``update_saved`` revalidates it at the true commit point, so
+    a Paper that changed in between fails truthfully instead of writing.
+    """
+    if "error" in action:
+        return action
     pool = None
     try:
         pool = Pool(
@@ -1770,27 +1844,29 @@ def _prepare_paper_approval(action, root, workspace, conversation_id, turn_id):
             course=workspace.get("active_course", ""),
             chapter=workspace.get("active_chapter", ""),
         )
-        projection, confirmation = _paper_update_preview(
-            pool, conversation_id, turn_id, workspace_name, revision,
-            proposal["practice_set_id"], proposal["problem_ids"],
+        practice_set_id = action["practice_set_id"]
+        problem_ids = list(action["problem_ids"])
+        _, confirmation = _paper_update_preview(
+            pool, conversation_id, turn_id, workspace.get("name"), 1,
+            practice_set_id, problem_ids,
         )
-        return {
-            "conversation_id": conversation_id,
-            "turn_id": turn_id,
-            "workspace_name": workspace_name,
-            "status": "pending",
-            "revision": revision,
-            "proposal": proposal,
-            "confirmation": confirmation,
-            "projection": projection,
+        record = practice_sets.update_saved(
+            pool, practice_set_id, problem_ids=problem_ids,
+            confirmation=confirmation,
+        )
+        action["result"] = {
+            "practice_set_id": practice_set_id,
+            "title": str(record.get("title") or practice_set_id),
+            "applied_problem_ids": list(problem_ids),
         }
     except Exception as exc:
-        return _invalid_paper_approval(
-            conversation_id, turn_id, workspace_name, proposal, revision, exc,
+        action["error"] = conversation_providers._pi_safe_text(
+            str(exc), conversation_providers._PI_SUMMARY_LIMIT,
         )
     finally:
         if pool is not None:
             pool.close()
+    return action
 
 
 def _sync_paper_approval_action(turn, approval):
@@ -1957,12 +2033,10 @@ def _store_answer(folder, conversation_path, turn_path, event_path, root, worksp
     answer, content_actions, notice = _extract_action(answer, context, folder)
     if notice is not None and notice.get("type") == "paper_artifact":
         notice = _verified_paper_artifact(notice, root, workspace, event_path)
-    paper_approval = None
     if notice is not None and notice.get("type") == "paper_update_proposal":
-        paper_approval = _prepare_paper_approval(
+        notice = _apply_paper_update_action(
             notice, root, workspace, conversation_id, turn_id,
         )
-        notice["paper_approval"] = _paper_approval_projection(paper_approval)
     if not pi_messages:
         _append_event(
             event_path, "activity", activity_id="answer",
@@ -1984,8 +2058,6 @@ def _store_answer(folder, conversation_path, turn_path, event_path, root, worksp
         turn["action"] = notice
     elif len(content_actions) == 1:
         turn["action"] = content_actions[0]
-    if paper_approval is not None:
-        turn["paper_approval"] = paper_approval
     _write_json(turn_path, turn)
     exchange = {
         "turn_id": turn_id,

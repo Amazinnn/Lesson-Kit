@@ -1,8 +1,17 @@
-"""Human approval for Agent proposed saved Paper updates."""
+"""Direct saved-Paper updates from Agent proposals (Q098/S008).
+
+The former approval gate is retired: a valid `paper_update_proposal` applies
+at the Data commit point (preview + update_saved revalidation), reports an
+invalid target truthfully without writes, and never creates an approval
+state or an approval-driven dispatch pause. Legacy pending approvals that
+still exist on disk reconcile once through the conversation-open path
+(covered in test_direct_paper_actions.py).
+"""
 
 import json
 import threading
 import unittest
+import urllib.error
 import urllib.request
 from pathlib import Path
 from unittest import mock
@@ -10,7 +19,7 @@ from unittest import mock
 from tests.workbench.fixtures import REPO_ROOT, WorkspaceFixture
 
 
-class PaperApprovalTests(unittest.TestCase):
+class DirectPaperUpdateTests(unittest.TestCase):
     def setUp(self):
         self.fixture = WorkspaceFixture()
         import sys
@@ -24,6 +33,7 @@ class PaperApprovalTests(unittest.TestCase):
         self.active_practice = active_practice
         self.attempts = attempts
         self.practice_sets = practice_sets
+        self.api = api
         self.workspace = {
             "name": "dmath",
             "path": str(self.fixture.ws),
@@ -59,6 +69,10 @@ class PaperApprovalTests(unittest.TestCase):
 
     def paper(self, ids, title="卷子"):
         return self.practice_sets.create_saved(self.pool, title, ids)
+
+    def saved_order(self, paper_id):
+        return [item["problem_id"] for item in self.practice_sets.get_saved(
+            self.pool, paper_id)["plan"]["items"]]
 
     def conversation(self, paper_id, *, queue_paused=False):
         folder = self.pool.jobs_dir() / "conv-001"
@@ -98,7 +112,14 @@ class PaperApprovalTests(unittest.TestCase):
             "请重排试卷", {}, answer,
         )
 
-    def test_proposal_action_is_discovered_and_never_directly_updates_paper(self):
+    def queue_turn(self, folder, turn_id, message="继续"):
+        (folder / f"{turn_id}.json").write_text(json.dumps({
+            "turn_id": turn_id, "status": "queued", "message": message,
+            "accepted_message": message, "context": {}, "queue_revision": 1,
+            "queue_action": "queue", "created_at": "now", "updated_at": "now",
+        }), encoding="utf-8")
+
+    def test_proposal_action_contract_states_direct_application(self):
         from workbench.bridge import agent_contracts
 
         action_contract = agent_contracts.get("actions")
@@ -106,9 +127,9 @@ class PaperApprovalTests(unittest.TestCase):
             "workspace": self.workspace,
         })
         self.assertIn('"type":"paper_update_proposal"', action_contract)
-        self.assertIn("Do not run a `papers update` command", action_contract)
+        self.assertIn("no separate approval click", action_contract)
         self.assertIn("paper_update_proposal", prompt)
-        self.assertIn("papers update", prompt)
+        self.assertIn("无需学生批准", prompt)
 
         answer = self.action("ps-001", ["dmath-ch06-prob-001"])
         _, actions, notice = self.conversations._extract_action(answer, {})
@@ -131,14 +152,7 @@ class PaperApprovalTests(unittest.TestCase):
         turn = json.loads((folder / "turn-001.json").read_text(encoding="utf-8"))
         self.assertEqual(turn["action"], notice)
 
-    def queue_turn(self, folder, turn_id, message="继续"):
-        (folder / f"{turn_id}.json").write_text(json.dumps({
-            "turn_id": turn_id, "status": "queued", "message": message,
-            "accepted_message": message, "context": {}, "queue_revision": 1,
-            "queue_action": "queue", "created_at": "now", "updated_at": "now",
-        }), encoding="utf-8")
-
-    def test_proposal_persists_exact_preview_and_pauses_before_queued_turn(self):
+    def test_proposal_applies_directly_and_preserves_unfinished_practice(self):
         paper = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
         self.active_practice.start_saved(self.pool, paper["practice_set_id"])
         self.active_practice.mark(self.pool, 0, "stuck")
@@ -152,78 +166,40 @@ class PaperApprovalTests(unittest.TestCase):
 
         self.propose(folder, answer)
 
-        conversation = json.loads((folder / "conversation.json").read_text(encoding="utf-8"))
-        proposing_turn = json.loads((folder / "turn-001.json").read_text(encoding="utf-8"))
-        queued_turn = json.loads((folder / "turn-002.json").read_text(encoding="utf-8"))
-        self.assertTrue(conversation["queue_paused"])
-        self.assertEqual(proposing_turn["status"], "done")
-        self.assertEqual(queued_turn["status"], "queued")
-        self.assertEqual(proposing_turn["action"]["type"], "paper_update_proposal")
-        approval = proposing_turn["paper_approval"]["projection"]
-        self.assertEqual(approval["status"], "pending")
-        self.assertEqual(approval["revision"], 1)
-        self.assertEqual(approval["current_problem_ids"], [
-            "dmath-ch06-prob-001", "dmath-ch06-prob-002",
-        ])
-        self.assertEqual(approval["proposed_problem_ids"], [
+        conversation = json.loads(
+            (folder / "conversation.json").read_text(encoding="utf-8"))
+        proposing_turn = json.loads(
+            (folder / "turn-001.json").read_text(encoding="utf-8"))
+        queued_turn = json.loads(
+            (folder / "turn-002.json").read_text(encoding="utf-8"))
+        self.assertEqual(self.saved_order(paper["practice_set_id"]), [
             "dmath-ch06-prob-002", "dmath-ch06-prob-001",
-        ])
-        self.assertTrue(approval["order_changed"])
-        # A reorder keeps the run, so it is no longer an impact that resets progress.
-        self.assertFalse(approval["resets_progress"])
-        self.assertEqual(approval["preserved_items"], 2)
-        self.assertEqual(approval["completed_items"], 1)
-        self.assertEqual(approval["draft_items"], 1)
-        self.assertNotIn("confirmation", approval)
-        self.assertIsNone(self.conversations._dispatch_next(
-            self.fixture.ws, self.pool.jobs_dir(), self.workspace, "conv-001"))
-
-    def test_pending_approval_queues_messages_blocks_continue_and_cancel_keeps_backlog_paused(self):
-        paper = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
-        folder, answer = self.conversation(paper["practice_set_id"])
-        self.propose(folder, answer)
-        self.queue_turn(folder, "turn-002", "B")
-
-        with self.assertRaises(self.conversations.ConversationConflict):
-            self.conversations.continue_queue(self.pool, self.workspace, "conv-001")
-        queued = self.conversations.start_turn(
-            self.pool, self.workspace, "conv-001", "C", {},
-            queue_action="queue")
-        self.assertEqual(queued["status"], "queued")
-        with self.assertRaises(self.conversations.ConversationConflict):
-            self.conversations.start_turn(
-                self.pool, self.workspace, "conv-001", "D", {},
-                queue_action="interrupt")
-        conversation = json.loads((folder / "conversation.json").read_text(encoding="utf-8"))
-        queued_message = json.loads((folder / f"{queued['turn_id']}.json").read_text(
-            encoding="utf-8"))
-        self.assertEqual(conversation["queue_order"], ["turn-002", queued["turn_id"]])
-        self.assertEqual(queued_message["message"], "C")
-        self.assertFalse((folder / "turn-004.json").exists())
-        self.assertEqual(
-            json.loads((folder / "turn-001.json").read_text(encoding="utf-8"))[
-                "paper_approval"]["projection"]["status"],
-            "pending",
-        )
-
-        result = self.conversations.resolve_paper_approval(
-            self.pool, self.workspace, "conv-001", "turn-001",
-            expected_revision=1, decision="cancel")
-
-        self.assertEqual(result["approval"]["status"], "cancelled")
-        self.assertTrue(result["queue_paused"])
-        self.assertEqual(
-            [item["problem_id"] for item in self.practice_sets.get_saved(
-                self.pool, paper["practice_set_id"])["plan"]["items"]],
-            ["dmath-ch06-prob-001", "dmath-ch06-prob-002"],
-        )
+        ], "the requested update applied without an approval click")
+        self.assertNotIn("paper_approval", proposing_turn,
+                         "no approval state is created")
+        self.assertNotEqual(conversation.get("queue_paused"), True,
+                            "no approval-driven dispatch pause")
+        self.assertEqual(proposing_turn["status"], "done")
+        self.assertEqual(proposing_turn["action"]["type"], "paper_update_proposal")
+        self.assertEqual(proposing_turn["action"]["result"]["applied_problem_ids"],
+                         ["dmath-ch06-prob-002", "dmath-ch06-prob-001"])
+        self.assertEqual(queued_turn["status"], "queued",
+                         "a queued message submitted before the update is retained")
         with mock.patch.object(self.conversations.threading, "Thread") as thread:
-            self.conversations.continue_queue(self.pool, self.workspace, "conv-001")
+            dispatched = self.conversations._dispatch_next(
+                self.fixture.ws, self.pool.jobs_dir(), self.workspace, "conv-001")
             thread.return_value.start.assert_called_once()
-        conversation = json.loads((folder / "conversation.json").read_text(encoding="utf-8"))
-        self.assertFalse(conversation["queue_paused"])
+        self.assertIsNotNone(dispatched,
+                             "the retained queue continues without an approval gate")
+        # A reorder keeps the run, its progress mark and the draft.
+        current = self.active_practice.current(self.pool)
+        self.assertEqual([item["item_id"] for item in current["items"]],
+                         ["dmath-ch06-prob-002", "dmath-ch06-prob-001"])
+        self.assertEqual(current["items"][1]["state"], "stuck",
+                         "the progress mark follows its item through the reorder")
+        self.assertEqual(current["items"][0]["draft"], {"answer": "draft"})
 
-    def test_stale_preview_refreshes_without_write_then_approval_is_idempotent(self):
+    def test_commit_point_revalidation_fails_without_write(self):
         from workbench.data import attempts
 
         first_id = "dmath-ch06-prob-001"
@@ -236,149 +212,82 @@ class PaperApprovalTests(unittest.TestCase):
         self.active_practice.mark(self.pool, 0, "stuck")
         run = self.active_practice.current(self.pool)
         self.active_practice.save_draft(
-            self.pool, run["execution_id"], 1, {"answer": "before approval"},
+            self.pool, run["execution_id"], 1, {"answer": "before update"},
             context=self.active_practice.submission_context(run, 1), sequence=1,
         )
         self.attempts.record_result(self.pool, first_id, "stuck", note="historical result")
         history_before = [tuple(row) for row in self.pool.connect().execute(
             "SELECT problem_id, status, note FROM problem_attempts ORDER BY id")]
         folder, answer = self.conversation(paper["practice_set_id"])
-        self.propose(folder, answer)
-        changed_draft = {"answer": "after proposal"}
+
+        real_update = self.conversations.practice_sets.update_saved
+
+        def conflicting_update(pool, practice_set_id, **fields):
+            # The Paper changed between the preview and the commit point.
+            raise ValueError(
+                "confirm the current Paper update preview before changing its items")
+
+        with mock.patch.object(self.conversations.practice_sets,
+                               "update_saved", conflicting_update):
+            self.propose(folder, answer)
+
+        proposing_turn = json.loads(
+            (folder / "turn-001.json").read_text(encoding="utf-8"))
+        self.assertEqual(self.saved_order(paper["practice_set_id"]),
+                         [first_id, second_id],
+                         "a stale confirmation writes nothing")
+        self.assertNotIn("paper_approval", proposing_turn)
+        self.assertIn("confirm the current Paper update preview",
+                      proposing_turn["action"]["error"])
         current = self.active_practice.current(self.pool)
-        self.active_practice.save_draft(
-            self.pool, current["execution_id"], 1, changed_draft,
-            context=self.active_practice.submission_context(current, 1), sequence=2,
-        )
+        self.assertEqual(current["items"][1]["draft"], {"answer": "before update"})
+        self.assertEqual([tuple(row) for row in self.pool.connect().execute(
+            "SELECT problem_id, status, note FROM problem_attempts ORDER BY id")],
+            history_before)
 
-        stale = self.conversations.resolve_paper_approval(
-            self.pool, self.workspace, "conv-001", "turn-001",
-            expected_revision=1, decision="approve")
+        self.propose(folder, answer)
 
-        self.assertTrue(stale["stale"])
-        self.assertEqual(stale["approval"]["status"], "pending")
-        self.assertEqual(stale["approval"]["revision"], 2)
-        self.assertEqual(stale["approval"]["draft_items"], 1)
-        self.assertEqual([item["problem_id"] for item in self.practice_sets.get_saved(
-            self.pool, paper["practice_set_id"])["plan"]["items"]], [first_id, second_id])
-        self.assertEqual(self.active_practice.current(self.pool)["items"][1]["draft"],
-                         changed_draft)
-
-        approved = self.conversations.resolve_paper_approval(
-            self.pool, self.workspace, "conv-001", "turn-001",
-            expected_revision=2, decision="approve")
-        saved = self.practice_sets.get_saved(self.pool, paper["practice_set_id"])
-        updated_at = saved["updated_at"]
-        duplicate = self.conversations.resolve_paper_approval(
-            self.pool, self.workspace, "conv-001", "turn-001",
-            expected_revision=2, decision="approve")
-
-        self.assertEqual(approved["approval"]["status"], "approved")
-        self.assertEqual(duplicate["approval"]["status"], "approved")
-        self.assertEqual(self.practice_sets.get_saved(
-            self.pool, paper["practice_set_id"])["updated_at"], updated_at)
-        # The approved reorder keeps the unfinished run and its draft.
+        self.assertEqual(self.saved_order(paper["practice_set_id"]),
+                         [second_id, first_id])
         current = self.active_practice.current(self.pool)
         self.assertEqual([item["item_id"] for item in current["items"]],
                          [second_id, first_id])
-        self.assertEqual(current["items"][0]["draft"], changed_draft)
+        self.assertEqual(current["items"][0]["draft"], {"answer": "before update"})
         self.assertEqual([tuple(row) for row in self.pool.connect().execute(
-            "SELECT problem_id, status, note FROM problem_attempts ORDER BY id")], history_before)
+            "SELECT problem_id, status, note FROM problem_attempts ORDER BY id")],
+            history_before)
         self.assertEqual(self.practice_sets.get_saved(
             self.pool, other["practice_set_id"])["progress"]["completed"], 1)
-        self.assertEqual(
-            [item["problem_id"] for item in saved["plan"]["items"]],
-            [second_id, first_id],
-        )
 
-    def test_reload_restores_pending_projection_and_pause_without_dispatch(self):
+    def test_direct_update_with_missing_paper_reports_without_write(self):
+        paper_id = "ps-999"
+        folder, answer = self.conversation(paper_id)
+        self.propose(folder, answer)
+        turn = json.loads((folder / "turn-001.json").read_text(encoding="utf-8"))
+        self.assertNotIn("paper_approval", turn)
+        self.assertIn("error", turn["action"])
+        record = self.conversations.get(self.pool, "conv-001")
+        self.assertIsNone(record.get("pending_paper_approval"))
+
+    def test_reload_shows_applied_result_without_pending_state(self):
         paper = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
         folder, answer = self.conversation(paper["practice_set_id"])
         self.queue_turn(folder, "turn-002", "B")
         self.queue_turn(folder, "turn-003", "C")
         self.propose(folder, answer)
-        record_path = folder / "conversation.json"
-        record = json.loads(record_path.read_text(encoding="utf-8"))
-        record["queue_paused"] = False
-        record_path.write_text(json.dumps(record), encoding="utf-8")
 
         restored = self.conversations.get(self.pool, "conv-001")
 
-        self.assertTrue(restored["queue_paused"])
-        self.assertEqual(restored["pending_paper_approval"]["status"], "pending")
-        self.assertEqual(restored["pending_paper_approval"]["turn_id"], "turn-001")
-        queued = json.loads((folder / "turn-002.json").read_text(encoding="utf-8"))
-        self.assertEqual(queued["status"], "queued")
-
-        approved = self.conversations.resolve_paper_approval(
-            self.pool, self.workspace, "conv-001", "turn-001",
-            expected_revision=1, decision="approve")
-        self.assertEqual(approved["approval"]["status"], "approved")
-        self.assertTrue(approved["queue_paused"])
-        with mock.patch.object(self.conversations.threading, "Thread") as thread:
-            continued = self.conversations.continue_queue(
-                self.pool, self.workspace, "conv-001")
-            thread.return_value.start.assert_called_once()
-        self.assertEqual(continued["turn"]["turn_id"], "turn-002")
-        self.assertEqual(json.loads((folder / "turn-003.json").read_text(
+        self.assertIsNone(restored["pending_paper_approval"])
+        self.assertNotEqual(restored["queue_paused"], True)
+        actions = [message.get("action") for message in restored["messages"]
+                   if message.get("role") == "assistant" and message.get("action")]
+        self.assertTrue(actions and actions[0].get("result"),
+                        "the applied update is visible through the conversation")
+        self.assertEqual(json.loads((folder / "turn-002.json").read_text(
             encoding="utf-8"))["status"], "queued")
 
-    def _resolve_finished_proposal(self, paper_ids, decision):
-        paper = self.paper(paper_ids)
-        folder, answer = self.conversation(paper["practice_set_id"])
-        self.propose(folder, answer)
-        record_path = folder / "conversation.json"
-        record = json.loads(record_path.read_text(encoding="utf-8"))
-        record.update({"status": "idle", "current_turn_id": None,
-                       "queue_paused": True})
-        record_path.write_text(json.dumps(record), encoding="utf-8")
-        result = self.conversations.resolve_paper_approval(
-            self.pool, self.workspace, "conv-001", "turn-001",
-            expected_revision=1, decision=decision)
-        return folder, record_path, result
-
-    def test_approval_resolution_with_empty_queue_lifts_pause_and_sends_directly(self):
-        folder, record_path, result = self._resolve_finished_proposal(
-            ["dmath-ch06-prob-001", "dmath-ch06-prob-002"], "approve")
-        conversation = json.loads(record_path.read_text(encoding="utf-8"))
-        self.assertFalse(conversation["queue_paused"])
-
-        with mock.patch.object(
-                self.conversations.threading, "Thread") as thread:
-            started = self.conversations.start_turn(
-                self.pool, self.workspace, "conv-001", "下一个问题", {},
-                queue_action="queue")
-            thread.return_value.start.assert_called_once()
-        self.assertEqual(started["status"], "running")
-
-    def test_cancel_with_empty_queue_lifts_pause(self):
-        folder, record_path, result = self._resolve_finished_proposal(
-            ["dmath-ch06-prob-001", "dmath-ch06-prob-002"], "cancel")
-        self.assertEqual(result["approval"]["status"], "cancelled")
-        conversation = json.loads(record_path.read_text(encoding="utf-8"))
-        self.assertFalse(conversation["queue_paused"])
-
-    def test_approval_resolution_with_retained_queue_keeps_it_paused(self):
-        paper = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
-        folder, answer = self.conversation(paper["practice_set_id"])
-        self.propose(folder, answer)
-        self.queue_turn(folder, "turn-002", "B")
-
-        approved = self.conversations.resolve_paper_approval(
-            self.pool, self.workspace, "conv-001", "turn-001",
-            expected_revision=1, decision="approve")
-
-        self.assertEqual(approved["approval"]["status"], "approved")
-        self.assertTrue(approved["queue_paused"])
-        queued = self.conversations.start_turn(
-            self.pool, self.workspace, "conv-001", "C", {},
-            queue_action="queue")
-        self.assertEqual(queued["status"], "queued")
-        conversation = json.loads((folder / "conversation.json").read_text(
-            encoding="utf-8"))
-        self.assertTrue(conversation["queue_paused"])
-
-    def test_http_projection_and_paper_approval_route(self):
+    def test_legacy_approval_route_reports_conflict_without_pending(self):
         from workbench.server import app
 
         paper = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
@@ -392,10 +301,7 @@ class PaperApprovalTests(unittest.TestCase):
             with urllib.request.urlopen(
                 base + "/api/w/dmath/ai/sessions/conv-001") as response:
                 session = json.loads(response.read().decode("utf-8"))
-            self.assertEqual(
-                session["pending_paper_approval"]["status"], "pending")
-            self.assertNotIn(
-                "confirmation", session["pending_paper_approval"])
+            self.assertIsNone(session["pending_paper_approval"])
             request = urllib.request.Request(
                 base + "/api/w/dmath/ai/sessions/conv-001/paper-approval",
                 data=json.dumps({
@@ -404,23 +310,19 @@ class PaperApprovalTests(unittest.TestCase):
                 }).encode("utf-8"),
                 headers={"Content-Type": "application/json"}, method="POST",
             )
-            with urllib.request.urlopen(request) as response:
-                result = json.loads(response.read().decode("utf-8"))
-            self.assertEqual(result["approval"]["status"], "cancelled")
-            # 2026-11-01 contract change (agent-chat-simplify): an empty queue
-            # has no retained work to protect, so cancellation lifts the pause.
-            self.assertFalse(result["queue_paused"])
-            self.assertIsNone(self.conversations.get(
-                self.pool, "conv-001")["pending_paper_approval"])
+            with self.assertRaises(urllib.error.HTTPError) as caught:
+                urllib.request.urlopen(request)
+            self.assertEqual(caught.exception.code, 409,
+                             "an obsolete callback resolves nothing and writes nothing")
+            self.assertEqual(self.saved_order(paper["practice_set_id"]),
+                             ["dmath-ch06-prob-002", "dmath-ch06-prob-001"])
         finally:
             server.shutdown()
             server.server_close()
 
     def test_api_rejects_non_string_decision(self):
-        from workbench.server import api
-
-        with self.assertRaises(api.ApiError) as caught:
-            api.ai_paper_approval(
+        with self.assertRaises(self.api.ApiError) as caught:
+            self.api.ai_paper_approval(
                 self.pool, self.workspace, {"conversation_id": "conv-001"},
                 {"turn_id": "turn-001", "expected_revision": 1, "decision": []},
             )

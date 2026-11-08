@@ -557,7 +557,7 @@ class QueueBridgeTests(unittest.TestCase):
         self.assertEqual(json.loads((folder / f"{c['turn_id']}.json").read_text(
             encoding="utf-8"))["status"], "queued")
 
-    def test_approval_rejects_interrupt_and_send_now_before_mutation(self):
+    def test_legacy_pending_approval_does_not_block_interrupt_or_send_now(self):
         conversation = self.create()
         conversation_id = conversation["conversation_id"]
         self.write_turn(
@@ -568,26 +568,23 @@ class QueueBridgeTests(unittest.TestCase):
         conversation_path, record = self.record(conversation_id)
         record["queue_order"] = [target["turn_id"]]
         self.conversations._write_json(conversation_path, record)
-        before = json.loads((self.pool.jobs_dir() / conversation_id / "turn-002.json")
-                            .read_text(encoding="utf-8"))
 
-        with self.assertRaises(self.conversations.ConversationConflict):
-            self.conversations.interrupt_pending(
-                self.pool, self.workspace, conversation_id, target["turn_id"],
-                expected_revision=1,
-            )
-        with self.assertRaises(self.conversations.ConversationConflict):
-            self.conversations.start_turn(
-                self.pool, self.workspace, conversation_id, "new interrupt", {},
-                submission_id="interrupt-id", queue_action="interrupt",
-            )
+        promoted = self.conversations.interrupt_pending(
+            self.pool, self.workspace, conversation_id, target["turn_id"],
+            expected_revision=1,
+        )
 
         after = json.loads((self.pool.jobs_dir() / conversation_id / "turn-002.json")
                            .read_text(encoding="utf-8"))
-        self.assertEqual(after, before)
-        self.assertFalse((self.pool.jobs_dir() / conversation_id / "turn-003.json").exists())
+        self.assertTrue(after.get("promoted_from_queue"),
+                        "the queued message is promoted despite a legacy approval")
+        self.assertEqual(promoted["turn_id"], target["turn_id"])
+        approval = json.loads((self.pool.jobs_dir() / conversation_id / "turn-001.json")
+                              .read_text(encoding="utf-8"))["paper_approval"]
+        self.assertNotEqual(approval["status"], "pending",
+                            "the legacy approval is reconciled, not kept blocking")
         self.assertEqual(self.conversations.get(self.pool, conversation_id)["queue_order"],
-                         [target["turn_id"]])
+                         [])
 
     def test_recovery_fails_unstarted_interrupt_instead_of_queueing_or_replaying(self):
         conversation = self.create()

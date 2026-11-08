@@ -131,7 +131,7 @@ Saved Paper update proposal:
 ```lessonkit-action
 {"type":"paper_update_proposal","practice_set_id":"ps-001","problem_ids":["题目ID"]}
 ```
-Emit this only when the learner explicitly asks to change the question membership or order of one existing saved Paper. Use the explicit Paper id and ordered problem ids. This proposes an update for the learner to review; it does not apply it. Do not run a `papers update` command or edit the saved Paper file directly. The Workbench computes the current impact and waits for the learner's separate approval click. Title/description edits, question-level resets, and ordinary Paper UI operations keep their existing workflows.
+Emit this only when the learner explicitly asks to change the question membership or order of one existing saved Paper. Use the explicit Paper id and ordered problem ids. The Workbench validates the actual inputs and applies the update directly; there is no separate approval click. Do not run a `papers update` command or edit the saved Paper file directly. The action's result (or error) in the next turn context is the authoritative outcome — report it truthfully. Title/description edits, question-level resets, and ordinary Paper UI operations keep their existing workflows.
 
 After any successful write, summarize the affected objects and user-accessible result in concise Chinese. Do not expose shell commands, SQL, tool logs, hashes, database keys, or implementation-only paths as the learner-facing evidence.
 """,

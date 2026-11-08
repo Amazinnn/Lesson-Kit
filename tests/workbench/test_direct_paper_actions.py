@@ -130,17 +130,13 @@ class DirectPaperActionTests(unittest.TestCase):
     # -- 2.2 legacy pending approval reconciles once --------------------------
 
     def legacy_pending(self, paper_id, problem_ids):
-        """Freeze a faithful legacy pending approval via the current writer."""
-        self.propose(paper_id, problem_ids)
-        turn = self.turn()
-        self.assertEqual(turn["paper_approval"]["status"], "pending",
-                         "fixture precondition: the current writer persists a "
-                         "pending approval")
-        return turn["paper_approval"]
-
-    def legacy_pending_for_missing_paper(self, paper_id="ps-999",
-                                          problem_ids=("dmath-ch06-prob-001",)):
-        """A pending approval whose target vanished after it was created."""
+        """Freeze a faithful legacy pending approval artifact (pre-WP03 shape)."""
+        try:
+            preview = self.practice_sets.preview_update(
+                self.pool, paper_id, problem_ids=list(problem_ids))
+            confirmation = preview["confirmation"]
+        except Exception:
+            confirmation = None
         folder = self.pool.jobs_dir() / "conv-001"
         folder.mkdir(parents=True, exist_ok=True)
         (folder / "conversation.json").write_text(json.dumps({
@@ -148,19 +144,20 @@ class DirectPaperActionTests(unittest.TestCase):
             "status": "running", "current_turn_id": "turn-001",
             "queue_paused": True, "created_at": "now", "updated_at": "now",
         }), encoding="utf-8")
+        approval = {
+            "conversation_id": "conv-001", "turn_id": "turn-001",
+            "workspace_name": "dmath", "status": "pending", "revision": 1,
+            "proposal": {"practice_set_id": paper_id,
+                         "problem_ids": list(problem_ids)},
+            "confirmation": confirmation,
+        }
         (folder / "turn-001.json").write_text(json.dumps({
             "turn_id": "turn-001", "status": "done",
             "message": "请重排试卷", "accepted_message": "请重排试卷",
             "context": {}, "created_at": "now", "updated_at": "now",
-            "paper_approval": {
-                "conversation_id": "conv-001", "turn_id": "turn-001",
-                "workspace_name": "dmath", "status": "pending", "revision": 1,
-                "proposal": {"practice_set_id": paper_id,
-                             "problem_ids": list(problem_ids)},
-                "confirmation": {"generation": 1,
-                                 "problem_ids": list(problem_ids)},
-            },
+            "paper_approval": approval,
         }), encoding="utf-8")
+        return approval
 
     def test_legacy_pending_approval_reconciles_once_on_open(self):
         paper_id = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
@@ -188,7 +185,7 @@ class DirectPaperActionTests(unittest.TestCase):
         self.assertEqual(approval["proposal"]["practice_set_id"], paper_id)
 
     def test_legacy_pending_approval_with_missing_target_records_incomplete(self):
-        self.legacy_pending_for_missing_paper()
+        self.legacy_pending("ps-999", ["dmath-ch06-prob-001"])
         record = self.conversations.get(self.pool, "conv-001")
         self.assertIsNone(record.get("pending_paper_approval"))
         turn = self.turn()
