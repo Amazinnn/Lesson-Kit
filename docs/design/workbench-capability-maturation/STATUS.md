@@ -1,5 +1,12 @@
 # 规划交接状态
 
+# 规划交接状态
+
+## 2026-11-09 续：WP02 2.2 完成（5/15），仅剩 2.6
+
+- **2.2 方法提案**（`7c90d201`，全仓 1582 passed / 432s）：`data method kp --input` 先按折叠标题查同义已有点——命中 1 个即复用身份（只追加适用原题关联，不改正文）、命中多个拒收并点名（要人工裁决）、未命中走治理新建（method-modeling / formula-calculation / algorithm-process 三类，分类不确定拒收零写入）；`problem_ids` 原题自动追加关联且既有关联保留，未知题号前置校验整体拒收。10 条用例（8 标注案例 + 同义多命中 + CLI 端到端）全过；L2/GLOSSARY（方法提案）/PRODUCT-MANUAL/ACTION-GRAPH 2026-11-09 留痕/agent_contracts 同批同步。
+- **仅剩 2.6**：20 个映射/完整性标注案例（区分结构检查与语义核对；限定章节分类补齐只改有依据项，疑点不进已核对练习）。这是纯证据工作——建议做法：以脱敏 dmath-ch06 风格夹具构造 20 组「提案 ↔ 既有知识点」原文对，逐条跑 `find_equivalent_kp`（语义）+ `content_audit`（结构），证据表落 `evidence/mature-course-content-operations/`；"限定章节分类补齐"如需实现入口（批量 `data update kp` 的 knowledge_type 补齐），走 `data update kp` 既有路径 + 单元语义即可，不新增第二套通道。
+
 ## 2026-11-09：WP02 2.4 完成（4/15）
 
 - 四类通道（content-bundle / problem-patch / micro-quiz+flash-card patch / figure-patch）全部单元化：门禁只产出接受单元的计划、依赖只认「库内 ∪ 已接受知识点」（题目与闪卡都查）、每个单元各自 savepoint、插图与行同生共死、批次记录只含实际落库单元。
