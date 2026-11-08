@@ -1,6 +1,17 @@
 # 规划交接状态
 
-> **下一阶段决策（2026-11-08，所有者确认）**：大任务 = WP03 `retire-project-approval-gates`（0/13）；前置 = 推送授权确认 + `agent-chat-simplify` 6.4 浏览器验收（同套浏览器环境）。交接文档：`%TEMP%\handoff-wp03-approval-retirement.md`。
+> 下一阶段：WP03 收尾（3.5/3.6 待独立验收结论）+ 后续队列（json-content-repository-sync、graph-settle-smoothness、三个 4 项收尾 change、WP04–06）。交接：本文件 + `evidence/retire-project-approval-gates/2026-11-08-impl/`。
+
+## 2026-11-08/09：WP03 2.1–3.4 实施完成（12/13，3.5 待独立验收）
+
+- **§1 基线**（`60d937a7`）：10 块 delta 逐块核对（场景全保全、REMOVED 无场景合规、direct-project-actions 为新能力）、change strict；4 红失败检查先行（1 护栏绿）。证据 `evidence/retire-project-approval-gates/2026-11-08-baseline/`。
+- **2.1/2.2**（`6b068abc`）：`_apply_paper_update_action` 直执行（preview 校验 + 提交点 confirmation 重校验，无审批状态/无派发暂停，无页面也完成）；`_reconcile_legacy_paper_approvals` 一次性迁移（挂 get()/start_turn()/interrupt_pending()，有效按原身份执行一次、失效如实 invalid、陈旧确认零写入）。
+- **2.3**（`e66316f8`+`6ed7a535`）：审批卡/审批按钮/composer 替换/批量重做二次确认/`POST /paper-approval` 路由全撤（workbench.js -374、agent-ui.js confirm 机制、pages/css/表面/api/surface），净删约 1100 行；FLOW-01/02 浏览器实测（wb64 隔离 daemon + 假 provider）：审批元素不在 DOM、proposal 直执行落库、legacy 双恢复证明最多写一次、重做零弹窗直开。
+- **2.4**：installed CLI=主检出、source_root/pid/assets 核对、静态资源为新代码、3099 验收端口 stop 复原；本包无 schema 变更、无池写入。
+- **3.1**（`98eaca82`）：GLOSSARY 两条词条标退役、ARCHITECTURE 279 重写、PRODUCT-MANUAL §4/§8.5/§9、动作图 L0/L2/L3/L4；DATA_MODEL/FILE_CONTRACT 零命中未动。
+- **3.2–3.4**（`96c91166`/`8a6d273c`）：FLOW-01/02/03 实测汇总、RELEASE-01 全绿（全仓 pytest **1583 passed/502.67s**、node 全套 0 fail、compileall、live specs 25/25、change strict、guard extract-problems PASS）。
+- **3.5**：独立验收已派（read-only agent，报告 `tmp/agent-runs/WP03-QC-report.md`），结论回来后勾选并决定归档。
+- 推送：未推送（需单独授权）；main 现领先 origin/main 22 提交。
 
 ## 2026-11-08：前置收口（推送 + 6.4 归档）；WP03 开工
 
