@@ -1,0 +1,71 @@
+FFFF.                                                                    [100%]
+================================== FAILURES ===================================
+_ DirectPaperActionTests.test_agent_paper_update_applies_directly_without_approval_or_pause _
+
+self = <tests.workbench.test_direct_paper_actions.DirectPaperActionTests testMethod=test_agent_paper_update_applies_directly_without_approval_or_pause>
+
+    def test_agent_paper_update_applies_directly_without_approval_or_pause(self):
+        paper_id = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
+        self.propose(paper_id, ["dmath-ch06-prob-002", "dmath-ch06-prob-001"])
+>       self.assertEqual(
+            self.saved_order(paper_id),
+            ["dmath-ch06-prob-002", "dmath-ch06-prob-001"],
+            "a valid requested Paper update applies at the commit point",
+        )
+E       AssertionError: Lists differ: ['dmath-ch06-prob-001', 'dmath-ch06-prob-002'] != ['dmath-ch06-prob-002', 'dmath-ch06-prob-001']
+E       
+E       First differing element 0:
+E       'dmath-ch06-prob-001'
+E       'dmath-ch06-prob-002'
+E       
+E       - ['dmath-ch06-prob-001', 'dmath-ch06-prob-002']
+E       + ['dmath-ch06-prob-002', 'dmath-ch06-prob-001'] : a valid requested Paper update applies at the commit point
+
+tests\workbench\test_direct_paper_actions.py:106: AssertionError
+_ DirectPaperActionTests.test_direct_update_with_missing_paper_fails_without_approval_state _
+
+self = <tests.workbench.test_direct_paper_actions.DirectPaperActionTests testMethod=test_direct_update_with_missing_paper_fails_without_approval_state>
+
+    def test_direct_update_with_missing_paper_fails_without_approval_state(self):
+        self.propose("ps-999", ["dmath-ch06-prob-001"])
+        turn = self.turn()
+>       self.assertNotIn("paper_approval", turn,
+                         "an unresolved target is missing input, not an approval")
+E       AssertionError: 'paper_approval' unexpectedly found in {'turn_id': 'turn-001', 'status': 'done', 'message': '请重排试卷', 'accepted_message': '请重排试卷', 'context': {}, 'created_at': 'now', 'updated_at': '2026-11-08T14:25:16.176021+00:00', 'action': {'type': 'paper_update_proposal', 'practice_set_id': 'ps-999', 'problem_ids': ['dmath-ch06-prob-001'], 'paper_approval': {'conversation_id': 'conv-001', 'turn_id': 'turn-001', 'revision': 1, 'status': 'invalid', 'error': 'unknown practice set: ps-999', 'practice_set_id': 'ps-999', 'proposed_problem_ids': ['dmath-ch06-prob-001']}}, 'paper_approval': {'conversation_id': 'conv-001', 'turn_id': 'turn-001', 'workspace_name': 'dmath', 'status': 'invalid', 'revision': 1, 'proposal': {'practice_set_id': 'ps-999', 'problem_ids': ['dmath-ch06-prob-001']}, 'confirmation': None, 'projection': {'conversation_id': 'conv-001', 'turn_id': 'turn-001', 'revision': 1, 'status': 'invalid', 'error': 'unknown practice set: ps-999', 'practice_set_id': 'ps-999', 'proposed_problem_ids': ['dmath-ch06-prob-001']}}, 'error': None} : an unresolved target is missing input, not an approval
+
+tests\workbench\test_direct_paper_actions.py:121: AssertionError
+_ DirectPaperActionTests.test_legacy_pending_approval_reconciles_once_on_open _
+
+self = <tests.workbench.test_direct_paper_actions.DirectPaperActionTests testMethod=test_legacy_pending_approval_reconciles_once_on_open>
+
+    def test_legacy_pending_approval_reconciles_once_on_open(self):
+        paper_id = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
+        approval = self.legacy_pending(paper_id, [
+            "dmath-ch06-prob-002", "dmath-ch06-prob-001",
+        ])
+        self.assertEqual(self.saved_order(paper_id),
+                         ["dmath-ch06-prob-001", "dmath-ch06-prob-002"],
+                         "fixture precondition: the legacy action never wrote")
+        record = self.conversations.get(self.pool, "conv-001")
+>       self.assertIsNone(record.get("pending_paper_approval"),
+                          "the legacy pending state is consumed, not restored")
+E       AssertionError: {'conversation_id': 'conv-001', 'turn_id': 'turn-001', 'revision': 1, 'status': 'pending', 'practice_set_id': 'ps-001', 'title': '卷子', 'current_problem_ids': ['dmath-ch06-prob-001', 'dmath-ch06-prob-002'], 'proposed_problem_ids': ['dmath-ch06-prob-002', 'dmath-ch06-prob-001'], 'added_problem_ids': [], 'removed_problem_ids': [], 'order_changed': True, 'structure_changed': True, 'resets_progress': False, 'preserved_items': 0, 'removed_items': 0, 'completed_items': 0, 'draft_items': 0} is not None : the legacy pending state is consumed, not restored
+
+tests\workbench\test_direct_paper_actions.py:174: AssertionError
+_ DirectPaperActionTests.test_legacy_pending_approval_with_missing_target_records_incomplete _
+
+self = <tests.workbench.test_direct_paper_actions.DirectPaperActionTests testMethod=test_legacy_pending_approval_with_missing_target_records_incomplete>
+
+    def test_legacy_pending_approval_with_missing_target_records_incomplete(self):
+        self.legacy_pending_for_missing_paper()
+        record = self.conversations.get(self.pool, "conv-001")
+>       self.assertIsNone(record.get("pending_paper_approval"))
+E       AssertionError: {} is not None
+
+tests\workbench\test_direct_paper_actions.py:193: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/workbench/test_direct_paper_actions.py::DirectPaperActionTests::test_agent_paper_update_applies_directly_without_approval_or_pause
+FAILED tests/workbench/test_direct_paper_actions.py::DirectPaperActionTests::test_direct_update_with_missing_paper_fails_without_approval_state
+FAILED tests/workbench/test_direct_paper_actions.py::DirectPaperActionTests::test_legacy_pending_approval_reconciles_once_on_open
+FAILED tests/workbench/test_direct_paper_actions.py::DirectPaperActionTests::test_legacy_pending_approval_with_missing_target_records_incomplete
+4 failed, 1 passed in 0.98s
