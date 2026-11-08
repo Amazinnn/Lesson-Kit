@@ -2,7 +2,6 @@
 
 > **下一阶段决策（2026-11-08，所有者确认）**：大任务 = WP03 `retire-project-approval-gates`（0/13）；前置 = 推送授权确认 + `agent-chat-simplify` 6.4 浏览器验收（同套浏览器环境）。交接文档：`%TEMP%\handoff-wp03-approval-retirement.md`。
 
-# 规划交接状态
 
 # 规划交接状态
 
