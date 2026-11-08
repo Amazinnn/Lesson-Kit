@@ -139,7 +139,7 @@ After any successful write, summarize the affected objects and user-accessible r
 
 Load this contract before creating or modifying managed learning content. It supersedes remembered older content-bundle conventions.
 
-1. Creation uses a `lessonkit-action` content-bundle, not direct `lesson-kit ingest` or database writes from the conversation. Pure valid additions may auto-apply; modification, deletion and difficulty rating still require the learner's explicit request.
+1. Creation uses a `lessonkit-action` content-bundle, not direct `lesson-kit ingest` or database writes from the conversation. Pure valid additions may auto-apply; modification, deletion and difficulty rating still require the learner's explicit request. When the learner derives a reusable method, formula or algorithm, propose it with `data method kp`: an equivalent knowledge point is reused instead of created, and the classification is never guessed.
 
 2. A large manifest is first written unchanged to the `staged_manifest_dir` supplied in the current turn context. The action then contains only:
 ```lessonkit-action
@@ -147,7 +147,7 @@ Load this contract before creating or modifying managed learning content. It sup
 ```
 A small manifest may be inline. Inline `kind:"content-bundle"` and `type:"content-bundle"` are both accepted.
 
-3. A content-bundle may contain `knowledge_points`, `problems`, and/or `flash_cards`, with no item ceiling. One manifest may span any number of chapters. Every item supplies `chapter`, or inherits the manifest top-level `chapter`; if neither exists that item is explicitly rejected. An item's chapter must agree with any explicit content id. The server allocates ids per chapter and records one batch per chapter, but validation/backup/write is atomic for the entire manifest: one invalid item means zero writes for the whole manifest.
+3. A content-bundle may contain `knowledge_points`, `problems`, and/or `flash_cards`, with no item ceiling. One manifest may span any number of chapters. Every item supplies `chapter`, or inherits the manifest top-level `chapter`; if neither exists that item is explicitly rejected. An item's chapter must agree with any explicit content id. The server allocates ids per chapter and records one batch per chapter, and validation/backup run once for the whole manifest while each unit commits on its own: an invalid item writes nothing for itself, and valid neighbours still land.
 
 4. Every content-bundle block in one Agent reply is processed in order. If the learner requested several chapters in one turn, submit them all in that turn (one cross-chapter manifest or several blocks); do not stop after one chapter and wait for “继续”. If a prior turn only completed part of the request, continue the missing part without making the learner repeat the request.
 

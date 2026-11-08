@@ -231,6 +231,101 @@ def related_problems(pool, kp_ids):
     return [found[key] for key in sorted(found)]
 
 
+#: A practice-derived proposal may only create reusable method knowledge; facts
+#: and definitions go through the ordinary governed content path instead.
+METHOD_KNOWLEDGE_TYPES = {"method-modeling", "formula-calculation",
+                          "algorithm-process"}
+METHOD_IMPORTANCE = {"core", "supplementary", "optional"}
+
+
+def normalize_knowledge_title(value):
+    """Fold case, whitespace and punctuation so same-sense titles compare equal."""
+    text = str(value or "").casefold()
+    folded = re.sub(r"[\s\W_]+", "", text, flags=re.UNICODE)
+    return folded or text.strip()
+
+
+def find_equivalent_kp(pool, knowledge_item):
+    """Existing knowledge points whose folded title matches the proposal."""
+    folded = normalize_knowledge_title(knowledge_item)
+    return [item for item in list_items(pool, "kp")
+            if normalize_knowledge_title(item.get("knowledge_item")) == folded]
+
+
+def apply_method_proposal(pool, proposal):
+    """Reuse an equivalent knowledge point when one exists; create it otherwise.
+
+    Either way, the applicable original problems gain the knowledge point in
+    their `kp_ids` while every existing association is kept. The classification
+    is never guessed: without a reusable method type the proposal is refused
+    and nothing is written.
+    """
+    if not isinstance(proposal, dict):
+        raise ValueError("method proposal must be an object")
+    knowledge_item = proposal.get("knowledge_item")
+    if not isinstance(knowledge_item, str) or not knowledge_item.strip():
+        raise ValueError("knowledge_item is required")
+    body = proposal.get("body")
+    if not isinstance(body, str) or not body.strip():
+        raise ValueError(
+            "a method proposal needs its applicability, formula and steps in `body`")
+    knowledge_type = proposal.get("knowledge_type")
+    if knowledge_type not in METHOD_KNOWLEDGE_TYPES:
+        raise ValueError(
+            "knowledge_type must name a reusable method "
+            "(method-modeling / formula-calculation / algorithm-process); "
+            "an uncertain classification is not created")
+    importance = proposal.get("importance") or "core"
+    if importance not in METHOD_IMPORTANCE:
+        raise ValueError(f"unknown importance {importance!r}")
+    problem_ids = proposal.get("problem_ids") or []
+    if not isinstance(problem_ids, list) or \
+            not all(isinstance(item, str) and item for item in problem_ids):
+        raise ValueError("problem_ids must be a list of problem ids")
+    conn = pool.connect()
+    unknown = [problem_id for problem_id in problem_ids
+              if conn.execute("SELECT 1 FROM problems WHERE problem_id=?",
+                              (problem_id,)).fetchone() is None]
+    if unknown:
+        raise ValueError("unknown problems for the associations: "
+                         + ", ".join(unknown))
+    matches = find_equivalent_kp(pool, knowledge_item)
+    if len(matches) > 1:
+        raise ValueError("several equivalent knowledge points exist: "
+                         + ", ".join(sorted(item["kp_id"] for item in matches))
+                         + " — decide which one to extend instead of creating another")
+    reused = bool(matches)
+    if reused:
+        kp_id = matches[0]["kp_id"]
+    else:
+        created = create(pool, "kp", {
+            "knowledge_item": knowledge_item, "knowledge_type": knowledge_type,
+            "importance": importance, "body": body,
+            **({"source_location": proposal["source_location"]}
+               if proposal.get("source_location") else {}),
+        })
+        kp_id = created["kp_id"]
+    added = 0
+    with pool.transaction(immediate=True):
+        for problem_id in problem_ids:
+            row = conn.execute(
+                "SELECT kp_ids FROM problems WHERE problem_id=?", (problem_id,)
+            ).fetchone()
+            association = json.loads(row[0] or "[]")
+            if kp_id not in association:
+                association.append(kp_id)
+                conn.execute("UPDATE problems SET kp_ids=? WHERE problem_id=?",
+                             (json.dumps(association, ensure_ascii=False), problem_id))
+                added += 1
+    if unknown:
+        raise ValueError("unknown problems for the associations: "
+                         + ", ".join(unknown))
+    return {"kp_id": kp_id, "reused": reused,
+            "knowledge_item": knowledge_item,
+            "associations_added": added,
+            "problems_referenced": len(problem_ids)}
+
+
 def history(pool, entity, object_id):
     conn = pool.connect()
     if entity == "problem":

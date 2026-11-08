@@ -737,6 +737,10 @@ def cmd_data(args):
             if args.entity != "kp":
                 raise ValueError("data move is supported only for knowledge points")
             result = content.move_kp(pool, args.target, args.chapter)
+        elif args.action == "method":
+            if args.entity != "kp":
+                raise ValueError("data method is supported only for knowledge points")
+            result = content.apply_method_proposal(pool, _json_input(args.input))
         elif args.action == "history":
             result = content.history(pool, args.entity, args.target)
         elif args.action == "create":
@@ -1232,8 +1236,9 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("name")
     p.add_argument(
         "action",
-        choices=["get", "list", "search", "related", "move", "history", "create", "update",
-                 "delete", "restore", "state", "audit", "check", "apply"],
+        choices=["get", "list", "search", "related", "move", "method", "history",
+                 "create", "update", "delete", "restore", "state", "audit", "check",
+                 "apply"],
     )
     p.add_argument("entity", nargs="?", choices=["kp", "problem", "relation"])
     p.add_argument("target", nargs="?")

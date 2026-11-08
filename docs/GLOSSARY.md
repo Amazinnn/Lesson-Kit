@@ -141,7 +141,7 @@ _Avoid_：客观题目难度向量、学习者评价
 （见「Check 管线」条目）。
 
 ### Check 管线 / Check pipeline
-内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规清单 → 确定性门禁校验 → **直接入正式池**（无候选中间态）。清单形态以 `content-bundle` 为主（可同时含知识点、正式题、微题、闪卡与必需原图，条数无上限，大清单暂存于本对话 jobs 目录），`flash-card-patch` / `micro-quiz-patch` 作为兼容通道保留。题目身份在整个课程池比较，不因跨来源或跨章重复入库。每次 apply 记批次 id、内容行带批次标记、图片按字节落 `figures/`；撤销入口已退役，修错改走直接修正（`data update problem` 或 `problem-patch` 清单）；门禁失败逐条显式报错、零写入。对话桥的控制动作仍叫 `check_ingest`，但**不再有浏览器关键词意图门**——合法的纯新增动作自动执行；门禁是决断辅助不是权限闸门，AI 永不直写池数据库。
+内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规清单 → 确定性门禁校验 → **直接入正式池**（无候选中间态）。清单形态以 `content-bundle` 为主（可同时含知识点、正式题、微题、闪卡与必需原图，条数无上限，大清单暂存于本对话 jobs 目录），`flash-card-patch` / `micro-quiz-patch` 作为兼容通道保留。题目身份在整个课程池比较，不因跨来源或跨章重复入库。每次 apply 记批次 id、内容行带批次标记、图片按字节落 `figures/`；撤销入口已退役，修错改走直接修正（`data update problem` 或 `problem-patch` 清单）；门禁失败逐条显式报错，被拒单元零写入、其余合格单元照常落库。对话桥的控制动作仍叫 `check_ingest`，但**不再有浏览器关键词意图门**——合法的纯新增动作自动执行；门禁是决断辅助不是权限闸门，AI 永不直写池数据库。
 _Avoid_：generate 桥（旧称）、候选中间态、staging 区、逐题人工确认、关键词意图门
 出处：DISCUSSION-RECORD 专题 20/21/22；workbench-content-governance spec（introduce-check-pipeline）；first-use-conversation-content-fidelity
 
@@ -287,7 +287,7 @@ _Avoid_：靠文档计数描述接口覆盖（会漂移）、把归属当许可�
 出处：review-workbench spec「Declared interface surface」
 
 ### 附图 / Figure
-题干自带的教材原图或生成图：文件落在工作区 `.lessonkit/figures/{course}/{chapter}/`，文件名 = **内容 sha256 + 原扩展名**（由门禁计算，不由 manifest 声明）；池里只存逻辑路径（`figure_paths` 列）+ 题干里的标准 Markdown 引用。入池唯一通道 = figure-patch 门禁（图与替换后的题干全文同批校验，失败零写入）；批次快照保留题干与 figure_paths 前值作为应用记录，已落盘文件保留；显式撤销入口已退役。
+题干自带的教材原图或生成图：文件落在工作区 `.lessonkit/figures/{course}/{chapter}/`，文件名 = **内容 sha256 + 原扩展名**（由门禁计算，不由 manifest 声明）；池里只存逻辑路径（`figure_paths` 列）+ 题干里的标准 Markdown 引用。入池唯一通道 = figure-patch 门禁（图与替换后的题干全文同批校验，该单元失败零写入）；批次快照保留题干与 figure_paths 前值作为应用记录，已落盘文件保留；显式撤销入口已退役。
 _Avoid_：`{owner_id}-fig-{NNN}.png`（旧命名规则，2026-09-20 作废）、图片入库（base64）、任意路径引用
 出处：knowledge-figures spec「Declared figure area / Gated figure patch channel / Legacy source-image migration」；ADR 0017
 
@@ -935,7 +935,7 @@ _Avoid_：普通对话代填、跳过人确认直接创建
 出处：complete-goals-loop 归档；ai-teacher-bridge spec
 
 ### 内容批次动作 / content bundle action
-Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份；**一份清单可以跨章**：每个知识点/题目/闪卡都可以写自己的 `chapter`，缺省用清单顶层的 `chapter`；两者都未提供时该项会被点名拒收，**不回退到工作区当前章**。服务端按每一项的章发号、按章落图、**按章各记一个批次**（各带自己的批次标记，便于按章溯源）。任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。一轮回复里的每个 content-bundle 区块都会被依次应用。成功以结果卡片呈现（每章一行：批次号、章、资产类型与数量、来源分布、工作区、备份、各章批次状态）。
+Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份；**一份清单可以跨章**：每个知识点/题目/闪卡都可以写自己的 `chapter`，缺省用清单顶层的 `chapter`；两者都未提供时该项会被点名拒收，**不回退到工作区当前章**。服务端按每一项的章发号、按章落图、**按章各记一个批次**（各带自己的批次标记，便于按章溯源）。任一条不合法或缺必需图片，该单元零写入并给出原因，其余合格单元照常落库；Agent 修正后重提即可补齐。一轮回复里的每个 content-bundle 区块都会被依次应用。成功以结果卡片呈现（每章一行：批次号、章、资产类型与数量、来源分布、工作区、备份、各章批次状态）。
 _Avoid_：关键词意图门、静默丢弃不合格条目、跳过门禁直写池、显式命令面板
 出处：ai-teacher-bridge spec「Atomic staged content bundle」；FILE_CONTRACT.md
 
@@ -1023,7 +1023,7 @@ _Avoid_：人工审阅、完工宣言
 出处：CONTEXT.md（迁入）；AGENTS.md 验证节奏
 
 ### 门禁 / Gate
-内容入库前的确定性检查。正式题候选过结构门禁 + 审计门禁两道；micro-quiz 清单过 `_gate_micro_quiz`、flash-card 清单过对应门禁（契约 + 标记安全 + 与库比对），失败即整体拒绝、零写入。
+内容入库前的确定性检查。正式题候选过结构门禁 + 审计门禁两道；micro-quiz 清单过 `_gate_micro_quiz`、flash-card 清单过对应门禁（契约 + 标记安全 + 与库比对），被拒单元零写入、其余照常落库。
 _Avoid_：人工抽查、事后补审
 出处：review-workbench spec「Past-paper coverage gate」；micro-quiz-content spec；workbench/ingest
 
@@ -1175,6 +1175,11 @@ _Avoid_：掌握度、复习状态、将批改中当成错误、将不会等同�
 ### 独立有效修改单元 / Independent Valid Mutation Unit
 一组引用完整且能独立校验、提交的修改。其他无效项不影响其完成，依赖无效内容的修改不属于该单元。
 出处：Q016、Q098。
+
+### 方法提案 / Method proposal
+练习衍生的可复用方法/公式/算法提案，经 `data method kp` 提交：先按折叠标题（大小写、空白、标点归一）查同义已有点，**命中即复用既有身份**（只追加适用原题关联，不改正文）；未命中才经治理路径新建，`knowledge_type` 必须是 method-modeling / formula-calculation / algorithm-process 之一，分类不确定即拒收零写入。提案正文应写清适用条件、公式与步骤；`problem_ids` 里的原题自动追加关联，既有关联全保留，未知题号整体拒收。
+_Avoid_：为同一方法再造第二个知识点、把 concept-property 当方法提案、靠工作区当前章猜分类
+出处：2026-11-09 mature-course-content-operations 2.2；review-workbench（data surface）
 
 ### 知识点章节迁移 / Knowledge-point Chapter Move
 在同课程内调整知识点章节归属，并保持题目关联、经验及学习记录可追溯的内容操作。

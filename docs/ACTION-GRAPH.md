@@ -143,6 +143,8 @@ flowchart LR
 
 ## 变更留痕
 
+- 2026-11-09 方法提案与原题关联（mature-course-content-operations 2.2）：新增 `data <workspace> method kp --input <proposal.json>`。提案先按折叠标题查同义已有点，命中即复用既有身份并只追加适用原题关联；未命中经治理路径新建 method-modeling / formula-calculation / algorithm-process 知识点（分类不确定拒收零写入）。`problem_ids` 的原题自动追加该知识点，既有关联全保留，未知题号整体拒收。L2-interfaces、GLOSSARY（方法提案）、PRODUCT-MANUAL、agent_contracts 同步；不新增学习事实、不写池表。
+
 - 2026-11-08 退役显式成功批次撤销（mature-course-content-operations 2.5 / S008）：删除 CLI `ingest rollback`、`POST /ingest/rollback`、结果卡「整批回滚」按钮与其确认面、`rollback_batch` 及阻断/冲突/回滚实现；`ingest_batches.rolled_back_at` 与历史卡片标记保留，只退役入口与再次撤销的能力。修错改走直接修正：单题 `data update problem`、成批 `problem-patch`（不换题号、不动学习记录）。GLOSSARY、FILE_CONTRACT、PRODUCT-MANUAL、L0–L4 同批同步。
 
 - 2026-11-01 Agent 对话区简化（agent-chat-simplify）：**退役两个对话流卡**——工具调用卡
