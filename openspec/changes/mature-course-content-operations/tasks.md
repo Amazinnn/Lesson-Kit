@@ -1,8 +1,8 @@
 ## 1. 当前契约与失败基线
 
-- [ ] 1.1 阅读本 change 全部工件、对应 package、execution-guide、contract-reconciliation、data-exchange-matrix 和 benchmarks/catalog，记录分支、commit、实际运行身份及重叠 change。
-- [ ] 1.2 逐条核对本包已提供的 MODIFIED/REMOVED delta，补齐命中的次级引用，保持原场景名称或明确迁移；先更新职责契约再改代码。
-- [ ] 1.3 在隔离课程副本建立 F1/F3/F4 回归样本，先运行针对本包缺口的失败检查，保存结果和期望差异。
+- [x] 1.1 阅读本 change 全部工件、对应 package、execution-guide、contract-reconciliation、data-exchange-matrix 和 benchmarks/catalog，记录分支、commit、实际运行身份及重叠 change。（证据 `evidence/mature-course-content-operations/2026-11-09-baseline/1-1-1-2-1-3-baseline.md`：main 分支与提交序列、editable=主检出、重叠 change 清单）
+- [x] 1.2 逐条核对本包已提供的 MODIFIED/REMOVED delta，补齐命中的次级引用，保持原场景名称或明确迁移；先更新职责契约再改代码。（同上证据：6 个 delta 清单、5 个 MODIFIED 块对 live 场景零丢失、knowledge-figures 的 REMOVED 为有意退役且 Reason/Migration 齐全、次级引用逐文件核对）
+- [x] 1.3 在隔离课程副本建立 F1/F3/F4 回归样本，先运行针对本包缺口的失败检查，保存结果和期望差异。（同上证据：审计三条 P1 先复现后修复并有回归；micro 门禁闸缺失由全仓首跑暴露；旧原子契约 17 条失败先于改写记录；全部在脱敏临时夹具）
 
 ## 2. 实现与逐单元检查
 

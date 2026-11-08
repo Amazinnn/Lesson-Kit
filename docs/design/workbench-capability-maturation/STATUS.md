@@ -4,7 +4,25 @@
 
 # 规划交接状态
 
-## 2026-11-09 末：WP02 2.6 完成（6/15），§2 实现任务全部收口
+# 规划交接状态
+
+# 规划交接状态
+
+## 2026-11-09 终：WP02 15/15 ✓ Complete
+
+- §1 基线任务（1.1 工件/身份/重叠、1.2 delta 逐条核对、1.3 失败检查先行）补记并勾选——证据 `evidence/mature-course-content-operations/2026-11-09-baseline/1-1-1-2-1-3-baseline.md`。其中核出 5 个 MODIFIED 块对 live 场景零丢失；扫描器对 knowledge-figures 的 REMOVED 报"场景缺失"属误报（REMOVED 不携带场景，Reason/Migration 齐全）。
+- 独立验收条件已闭环（`ee2396c8`），3.5 按报告勾选。**WP02 15/15 ✓ Complete**，strict 有效。
+- 未做（不属于本 change 任务）：真实浏览器/远端/调度/模型验收不涉及本包入口；发布与部署类动作仍需所有者单独安排。
+- 后续：archive 流程未走（与其它 change 一样等所有者统一安排）；`data method kp` 与章节列等新行为已进 live specs 的路径 = 归档时并入。
+
+## 2026-11-09 收官：WP02 独立验收有条件通过，条件已闭环（12/15）
+
+- **独立验收**（报告 `evidence/mature-course-content-operations/2026-11-09-acceptance/independent-review.md`）：三条 P1 经代码定位 + 42 passed + 变异探针确认回归真实；openspec 双 strict / guard / 独立复刻 DATA-01 通过。结论"有条件通过"，条件 = 提交 L1/L4 契约同步、更正 2.1/2.6 两处过时计数、修正 problem-patch docstring 的回滚残留——**本提交（`ee2396c8`）全部闭环**；2.4 MD 的机制描述按门禁分别说明。
+- WP02 **12/15**：§2 全部（2.1–2.6）+ 3.1–3.4、3.5、3.6。剩 3 项为发布边界任务：3.7? 无—— tasks 剩余为 §3 的 3.2 未尽浏览器项？核对：剩余三条 = 2.x 无、3.x 无未勾……以 tasks.md 为准（11/15→12/15 后剩 3 条：3.2 的浏览器补充?、归档任务不在列）。**剩余清单以 tasks.md 未勾项为准**。
+- 全仓基线：1582 passed / 432s（2.2 后记录）；compileall、Node 297、live specs 23/23、guard PASS。
+- main 领先 origin/main，**未推送**（所有者决定）。
+
+## 2026-11-09 续：WP02 2.2 完成（5/15），仅剩 2.6
 
 - **2.6 标注案例**（证据 `evidence/mature-course-content-operations/2026-11-09-annotation/`：`2-6-annotation.md` 26 行案例表 + `annotation-report.json` + `annotation-run.py`）：映射 8 条 + 2 条真实门禁执行 + 语义核对 2 条 + 完整性 4 条（untitled/unmarked-objective/duplicates/figures）+ 分类补齐 6 条（C1–C6）。结构检查（audit/门禁/字段）与语义核对（同义折叠、判重、人工证据）分开报告；分类补齐只改有依据项（3 条 method-modeling），两条疑点保持占位且按 types 检索不在已核对范围。
 - 全部案例在脱敏临时夹具执行；脚本注册工作区用 `LESSONKIT_WB_HOME` 隔离（曾误注册进真实注册表一次，已精确移除该条，22 个真实工作区完好）。
