@@ -44,7 +44,7 @@ An explicit `state` command SHALL replace the current knowledge-point or problem
 
 ### Requirement: Composable ingestion commands
 
-The workbench SHALL expose `prepare`, `run`, `gate`, `apply`, `render`, official `recipe`, and `rollback` ingestion commands that exchange explicit UTF-8 artifacts. Preparing work SHALL NOT start an Agent, running Agent work SHALL require an explicit available provider with no fallback, recipes SHALL perform no pool write unless the caller supplies `--apply`, and rollback SHALL act only on a recorded ingest batch.
+The workbench SHALL expose `prepare`, `run`, `gate`, `apply`, `render`, official `recipe`, ingestion commands that exchange explicit UTF-8 artifacts. Preparing work SHALL NOT start an Agent, running Agent work SHALL require an explicit available provider with no fallback, recipes SHALL perform no pool write unless the caller supplies `--apply`. Explicit successful-batch rollback SHALL be retired.
 
 #### Scenario: Prepare without invoking a provider
 
@@ -69,7 +69,7 @@ The workbench SHALL expose `prepare`, `run`, `gate`, `apply`, `render`, official
 #### Scenario: Rollback only acts on a recorded batch
 
 - **WHEN** a caller runs rollback for a batch id with no ingest-batch record
-- **THEN** the command fails without writing and reports the unknown batch
+- **THEN** the retired command performs no write and reports ordinary content repair as the available operation
 
 ### Requirement: Independent formal-problem audit
 
@@ -141,7 +141,7 @@ The deterministic problem gate SHALL reject missing solutions, malformed or empt
 
 ### Requirement: Batch provenance and rollback
 
-Every recipe apply SHALL allocate one readable sequential batch id (no hash-derived identifier), record the batch with its kind, item counts, and backup path in an additive ingest-batch registry, and stamp every content row it writes with that batch id. A bundle that spans chapters SHALL record one batch per chapter, each stamped on that chapter's rows, so a whole-batch rollback undoes one chapter without touching its siblings. A whole-batch rollback SHALL run as one transaction that first writes a fresh recoverable backup, then deletes exactly the content rows carrying that batch id, and then marks the batch rolled back. Rollback SHALL refuse a batch whose content rows still have dependent learning records, and SHALL refuse an already rolled-back batch.
+Every committed independent valid mutation unit SHALL retain readable batch provenance, affected counts and backup references. Cross-chapter input SHALL retain per-chapter provenance and original chapter resolution. Explicit undo of successfully applied batches SHALL be retired. Old batch and rolled-back records SHALL remain readable as historical facts. An unsupported old rollback request SHALL perform no write. Repair SHALL use ordinary direct content mutations.
 
 #### Scenario: Apply records the batch
 
@@ -150,23 +150,23 @@ Every recipe apply SHALL allocate one readable sequential batch id (no hash-deri
 
 #### Scenario: Roll back a whole batch
 
-- **WHEN** rollback is requested for a recorded batch whose rows have no dependent learning records
-- **THEN** exactly the rows stamped with that batch id are removed in one transaction after a fresh backup, the registry marks the batch rolled back, and the reported accounting matches the recorded counts
+- **WHEN** a caller requests rollback of a previously successful batch
+- **THEN** the retired operation performs no deletion and directs the caller to ordinary content repair
 
 #### Scenario: Rollback refuses dependent learning records
 
-- **WHEN** any content row of the batch is referenced by an attempt, feedback event, schedule row, progress row, or learner signal
-- **THEN** the rollback fails without deleting anything and names the blocking dependency
+- **WHEN** a rollback request names a batch with dependent learning records
+- **THEN** the retired operation performs no write and the learning records remain
 
 #### Scenario: Double rollback is refused
 
-- **WHEN** rollback is requested for a batch already rolled back
-- **THEN** the command fails without writing and reports the batch as already rolled back
+- **WHEN** a rollback request names a historically rolled-back batch
+- **THEN** the retired operation performs no write and historical state remains readable
 
 #### Scenario: One chapter is undone while the other stays
 
-- **WHEN** a two-chapter bundle was applied and rollback is requested for one of its two batches
-- **THEN** only that chapter's rows and its now-unreferenced figures are removed, the sibling batch and its rows stay, and the registry shows one batch rolled back and one still applied
+- **WHEN** a caller requests rollback of one chapter from an applied multi-chapter bundle
+- **THEN** neither chapter is undone and direct scoped repair remains the supported operation
 
 ### Requirement: Ingest batch registry visibility
 
@@ -174,8 +174,7 @@ The workbench SHALL expose a read-only CLI listing of recorded ingest
 batches (`ingest batches`), reporting for each batch its id, kind, item
 counts, applied timestamp, rollback state, and backup path, newest first.
 The listing SHALL perform zero writes and SHALL NOT require any prior
-artifact, so that agents and the owner can discover batch ids for whole-batch
-rollback.
+artifact, so that agents and the owner can inspect provenance and historical state. Explicit successful-batch undo SHALL remain retired.
 
 #### Scenario: List recorded batches
 
@@ -288,23 +287,7 @@ the stored value.
 
 ### Requirement: Atomic staged content bundle
 
-A `content-bundle` SHALL contain one or more new knowledge points, formal
-problems, micro quizzes, flash cards, and required source figures. Its manifest
-SHALL be staged under the owning conversation, or carried inline when it declares
-its `kind` or its `type` as `content-bundle`. Every knowledge point, problem,
-and flash card SHALL resolve exactly one chapter: an item MAY declare its own
-`chapter`, otherwise the bundle-level `chapter` applies; an item that resolves no
-chapter SHALL be refused with its label and nothing SHALL be written, and the
-workspace's active chapter SHALL NOT be used as a fallback, so a manifest that
-spans chapters can never be silently assigned to the chapter the learner happens
-to be viewing. A single bundle MAY therefore span several chapters, and every
-derived value SHALL follow its item's chapter — allocated id prefix, figure
-logical path and destination directory, micro-quiz id, and the duplicate check.
-The complete bundle SHALL be prevalidated and applied under one backup and one
-transaction; any invalid entity, reference, or file SHALL leave both SQLite and
-the figure destination unchanged. It SHALL record one batch per chapter present,
-in chapter order, so each chapter's content can be rolled back on its own. There
-SHALL be no fixed ceiling on items or on chapters per bundle.
+A content-bundle SHALL accept new knowledge points, formal problems, micro quizzes, flash cards and required source figures as a staged or inline kind/type manifest. Every item SHALL resolve one valid chapter from its own value or the manifest value, never the active UI chapter. IDs, figure paths, quiz IDs and duplicate scope SHALL follow that chapter. Input SHALL be prevalidated into independent dependency-complete units. Each valid unit SHALL commit consistently with a recoverable backup and readable per-chapter batch provenance. Invalid items and dependent units SHALL remain unchanged while independent valid units complete. There SHALL be no fixed item or chapter ceiling. Successful-batch undo SHALL be unavailable.
 
 #### Scenario: Missing knowledge point is included
 
@@ -313,8 +296,8 @@ SHALL be no fixed ceiling on items or on chapters per bundle.
 
 #### Scenario: Required image is missing
 
-- **WHEN** a problem depends on an unavailable or invalid source image
-- **THEN** the complete bundle fails and the incomplete problem is not inserted
+- **WHEN** a problem depends on an unavailable or invalid source image while independent valid content is present
+- **THEN** the problem and dependent unit remain unchanged while independent valid units complete
 
 #### Scenario: Thirty valid exercises
 
@@ -328,18 +311,18 @@ SHALL be no fixed ceiling on items or on chapters per bundle.
 
 #### Scenario: An item cannot be assigned to a chapter
 
-- **WHEN** a bundle has no chapter of its own and an item declares none, even though the workspace has an active chapter
-- **THEN** that item is refused with its label and no content and no figure is written
+- **WHEN** one item lacks both item and manifest chapter while independent valid items have chapters
+- **THEN** the item is refused with its label and its dependency unit stays unchanged while independent units complete
 
 #### Scenario: A declared chapter is not an identifier
 
-- **WHEN** an item or the bundle declares a chapter that is not a lowercase ASCII identifier
-- **THEN** the bundle is refused with that reason and nothing is written
+- **WHEN** an item or the manifest declares an invalid chapter identifier
+- **THEN** the affected unit is refused and no invalid-chapter content is written while independent valid units can complete
 
 #### Scenario: An inline bundle carries the same contract
 
-- **WHEN** the manifest arrives inline in the reply instead of as a staged file
-- **THEN** the same chapter resolution, per-chapter batches, backup, and transaction apply
+- **WHEN** a manifest arrives inline instead of as a staged file
+- **THEN** the same chapter resolution, dependency grouping, provenance, backup and consistent-unit rules apply
 
 ### Requirement: Source and solution provenance
 Every new Agent-managed problem SHALL store non-empty source evidence visible to the learner.
@@ -372,22 +355,7 @@ items.
 
 ### Requirement: In-place problem patch
 
-Content that already exists SHALL be changeable without deleting and
-re-importing it, because a problem's readable id is its identity and every
-attempt, rating, and schedule hangs off it. A patch SHALL name existing problems
-only, SHALL refuse unknown ids, unknown field names, an id outside the
-workspace's course, and any attempt to change the id, and SHALL keep difficulty
-ratings a separate command. It SHALL be available as one explicit command per
-problem and as one bulk manifest (`problem-patch`) that prevalidates every item,
-records one readable batch id with the manifest snapshot **and each row's
-previous values**, writes one recoverable backup, and applies in one
-transaction: any invalid item leaves the pool untouched. Rolling such a batch
-back SHALL restore the previous values instead of deleting rows, so the
-learner's records survive an edit and its reversal. A patch SHALL resolve the
-practice mode from the payload unless the caller declares it, SHALL validate the
-resulting row against the micro-quiz contract for the parts it touches, and
-SHALL NOT re-validate untouched legacy fields. Unknown field names SHALL be an
-error rather than a silent drop.
+Existing problems SHALL be edited without changing their readable identity or deleting learning history. Single and bulk problem-patch operations SHALL reject unknown IDs, unsupported fields, cross-course IDs, ID changes and difficulty commands in this payload. Bulk patches SHALL prevalidate all items, report itemized results and commit independent valid units with batch provenance and recoverable backup. Invalid units SHALL retain prior state. Practice-mode and micro-quiz validation SHALL cover touched fields and SHALL NOT reject untouched legacy fields. Explicit successful-batch undo SHALL be retired, and corrected retries SHALL not duplicate applied events.
 
 #### Scenario: One problem is edited explicitly
 
@@ -396,13 +364,13 @@ error rather than a silent drop.
 
 #### Scenario: A bulk patch is all or nothing
 
-- **WHEN** a `problem-patch` manifest mixes valid items with an unknown id, an unknown field, or a contract violation
-- **THEN** every reason is reported per item and no row, batch record, or backup changes state
+- **WHEN** a bulk patch mixes valid independent items with an unknown ID, unknown field or invalid value
+- **THEN** valid independent units commit and invalid units remain unchanged with itemized outcomes
 
 #### Scenario: A patch is rolled back value for value
 
-- **WHEN** an applied `problem-patch` batch is rolled back
-- **THEN** every touched column returns to exactly its previous value, including cleared difficulty ratings, and the rows themselves remain
+- **WHEN** a caller requests explicit undo of an applied patch
+- **THEN** no successful patch is undone and ordinary direct repair remains available
 
 #### Scenario: Unsupported fields are refused
 
@@ -423,18 +391,17 @@ keys, their source files, or their chapters, and the refusal SHALL name the
 colliding problem id together with its source evidence so the caller can see
 which row already covers the content. Two stems that differ beyond those
 variants SHALL NOT collide: similar-but-different items are deliberately kept.
-A duplicate refusal SHALL follow the existing all-or-nothing rule — every reason
-reported per item, nothing written, no batch recorded.
+A duplicate refusal SHALL isolate the invalid dependency unit, report each collision and allow independent valid units to commit without inserting duplicate content.
 
 #### Scenario: The same item arrives from a second source file
 
 - **WHEN** a manifest item's normalized identity equals an existing problem's identity in the same course scope
-- **THEN** the gate refuses that item with a reason naming the existing problem id and nothing is written
+- **THEN** the gate refuses that item with a reason naming the existing problem id and the invalid unit is unchanged while independent valid units can complete
 
 #### Scenario: The same item appears twice in one manifest
 
 - **WHEN** two items of one manifest share a normalized identity
-- **THEN** the gate reports an itemized reason for each and the manifest is not applied
+- **THEN** the gate reports an itemized reason for each and the colliding units remain unchanged while independent valid units can complete
 
 #### Scenario: Rendering variants still collide
 
@@ -449,7 +416,7 @@ reported per item, nothing written, no batch recorded.
 #### Scenario: A duplicate never half-writes
 
 - **WHEN** a manifest mixes a duplicate with otherwise valid new items
-- **THEN** the duplicate is reported and no item of that manifest reaches the pool
+- **THEN** the duplicate is reported and the duplicate unit remains unchanged while independent valid new items reach the pool
 
 ### Requirement: Read-only pool content audit
 
@@ -1024,3 +991,4 @@ unreadable file never prevents the rest of the course from being established.
 - **GIVEN** the course subtree contains only readable entity JSON documents and valid deletion requests
 - **WHEN** bootstrap runs
 - **THEN** the report contains no unreadable-file entries
+

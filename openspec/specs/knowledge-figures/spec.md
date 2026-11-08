@@ -201,13 +201,11 @@ The graph MAY project existing `problem_count`, `importance`, `state`, or edge `
 
 Creating or attaching new problem figure assets SHALL occur only through a
 figure-patch gate. Its manifest carries the figure source files and the full
-replacement problem text; the gate verifies each source exists and hashes to
-its derived name, that the text references every figure, and that no
+replacement problem text; the gate verifies each source exists, has a declared readable logical name and matches its staged source bytes, that the text references every figure, and that no
 destination conflicts, and only then does one transaction copy the files,
 update the problem text, and record the logical paths on `figure_paths`. Any
 gate failure SHALL write nothing. An applied patch SHALL be recorded as a
-batch with a snapshot carrying the previous text and figure paths, and rollback
-SHALL restore them without touching the problem's original ingest batch stamp.
+batch with a snapshot carrying the previous text and figure paths, and the problem's original ingest batch stamp SHALL remain unchanged. Explicit successful-batch undo SHALL be retired.
 
 An explicit JSON mirror revision is a separate reference-field projection for
 an already-tracked problem. It MAY update `figure_paths` after existing logical
@@ -215,7 +213,9 @@ path validation, but SHALL NOT create, copy, rename, or transport figure bytes,
 change problem text as part of image generation, compute or attest a byte hash,
 or claim that the referenced files exist or are intact. New problem image
 generation and asset attachment remain subject to this gated manifest, review,
-source-byte, and hash-verification channel.
+source-byte verification channel.
+
+Existing hash-shaped figure filenames SHALL remain valid opaque legacy paths without requiring new hash computation. New managed names SHALL use readable sequential identity and logical revisions.
 
 #### Scenario: A patch lands figures and text together
 
@@ -230,7 +230,7 @@ source-byte, and hash-verification channel.
 #### Scenario: Rollback restores the previous text
 
 - **WHEN** a figure-patch batch is rolled back
-- **THEN** each affected problem's text and figure paths return to their pre-patch values, and the landed figure files are left in place as content-addressed, unreferenced assets
+- **THEN** the retired operation performs no write and ordinary direct text and figure repair remains available
 
 #### Scenario: Reference-only mirror updates do not bypass the figure gate
 
@@ -275,18 +275,3 @@ to the stored logical path, and linked-problem rendering SHALL display it.
 - **WHEN** the source file is missing, unsupported, conflicting, or not referenced by final text
 - **THEN** the whole content bundle writes neither the problem nor any figure
 
-### Requirement: Rollback deletes newly unreferenced figures
-
-Rolling back a content bundle SHALL remove each figure file created by that
-batch when no surviving pool row references its logical path. A file still
-referenced by another row SHALL remain.
-
-#### Scenario: Unique bundle image is rolled back
-
-- **WHEN** the owning batch is rolled back and no other row references its image
-- **THEN** the database reference and physical file are both removed
-
-#### Scenario: Shared image remains referenced
-
-- **WHEN** another surviving problem still references the same logical image
-- **THEN** rollback removes only the rolled-back row's reference and retains the file

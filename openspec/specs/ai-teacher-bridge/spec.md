@@ -351,55 +351,26 @@ NOT populate goal fields.
 
 ### Requirement: Check ingest action
 
-The bridge SHALL parse a valid governed append-only content action without
-depending on message keyword regexes and SHALL execute it automatically without
-a confirmation dialog. A reply with no action SHALL perform zero content or
-learning writes. Automatic actions MAY add knowledge points, formal problems,
-micro quizzes, flash cards, and figures. Updating or deleting existing content,
-rolling back a batch, and applying difficulty SHALL still require an explicit
-learner instruction.
+The Bridge SHALL parse governed content action blocks and execute valid requested or persistently authorized operations without a project approval dialog. Ordinary text without a structured action SHALL write no content or learning facts. Automatic content actions can add knowledge points, formal problems, micro quizzes, flash cards and figures. Existing-content edits and difficulty writes SHALL remain bound to actual user intent or scoped ongoing authorization. Explicit successful-batch undo SHALL be retired.
 
-Large actions SHALL reference one complete manifest staged under the current
-conversation's jobs directory. An inline manifest SHALL be accepted whether it
-declares its `kind` or its `type` as `content-bundle`. The server SHALL reject
-staged paths outside that directory, impose no fixed item ceiling, validate the
-full manifest, create a recoverable backup, and apply one transaction. One
-manifest MAY span several chapters: every knowledge point, problem, and flash
-card SHALL resolve exactly one chapter (its own `chapter`, else the manifest's), a
-manifest that leaves any item without a chapter SHALL be refused with that item's
-label instead of falling back to the workspace chapter, and every derived value —
-allocated id prefix, figure destination, micro-quiz id, duplicate check — SHALL
-follow the item's chapter. The apply SHALL record one batch per chapter present,
-so a chapter can be rolled back on its own, while prevalidation, backup, and the
-transaction cover the whole manifest. Every content action block in one reply
-SHALL be applied in order, so a learner who asks for several chapters is served
-in one turn. Any invalid item SHALL produce itemized errors and zero writes; the
-Agent SHALL repair and resubmit the complete manifest rather than silently
-dropping items. Outcomes SHALL remain in the mirror and next-turn context, where
-a successful apply SHALL also tell the Agent to continue any chapters the learner
-asked for that are still missing rather than asking the learner for another
-「继续」. Result cards SHALL show batch id, final asset types/counts, workspace,
-backup, and current rollback state.
+Staged paths SHALL remain within the owning conversation. Inline kind/type content-bundle SHALL use the same contract. Every item SHALL resolve its own valid chapter or a valid manifest chapter, never the active page chapter. Independent dependency-complete units SHALL be validated and applied consistently with backup and readable per-chapter provenance. Invalid units and dependents retain prior state while independent valid units complete. Outcomes SHALL truthfully reach the conversation mirror and next-turn context, with no success claim for failed content. Completed identities SHALL not be resubmitted as new content.
 
-Provider file tools MAY read and write arbitrary local paths. Those external
-tool writes are outside Lesson Kit's governed batch/rollback boundary. Managed
-runtime, pool, staged-manifest, and figure destinations SHALL remain inside the
-active workspace.
+The Agent SHALL continue requested chapters without another redundant user approval or continue prompt. Default UI result presentation SHALL be concise and SHALL NOT add source, reason, rollback-state fields or rollback controls. Full CLI and verification receipts SHALL preserve detailed actual outcomes. External provider file tools keep their existing scope, while managed runtime/pool/staged/figure destinations remain bounded by the active workspace.
 
 #### Scenario: Conversation request produces cards
 
 - **WHEN** the Agent returns a valid append-only flash-card action
-- **THEN** one governed batch inserts the cards automatically and restores a result card with rollback
+- **THEN** valid independent units insert the cards directly and the result reflects actual completion without rollback controls
 
 #### Scenario: Result card survives re-render
 
 - **WHEN** the conversation is reopened after an action ran or was rolled back
-- **THEN** the card reflects the current batch state and an already rolled-back batch has no rollback action, and a turn carrying one action renders one card
+- **THEN** the actual recorded result is restored once without rollback actions or new default explanation fields
 
 #### Scenario: Gate failure is explicit
 
 - **WHEN** any item in the staged manifest fails validation
-- **THEN** every reason is shown, the whole bundle writes nothing, and no success is claimed
+- **THEN** invalid units and their dependents remain unchanged, independent valid units may complete, and the mirror records actual itemized outcomes without claiming complete success
 
 #### Scenario: Ordinary conversation cannot ingest
 
@@ -414,7 +385,7 @@ active workspace.
 #### Scenario: Rejected manifest is correctable
 
 - **WHEN** the Agent repairs the complete staged manifest from itemized errors
-- **THEN** the full bundle is checked anew and may apply under one batch id
+- **THEN** corrected units are checked and applied while completed identities are reconciled without duplication
 
 #### Scenario: Applied content is not resubmitted
 
@@ -449,7 +420,7 @@ active workspace.
 #### Scenario: A multi-chapter bundle reports each batch
 
 - **WHEN** an applied bundle contains content for two chapters
-- **THEN** the result lists both batches with their chapters and counts, and each card row offers its own rollback
+- **THEN** the receipt lists both chapter batches and counts, and normal result cards contain no rollback action
 
 #### Scenario: One reply imports several chapters
 
@@ -464,7 +435,7 @@ active workspace.
 #### Scenario: A chapter-less item is refused with its label
 
 - **WHEN** a manifest has no bundle-level chapter and an item declares none, even though the workspace has an active chapter
-- **THEN** that item is refused with its label and a reason that names the missing chapter, and nothing is written
+- **THEN** the affected dependency unit stays unchanged, its missing chapter is recorded, and independent valid units can complete
 
 #### Scenario: Stopping early is corrected next turn
 
@@ -1007,3 +978,4 @@ The prompt SHALL prioritize explicit messages, task continuation, explicit refer
 #### Scenario: Task crosses knowledge points
 - **WHEN** an authorized task needs other knowledge points
 - **THEN** the Agent is instructed to read appropriate data proactively without requesting read permission or restricting itself to page focus
+
