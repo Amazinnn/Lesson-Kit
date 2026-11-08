@@ -1,5 +1,19 @@
 # 规划交接状态
 
+## 2026-11-09：WP02 2.4 内容包一半完成（`84b4f9cf`），其余三类待做
+
+按 `docs/audits/2026-11-08-wp02-review.md` 的三条 P1 重做，**未采纳 stash**（原样保留）。
+
+**已完成（content-bundle）**：
+
+- 计划剔除：门禁里任一单元出现校验错误即不再产出 plan（知识点/题目/闪卡三段都加了 per-item 错误闸）；`_problem_identity_errors` 同时返回被拒 id 集合并剔除对应问题计划；
+- 完整依赖：题目的 `kp_ids`、闪卡的 `kp_id` 只认「库内 ∪ 已接受的包内知识点」；被拒知识点的依赖方零写入；
+- 单元一致：按章一个外层事务（行 + 附件 + 快照 + 批次记录同生共死），章内每个单元各自 savepoint；题目的插图在**同一 savepoint 内**发布，失败只回滚该题并删除已复制文件；
+- 用例：5 条旧原子断言改写为单元语义；新增 5 条钉住审计三条 P1（含注入 `_publish_figure` 失败只回滚本单元、批次计数只含已应用单元）；
+- 受影响套件 119 passed（content-bundle 42、ingest、figures、problem-patch、cards、conversation-api）。
+
+**2.4 未完成部分（不得勾选）**：`_apply_problem_patch`、`_apply_patch`（micro-quiz / flash-card patch）、`apply_figure_patch` 仍是整单一事务；三者的门禁同样需要「拒收单元不产出计划 + 依赖完整」，并各自补单元级用例。2.2、2.6 未开始。
+
 ## 2026-11-08 WP02 合并前审查
 
 审查 `5fc45cd0` 的已提交成果与 stash 对象 `36ce68193c4db5bd37119ea616cd8bd8205b921b`。stash 未应用、未整合：已复现重复题报错仍落库、未知知识点闪卡仍落库、附件失败退回整包回滚，不能归因于旧测试契约。
