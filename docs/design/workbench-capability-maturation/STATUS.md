@@ -1,5 +1,26 @@
 # 规划交接状态
 
+## 2026-11-08 末：WP02 2.5 撤除面已勘察（未动手）
+
+全仓 **1577 passed（433s）**。`data move kp` / GAP-01 墓碑 / 章节归属均已提交并通过全仓回归。
+
+2.5「退役成功批次 undo」的完整撤除面（**一次做完，不要拆半**：CLI 删了而界面还在 = 更糟）：
+
+| 层 | 位置 |
+|---|---|
+| CLI | `workbench/cli/main.py:827`（dispatch）、`:1307`（`ingest rollback` parser） |
+| HTTP | `workbench/surface.py:123`、`workbench/server/app.py:115`、`workbench/server/api.py:826`（`ingest_rollback`） |
+| 数据层 | `workbench/ingest/__init__.py::rollback_batch`（2096+）、`_rollback_blockers`、`_rollback_conflicts`、快照 `manifest_path` 的保留逻辑 |
+| 前端 | `workbench/server/static/workbench.js:5318`（`/ingest/rollback` 调用）、`:5217/:5229`（`rolled_back_at` → 「已回滚」标记）、按钮 `aiMarkRolledBack` 相关渲染 |
+| Agent 提示 | `workbench/bridge/agent_contracts.py:142`（把 rollback 列为需显式请求的动作）、`:185`（"rollbackable by ingest batch"） |
+| 手册 | `docs/PRODUCT-MANUAL.md:488/517/593/597/607`（整批回滚按钮、可按章回滚、整批可回滚等表述）——第 8 章是主战场 |
+| 动作图/术语/工件 | `docs/action-graph/L2-interfaces.md`（路由）、`L3-actions.md`、`L4-workflows.md`、`L0-data.md`、`L1-services.md`；`docs/GLOSSARY.md`、`FILE_CONTRACT.md`（快照/回滚节） |
+| 测试 | `tests/workbench/test_ingest.py`、`test_content_bundle.py`、`test_problem_patch.py`、`test_conversation_api.py`、`test_ingest_figures.py`、`test_cards.py` 里以 rollback 为断言的用例 |
+
+保留：`ingest_batches.rolled_back_at` 列与 `list_batches` 的读取（`ingest/__init__.py:2078-2092`），历史批次仍可读；只退役**入口**与**能再次撤销**的能力。
+
+FLOW-03 要求"用直接修正完成相同修错任务"：撤除后应演示 `data update problem`（单题）与 `problem-patch` 清单（成批）完成一次真实修错，并把该路径写进手册替代原回滚段落。
+
 ## 2026-11-08 深夜：GAP-01 关闭，WP02 2.1/2.3 完成（2/15）
 
 - **GAP-01 已修**（`82aa5e7b`）：删除知识点时在交换状态里记录删除，导出据此产出显式墓碑；接收端照常删除，重复接收为空操作。缺文件仍**不**授权删除。证据 `evidence/expand-file-mediated-course-sync/2026-11-08-accept/gap-01-resolved.md`。闪卡无独立删除入口、学习文件仍无写端删除，均记为边界。
