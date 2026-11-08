@@ -189,11 +189,13 @@ a fallback, so a multi-chapter manifest cannot be silently assigned to the
 chapter the learner happens to be viewing.
 
 The manifest is checked and applied through the workbench ingest boundary as one
-prevalidation, one recoverable backup, and one transaction, recording one batch
-per chapter present (`batch-NNN` each, in chapter order) so a chapter can be
-rolled back on its own. Any invalid item or missing required image leaves SQLite
-and the figure destination untouched. Source figures are copied byte for byte into
-`.lessonkit/figures/{course}/{chapter}/` and referenced by logical path.
+prevalidation and one recoverable backup, recording one batch per applied chapter
+(`batch-NNN` each, in chapter order). Units are independent: an accepted item —
+its rows, its figures and that chapter's batch record — commits inside its
+chapter's transaction, while a refused item writes nothing for itself and is
+reported with its reasons; valid neighbours still land. Source figures are copied
+byte for byte into `.lessonkit/figures/{course}/{chapter}/` and referenced by
+logical path.
 
 An objective item declares its practice form with `quiz_type` (`yes_no`,
 `single_choice`, `multiple_choice`) plus `options`, and optionally an
@@ -222,14 +224,21 @@ Problems that already exist are changed **in place** — never by deleting and
 re-importing, because the readable id is the row's identity and everything a
 learner has recorded hangs off it:
 
+- method proposal: `lesson-kit data <workspace> method kp --input <proposal.json>`
+  resolves a practice-derived method before writing anything — an equivalent
+  knowledge point (same folded title) is reused and only the `problem_ids`
+  associations are written, while a new point goes through the governed create
+  path with a reusable method type; an uncertain classification or an unknown
+  problem id refuses the whole proposal with zero writes;
 - one row: `lesson-kit data <workspace> update problem <id> --input <file>`;
 - many rows: a `problem-patch` manifest (`{"kind": "problem-patch", "items":
   [{"problem_id": "…", …fields}]}`) applied with `lesson-kit ingest <workspace>
   recipe problem-patch --input <manifest> --output <dir> --apply`, which
   prevalidates every item, refuses unknown ids and unknown field names, writes
-  one recoverable backup and one transaction, records one batch id together with
-  **each row's previous values**, so a mistaken edit is corrected field for field
-  by another patch; the explicit successful-batch undo was retired.
+  one recoverable backup, commits each accepted row in its own unit, records one
+  batch id together with **each row's previous values**, so a mistaken edit is
+  corrected field for field by another patch; the explicit successful-batch undo
+  was retired.
 
 Writable fields are the problem's descriptive ones plus its practice form:
 `problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`,

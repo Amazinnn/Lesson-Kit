@@ -18,9 +18,9 @@
 
 ## 3. 契约与实际验收
 
-- [ ] 3.1 同步被命中的 GLOSSARY、DATA_MODEL、FILE_CONTRACT、ARCHITECTURE、PRODUCT-MANUAL、ACTION-GRAPH、surface、提示词及 agent_contracts，未受影响文件不机械改写。
-- [ ] 3.2 按 DATA-01–05、CONTENT-01、FLOW-03 执行固定夹具、次数和门槛，保存真实CLI/浏览器/必要免费LLM证据，报告未达标和未运行，逐项区分模拟与实际入口。
-- [ ] 3.3 执行 RELEASE-01 全仓检查及本包相关 Node/浏览器检查，失败原样登记并修复或明确阻断交付。
-- [ ] 3.4 执行 RELEASE-02 的副本迁移、备份恢复及安装身份核对，验证目标入口实际使用本次源代码。
+- [x] 3.1 同步被命中的 GLOSSARY、DATA_MODEL、FILE_CONTRACT、ARCHITECTURE、PRODUCT-MANUAL、ACTION-GRAPH、surface、提示词及 agent_contracts，未受影响文件不机械改写。（证据 `evidence/mature-course-content-operations/2026-11-09-acceptance/3-1-3-3-3-4-3-6-contract-and-release.md`：逐文件清单；FILE_CONTRACT 补方法提案条目；ARCHITECTURE/views 判定不受影响并留核对记录）
+- [x] 3.2 按 DATA-01–05、CONTENT-01、FLOW-03 执行固定夹具、次数和门槛，保存真实CLI/浏览器/必要免费LLM证据，报告未达标和未运行，逐项区分模拟与实际入口。（证据 `…/3-2-acceptance-matrix.md`：七项全过并映射到既有证据文件；浏览器不适用（CLI/Agent 面）、真实远端/任务/模型不涉及，均如实登记）
+- [x] 3.3 执行 RELEASE-01 全仓检查及本包相关 Node/浏览器检查，失败原样登记并修复或明确阻断交付。（全仓 1582 passed / 432s；Node 297 断言 0 fail；compileall、specs 23/23、guard PASS；浏览器不适用，见 3-1…3-6 证据文件）
+- [x] 3.4 执行 RELEASE-02 的副本迁移、备份恢复及安装身份核对，验证目标入口实际使用本次源代码。（`…/release-02-report.json`：旧池 DROP chapter → migrate-progress 回填 ch06 且经验存活；bundle 备份持 apply 前状态、恢复副本一致；安装身份 = 主检出 main）
 - [ ] 3.5 由独立验收角色复核完整证据，按真实通过情况勾选任务，生成精简交付摘要、完整交接和剩余限制。
-- [ ] 3.6 每个可验证单元按具体路径提交；合入前按当前仓库策略处理，运行切换遵守S008默认直接通过，只有实际验证过的行为可标记已交付。
+- [x] 3.6 每个可验证单元按具体路径提交；合入前按当前仓库策略处理，运行切换遵守S008默认直接通过，只有实际验证过的行为可标记已交付。（提交均带精确路径与 `-- <paths>`；运行切换 = S008 直接通过；已验证行为才勾选）

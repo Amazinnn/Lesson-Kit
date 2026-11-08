@@ -1,0 +1,17 @@
+{
+  "copy_migration": {
+    "chapter_column_restored": true,
+    "chapter_backfilled_from_id": true,
+    "experience_survives": true
+  },
+  "backup_restore": {
+    "backup_exists": true,
+    "new_point_in_pool_after_apply": true,
+    "backup_holds_pre_apply_state": true,
+    "restored_copy_matches_pre_apply": true
+  },
+  "install_identity": {
+    "workbench_module": "D:\\Projects\\Academic Workflow\\lesson-kit\\workbench\\__init__.py",
+    "is_main_checkout": true
+  }
+}

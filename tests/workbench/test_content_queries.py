@@ -51,6 +51,26 @@ def test_type_and_chapter_narrow_the_same_query(pool):
         == ['dmath-ch07-kp-001']
 
 
+def test_a_keyword_hitting_only_the_title_or_only_the_body(pool):
+    # 名称与正文是两个独立命中位；经验位与出处位（source_location）分别由
+    # test_a_keyword_only_in_experience… 与真实池探针（2-1-query.md）覆盖。
+    conn = pool.connect()
+    conn.execute(
+        "INSERT INTO knowledge_points (kp_id, knowledge_item, body, knowledge_type)"
+        " VALUES (?, ?, ?, ?)",
+        ('dmath-ch07-kp-900', '计数原理', '正文不含关键词', 'concept-property'))
+    conn.execute(
+        "INSERT INTO knowledge_points (kp_id, knowledge_item, body, knowledge_type)"
+        " VALUES (?, ?, ?, ?)",
+        ('dmath-ch07-kp-901', '另一个知识点', '正文里才有计数原理', 'concept-property'))
+    pool.commit()
+
+    hits = {item['kp_id'] for item in content.knowledge_query(pool, text='计数原理')}
+    assert {'dmath-ch07-kp-900', 'dmath-ch07-kp-901'} <= hits
+    assert [item['kp_id'] for item in
+            content.knowledge_query(pool, chapter='ch07', text='正文里才有')]         == ['dmath-ch07-kp-901']
+
+
 def test_bulk_read_carries_content_and_classification(pool):
     for item in content.knowledge_query(pool):
         assert item['knowledge_type']
