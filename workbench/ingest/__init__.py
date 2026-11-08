@@ -1661,7 +1661,7 @@ def _gate_problem_patch(conn, manifest, course=""):
     """Validate an in-place problem patch; every reason is reported, nothing is written.
 
     A patch can only touch rows that already exist, never changes an id, and
-    records each row's previous values so the whole batch can be rolled back.
+    records each row's previous values as this batch's applied-record history.
     """
     errors = []
     if not isinstance(manifest, dict) or manifest.get("kind") != PROBLEM_PATCH_KIND:

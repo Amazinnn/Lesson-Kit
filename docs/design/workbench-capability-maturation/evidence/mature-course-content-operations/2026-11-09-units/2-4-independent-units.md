@@ -8,7 +8,7 @@
 
 `workbench/ingest/__init__.py::_gate_content_bundle` / `_gate_micro_quiz` / `_gate_flash_cards` / `_gate_figure_patch` / `_gate_problem_patch`：
 
-- 每个条目循环内记录 `refused_before = len(errors)`，条目结束时任一新增错误即不产出 plan（bundle 三段、micro-quiz、flash-card、figure-patch 同一模式）；
+- 每个条目循环内记录 `refused_before = len(errors)`，条目结束时任一新增错误即不产出 plan。机制细节按门禁而异：bundle 三段与 micro-quiz 在条目尾部判定；flash-card 在 validate_card_row 之后判定；figure-patch 在落图后判定且「无 files 的纯文本修订」不视为错误；problem-patch 原本就逐条 `continue`。
 - bundle 的重复内容：`_problem_identity_errors` 改为同时返回 `(errors, refused_ids)`，被拒 id 对应的 problem plan 被剔除——审计 P1-1（报 duplicate 仍落库）；
 - micro-quiz / flash-card 门禁同样返回 `items`（仅接受单元），`ok` 仍表示"整份清单是否全合规"；
 - figure 门禁：course/chapter 层错误是**全局错误**（manifest-wide）→ 无 plans、整体拒绝；条目级错误只拒该条。
