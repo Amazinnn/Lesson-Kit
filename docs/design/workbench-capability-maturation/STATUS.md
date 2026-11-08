@@ -1,5 +1,15 @@
 # 规划交接状态
 
+## 2026-11-09：WP02 2.4 完成（4/15）
+
+- 四类通道（content-bundle / problem-patch / micro-quiz+flash-card patch / figure-patch）全部单元化：门禁只产出接受单元的计划、依赖只认「库内 ∪ 已接受知识点」（题目与闪卡都查）、每个单元各自 savepoint、插图与行同生共死、批次记录只含实际落库单元。
+- 审计三条 P1 全部有回归用例钉住（重复内容零写入、悬空闪卡零写入、插图失败只回滚本单元）。首版漏了 micro 门禁的 per-item 闸（全仓跑出 2 条旧原子用例失败后补上，`11629355`）。
+- 旧原子断言已改写为单元语义；全仓 **1572 passed / 441s**、compileall OK、Node 297 断言、live specs 23/23、WP02 strict、guard PASS。
+- 回执新增 `errors` / `partial` 字段；文档（GLOSSARY/PRODUCT-MANUAL/L1/L4/agent_contracts/FILE_CONTRACT）已同步为"逐单元提交"语义。
+- **剩余**：2.2 提炼复用（同义已有点优先、新模型带条件/公式/步骤、自动追加原题关联；8 个标注案例）、2.6 二十个映射/完整性标注案例（区分结构检查与语义核对，疑点不入已核对练习）。
+
+# 规划交接状态
+
 ## 2026-11-09：WP02 2.4 内容包一半完成（`84b4f9cf`），其余三类待做
 
 按 `docs/audits/2026-11-08-wp02-review.md` 的三条 P1 重做，**未采纳 stash**（原样保留）。
