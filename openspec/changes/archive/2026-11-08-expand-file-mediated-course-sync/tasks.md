@@ -28,6 +28,9 @@
 
 ## 4. 与改卷历史的同步联动（S011）
 
+- [x] 4.5 合并后审查回归：Tutor 可读交接输出 active/parked 草稿中已保存的参考答案披露事实；旧库缺 paper_state 且无活动执行时仍可导出，不创建表。（2026-11-08：test_tutor_handoff 6 passed，含小问披露）
+- [x] 4.6 跨机更正重放必须覆盖接收端已有独立 Attempt、两机编号不同；同请求不同内容及不同目标仍拒绝。（2026-11-08：同步生命周期/Attempts/对话 API 组合 78 passed；重放核验操作目标绑定）
+
 - [x] 4.1 把 `retired_paper_items` 纳入完整资产矩阵：身份带安装来源、attempt 引用转换、接收端分配本地序号、多跳传递与重复接收幂等。（实现 `workbench/data/course_sync.py`；`tests/workbench/test_course_sync_lifecycle.py` 覆盖首跳/次跳/同号并存/重复接收）
 - [x] 4.2 历史快照中不可解析的引用如实报告且不阻断导出；不按相同编号绑定本地记录。（导出清单 `dangling_history_references`；同上测试）
 - [x] 4.3 跨机重复请求识别并返回原结果；同请求不同内容仍为真实冲突；历史显示快照与可操作引用分离。（`attempts._correction_already_holds`：指纹绑在本机 attempt 号上的 `correct` 在目标机按「效果已成立」返回原结果且零写入；不同内容仍是真实冲突；显示缓存编号保留为不透明值、不重绑，见 `tests/workbench/test_course_sync_lifecycle.py`）

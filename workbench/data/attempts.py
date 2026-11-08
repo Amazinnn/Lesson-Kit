@@ -270,15 +270,15 @@ def correct(pool, attempt_id, payload):
         item["index"] = 0
         batch = _batch_fingerprint("correct", [item], attempt_id)
         stored = _operations(pool, request_id)
-        replay = _replay(pool, request_id, batch)
-        if replay is not None:
-            return replay
         if stored and _correction_already_holds(attempt, item, stored):
             # The same correction ran on another installation: its fingerprint is
             # bound to that machine's attempt number, but the recorded effect is
             # what this request asks for, so the original result is returned and
             # nothing is written again.
             return _envelope(request_id, [json.loads(row["result"]) for row in stored])
+        replay = _replay(pool, request_id, batch)
+        if replay is not None:
+            return replay
         operation = linked_operation(pool, attempt_id)
         if operation is None:
             raise ManifestError(
@@ -407,6 +407,8 @@ def _correction_already_holds(attempt, item, stored):
     if len(stored) != 1:
         return False
     row = stored[0]
+    if row["attempt_id"] != attempt["id"]:
+        return False
     if row["kind"] != "correct" or row["problem_id"] != item["problem_id"]:
         return False
     if row["rating"] != item["rating"]:

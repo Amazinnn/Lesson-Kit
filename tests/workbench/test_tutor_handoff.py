@@ -98,6 +98,30 @@ def test_the_handoff_carries_answers_reveals_unanswered_items_and_position(cours
     assert text == tutor_handoff.build(pool), "the same facts give the same text"
 
 
+def test_handoff_reports_actual_reveals_for_active_and_parked_items(course):
+    pool, _ = course
+    assert "`p-1`（已查看参考答案）" in tutor_handoff.build(pool)
+    connection = pool.connect()
+    active = dict(connection.execute("SELECT * FROM active_practice").fetchone())
+    active["items"] = [dict(row) for row in connection.execute(
+        "SELECT * FROM active_practice_items ORDER BY position")]
+    for item in active["items"]:
+        item["draft"] = json.loads(item.pop("draft_json") or "{}")
+    active["items"][1]["draft"] = {"parts": {"a": {"reference_viewed": True}}}
+    connection.execute("DELETE FROM active_practice")
+    connection.execute("INSERT INTO paper_state (paper_id,generation,checkpoint_json) VALUES (?,?,?)",
+                       ("ps-001", 1, json.dumps(active)))
+    assert "`p-1`（已查看参考答案）" in tutor_handoff.build(pool)
+    assert "`p-2` / `a`（已查看参考答案）" in tutor_handoff.build(pool)
+
+
+def test_handoff_without_active_run_or_legacy_paper_state_table(course):
+    pool, _ = course
+    pool.connect().execute("DELETE FROM active_practice")
+    pool.connect().execute("DROP TABLE paper_state")
+    assert "没有未完成的 Paper" in tutor_handoff.build(pool)
+
+
 def test_the_handoff_lands_in_the_package_and_never_in_the_workspace(course, tmp_path):
     pool, workspace = course
     code = course_sync.main(["math", "export", "--to", str(tmp_path / "bundle")],

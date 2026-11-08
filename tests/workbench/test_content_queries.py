@@ -57,6 +57,16 @@ def test_bulk_read_carries_content_and_classification(pool):
         assert 'knowledge_item' in item
 
 
+def test_chapter_filter_uses_current_ownership_after_a_move(pool):
+    connection = pool.connect()
+    if 'chapter' not in {row[1] for row in connection.execute('PRAGMA table_info(knowledge_points)')}:
+        connection.execute('ALTER TABLE knowledge_points ADD COLUMN chapter TEXT')
+    connection.execute("UPDATE knowledge_points SET chapter='ch08' WHERE kp_id='dmath-ch07-kp-001'")
+    pool.commit()
+    assert [item['kp_id'] for item in content.knowledge_query(pool, chapter='ch08')] == ['dmath-ch07-kp-001']
+    assert content.knowledge_query(pool, chapter='ch07') == []
+
+
 def test_a_problem_with_two_matching_associations_appears_once(pool):
     problems = content.related_problems(
         pool, ['dmath-ch06-kp-001', 'dmath-ch07-kp-001'])

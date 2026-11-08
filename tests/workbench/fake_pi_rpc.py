@@ -12,6 +12,10 @@ import sys
 import threading
 import time
 
+# Pi RPC uses UTF-8 JSONL regardless of the Windows console code page.
+sys.stdin.reconfigure(encoding="utf-8")
+sys.stdout.reconfigure(encoding="utf-8", newline="\n")
+
 
 _KNOWN_FLAGS = {"--mode", "--print", "--model", "--session", "--session-dir"}
 

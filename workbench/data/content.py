@@ -2,6 +2,7 @@
 
 import json
 import re
+from contextlib import nullcontext
 
 from workbench.domain import facets
 from workbench.domain import micro_quiz
@@ -169,7 +170,7 @@ def kp_chapter(item):
     A chapter move keeps the stable id, so the id segment goes stale; rows that
     predate the column still answer from the id.
     """
-    return item.get("chapter") or _chapter_from_id(item.get("kp_id"))
+    return item["chapter"] if item.get("chapter") is not None else _chapter_from_id(item.get("kp_id"))
 
 
 def move_kp(pool, kp_id, chapter):
@@ -207,6 +208,7 @@ def knowledge_query(pool, *, types=(), chapter=None, text=None):
             continue
         if chapter and kp_chapter(item) != chapter:
             continue
+
         if words:
             fields = (item.get("knowledge_item"), item.get("graph_label"), item.get("body"),
                       item.get("source_location"), experiences.get(item.get("kp_id")))
@@ -628,7 +630,9 @@ def delete(pool, entity, object_id):
         return
     table, id_column = _entity(entity)
     conn = pool.connect()
-    with pool.transaction(immediate=True):
+    from workbench.data import course_sync
+    lock = course_sync.course_lock(pool.root) if entity == "kp" else nullcontext()
+    with lock, pool.transaction(immediate=True):
         exists = conn.execute(
             f"SELECT 1 FROM {table} WHERE {id_column}=?", (object_id,)
         ).fetchone()
@@ -638,16 +642,12 @@ def delete(pool, entity, object_id):
             _delete_problem(conn, object_id, pool)
         elif entity == "kp":
             _delete_kp(conn, object_id, pool)
+            course_sync.record_row_deletions(pool, table, [object_id])
         else:
             conn.execute(
                 "DELETE FROM knowledge_relations WHERE relation_id=?", (object_id,)
             )
     paper_progress.flush_files(pool)
-    if entity == "kp":
-        # The row is gone, so export can no longer see it; without a recorded
-        # deletion the next exchange would report a missing asset instead.
-        from workbench.data import course_sync  # course_sync imports this module
-        course_sync.record_row_deletions(pool, table, [object_id])
 
 
 def restore(pool, entity, object_id):

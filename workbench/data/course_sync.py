@@ -534,27 +534,30 @@ def _execution_projection(assets, state):
 def record_row_deletions(pool, table, keys):
     """Mark rows this installation deleted, so the next export sends a tombstone.
 
+    Called inside the content mutation transaction: the authoritative SQLite
+    checkpoint commits or rolls back with the deletion. The readable sidecar
+    is refreshed by the next exchange, never published ahead of this commit.
+
     Only a row that was already exported needs one: a receiver that never saw it
     has nothing to delete, and a vanished local row must still not be confused
     with a lost file.
     """
     if table not in TABLES:
         return []
-    with course_lock(pool.root):
-        state = _state(pool.root, pool.course, pool=pool)
-        marked = []
-        for key in keys:
-            local_key = (table + "/"
-                         + json.dumps([key], ensure_ascii=False, separators=(",", ":")))
-            identity = state["row_identities"].get(local_key)
-            asset = state["base"].get(identity) if identity else None
-            if asset is None:
-                continue
-            state["base"][identity] = {**asset, "deleted": True}
-            marked.append(identity)
-        if marked:
-            _save_state(pool, state)
-        return marked
+    state = _state(pool.root, pool.course, pool=pool)
+    marked = []
+    for key in keys:
+        local_key = (table + "/"
+                     + json.dumps([key], ensure_ascii=False, separators=(",", ":")))
+        identity = state["row_identities"].get(local_key)
+        asset = state["base"].get(identity) if identity else None
+        if asset is None:
+            continue
+        state["base"][identity] = {**asset, "deleted": True}
+        marked.append(identity)
+    if marked:
+        _checkpoint(pool.connect(), state)
+    return marked
 
 
 def export_course(pool, workspace, destination):

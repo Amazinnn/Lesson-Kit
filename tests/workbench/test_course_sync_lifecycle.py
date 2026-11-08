@@ -216,7 +216,8 @@ def test_an_old_course_without_the_history_table_receives_and_repeats(devices, t
     assert [row[0] for row in retired(right(), paper_id)] == ["dmath-ch06-prob-002"]
 
 
-def test_a_correction_recorded_elsewhere_replays_its_result(devices, tmp_path):
+@pytest.mark.parametrize("occupied_id", [False, True])
+def test_a_correction_recorded_elsewhere_replays_its_result(devices, tmp_path, occupied_id):
     """The same request executed on A repeats on B without a false conflict."""
     from workbench.data import attempts
     left, right = devices
@@ -231,21 +232,29 @@ def test_a_correction_recorded_elsewhere_replays_its_result(devices, tmp_path):
                   "answer_text": "更正后的原文", "note": "备注", "rating": 4}
     first = attempts.correct(left(), attempt_id, correction)
 
-    _inspected, result = round_trip(left, right, tmp_path / "hop1")
+    if occupied_id:
+        right().connect().execute(
+            "INSERT INTO problem_attempts (problem_id,status,answer_text) VALUES (?,?,?)",
+            ("dmath-ch06-prob-003", "wrong", "local independent answer"))
+        right().commit()
+
+    _inspected, result = round_trip(left, right, tmp_path / "hop1", {"associate": True})
     assert result["status"] == "success", result["failed"]
 
     before = [tuple(row) for row in right().connect().execute(
         "SELECT id, problem_id, status, note, answer_text FROM problem_attempts ORDER BY id")]
-    replayed = attempts.correct(right(), attempt_id, correction)
+    local_id = right().connect().execute(
+        "SELECT id FROM problem_attempts WHERE answer_text=?", (correction["answer_text"],)).fetchone()[0]
+    replayed = attempts.correct(right(), local_id, correction)
 
     assert replayed["request_id"] == first["request_id"]
-    assert replayed["items"] == first["items"]
+    assert replayed["items"] == [{**item, "attempt_id": local_id} for item in first["items"]]
     assert [tuple(row) for row in right().connect().execute(
         "SELECT id, problem_id, status, note, answer_text FROM problem_attempts ORDER BY id")] == before
 
     different = dict(correction, answer_text="另一次更正")
     with pytest.raises(attempts.ManifestError, match="different content"):
-        attempts.correct(right(), attempt_id, different)
+        attempts.correct(right(), local_id, different)
 
 
 def test_a_cached_display_id_never_blocks_export_or_gets_rebound(devices, tmp_path):
@@ -322,6 +331,31 @@ def test_a_deleted_knowledge_point_travels_as_an_explicit_tombstone(devices, tmp
     assert remaining == 0
     assert right().connect().execute(
         "SELECT COUNT(*) FROM knowledge_relations").fetchone()[0] == 0
+
+
+def test_kp_deletion_rolls_back_if_tombstone_checkpoint_fails(devices, tmp_path, monkeypatch):
+    from workbench.data import content
+    left, right = devices
+    round_trip(left, right, tmp_path / "hop1")
+
+    def fail(*args, **kwargs):
+        raise OSError("checkpoint unavailable")
+
+    monkeypatch.setattr(course_sync, "_checkpoint", fail)
+    with pytest.raises(OSError, match="checkpoint unavailable"):
+        content.delete(left(), "kp", "dmath-ch06-kp-001")
+    assert left().kp("dmath-ch06-kp-001") is not None
+
+
+def test_kp_delete_refuses_an_active_exchange_before_writing(devices, tmp_path):
+    from workbench.data import content
+    left, right = devices
+    round_trip(left, right, tmp_path / "hop1")
+    with course_sync.course_lock(left.pool.root):
+        with pytest.raises(ValueError, match="locked"):
+            content.delete(left(), "kp", "dmath-ch06-kp-001")
+    assert left().kp("dmath-ch06-kp-001") is not None
+    assert course_sync.export_course(left(), workspace(left()), tmp_path / "after")["status"] == "success"
 
 
 def test_receiving_a_knowledge_point_tombstone_twice_is_idle(devices, tmp_path):
