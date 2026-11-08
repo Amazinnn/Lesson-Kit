@@ -1,0 +1,231 @@
+{
+  "cases": [
+    {
+      "case": "M1",
+      "kind": "mapping",
+      "original": "提案「等差数列求和公式」 ↔ 既有「等差数列求和公式」",
+      "structural": "折叠标题相同",
+      "semantic": "同义：复用既有身份",
+      "disposition": "见下述验证"
+    },
+    {
+      "case": "M2",
+      "kind": "mapping",
+      "original": "提案「等差数列 求和 公式！」 ↔ 既有「等差数列求和公式」",
+      "structural": "折叠标题相同（仅空格/标点差异）",
+      "semantic": "同义：复用既有身份",
+      "disposition": "见下述验证"
+    },
+    {
+      "case": "M3",
+      "kind": "mapping",
+      "original": "提案「抽屉原理」 ↔ 既有「鸽笼原理」",
+      "structural": "折叠标题不同",
+      "semantic": "同义但词面不同：机器不合并，人工裁决",
+      "disposition": "见下述验证"
+    },
+    {
+      "case": "M4",
+      "kind": "mapping",
+      "original": "提案「组合数的两个性质」 ↔ 库内无同义点",
+      "structural": "折叠标题无命中",
+      "semantic": "按治理路径新建（bundle 计划成立）",
+      "disposition": "见下述验证"
+    },
+    {
+      "case": "M5",
+      "kind": "mapping",
+      "original": "提案「加法原理（练习总结）」 ↔ 既有「加法原理」与「加法原理（讲义版）」",
+      "structural": "同一折叠命中两条既有记录",
+      "semantic": "歧义：拒收并点名两条，人工裁决",
+      "disposition": "见下述验证"
+    },
+    {
+      "case": "M6",
+      "kind": "mapping",
+      "original": "两道不同 key、相同题干「袋中有 5 只白球…」的题目",
+      "structural": "problem_identity 相同",
+      "semantic": "重复内容：双拒零写入",
+      "disposition": "见下述验证"
+    },
+    {
+      "case": "M7",
+      "kind": "mapping",
+      "original": "题目 kp_ids 引用「dmath-ch06-kp-999」（库内与包内均无）",
+      "structural": "unknown knowledge point",
+      "semantic": "依赖阻断：该题零写入",
+      "disposition": "见下述验证"
+    },
+    {
+      "case": "M8",
+      "kind": "mapping",
+      "original": "提案「错位排列公式」 knowledge_type=concept-property",
+      "structural": "方法提案要求三类方法类型之一",
+      "semantic": "拒收：分类不确定不创建",
+      "disposition": "见下述验证"
+    },
+    {
+      "case": "M1v",
+      "kind": "mapping-gate",
+      "original": "M1 的真实门禁执行",
+      "structural": "plans=1（接受）",
+      "semantic": "折叠命中库内既有 → 应改走复用",
+      "disposition": "演示：门禁只做身份校验，同义复用在提案层"
+    },
+    {
+      "case": "M3v",
+      "kind": "mapping-gate",
+      "original": "M3 的真实门禁执行",
+      "structural": "plans=1（接受）",
+      "semantic": "「抽屉原理」与「鸽笼原理」折叠不同 → 不会被自动合并",
+      "disposition": "反例：同义词不静默合并"
+    },
+    {
+      "case": "M6v",
+      "kind": "mapping-gate",
+      "original": "M6 的真实门禁执行",
+      "structural": "plans=0，duplicate 错误 2 条",
+      "semantic": "同一题干判重",
+      "disposition": "双拒零写入"
+    },
+    {
+      "case": "M7v",
+      "kind": "mapping-gate",
+      "original": "M7 的真实门禁执行",
+      "structural": "plans=0",
+      "semantic": "unknown knowledge point",
+      "disposition": "依赖阻断零写入"
+    },
+    {
+      "case": "S0",
+      "kind": "semantic",
+      "original": "提案「加法原理（练习总结）」的折叠匹配（歧义环境）",
+      "structural": "输入合法",
+      "semantic": "折叠无精确命中 0 条",
+      "disposition": "因此走新建路径——下面的拒收来自多命中，不是这里的探测"
+    },
+    {
+      "case": "S1",
+      "kind": "semantic",
+      "original": "提案「等差数列 求和 公式！」的折叠匹配",
+      "structural": "输入合法（标题/正文/类型）",
+      "semantic": "折叠命中 []",
+      "disposition": "复用既有身份"
+    },
+    {
+      "case": "S5",
+      "kind": "semantic",
+      "original": "提案「加法原理」在两条同折叠记录之间的复用检查",
+      "structural": "输入合法",
+      "semantic": "拒收：several equivalent knowledge points exist: dmath-ch06-kp-001, dmath-ch06-kp-070 — decide which one to extend instead of creating another",
+      "disposition": "歧义拒收，知识点总数不变（3 == 3）"
+    },
+    {
+      "case": "I1",
+      "kind": "integrity-audit",
+      "original": "知识点「无标题检查」正文为空、标题缺失",
+      "structural": "untitled 检查命中",
+      "semantic": "标题缺失即结构问题",
+      "disposition": "进入 findings，不落已核对"
+    },
+    {
+      "case": "I2",
+      "kind": "integrity-audit",
+      "original": "选择题「P50」未标 objective 与答案键",
+      "structural": "unmarked-objective 检查命中",
+      "semantic": "形态完整但判分依据缺失",
+      "disposition": "进入 findings"
+    },
+    {
+      "case": "I3",
+      "kind": "integrity-audit",
+      "original": "题目「P51」为普通计算题（对照）",
+      "structural": "unmarked-objective 未命中",
+      "semantic": "无需补标",
+      "disposition": "保持原状"
+    },
+    {
+      "case": "I4",
+      "kind": "integrity-audit",
+      "original": "题干「P50/P51」正文不同 → 非重复",
+      "structural": "duplicates 检查",
+      "semantic": "题干规范化后不同",
+      "disposition": "无 finding（对照）"
+    },
+    {
+      "case": "I5",
+      "kind": "integrity-audit",
+      "original": "题 P51 引用 dmath/ch06/absent.png 但文件不存在",
+      "structural": "figures 检查命中 2 条",
+      "semantic": "引用与文件不一致",
+      "disposition": "进入 findings，不落已核对"
+    },
+    {
+      "case": "C1",
+      "kind": "classification",
+      "original": "「错位排列公式」有教材出处",
+      "structural": "字段合法（method-modeling）",
+      "semantic": "证据=教材例 6.3",
+      "disposition": "补齐 knowledge_type"
+    },
+    {
+      "case": "C2",
+      "kind": "classification",
+      "original": "「捆绑法」有教材出处",
+      "structural": "字段合法",
+      "semantic": "证据=教材例 6.5",
+      "disposition": "补齐 knowledge_type"
+    },
+    {
+      "case": "C3",
+      "kind": "classification",
+      "original": "「隔板法」有教材出处",
+      "structural": "字段合法",
+      "semantic": "证据=教材例 6.8",
+      "disposition": "补齐 knowledge_type"
+    },
+    {
+      "case": "C4",
+      "kind": "classification",
+      "original": "「存疑：讲义说法不一致」无依据",
+      "structural": "不写入",
+      "semantic": "证据不足",
+      "disposition": "保持原状，不进已核对练习"
+    },
+    {
+      "case": "C5",
+      "kind": "classification",
+      "original": "「存疑：两道题答案矛盾」无依据",
+      "structural": "不写入",
+      "semantic": "证据不足",
+      "disposition": "保持原状，不进已核对练习"
+    },
+    {
+      "case": "C6",
+      "kind": "classification",
+      "original": "已核对范围 = 按 types 检索",
+      "structural": "knowledge_query(types=['method-modeling'])",
+      "semantic": "命中 3 条，全部有证据",
+      "disposition": "疑点不在其中：dmath-ch06-kp-063, dmath-ch06-kp-064"
+    }
+  ],
+  "summary": {
+    "cases": 26,
+    "structure_vs_semantic": "结构=audit/门禁/字段校验；语义=同义折叠与判重与证据",
+    "classification_completed": [
+      "dmath-ch06-kp-060",
+      "dmath-ch06-kp-061",
+      "dmath-ch06-kp-062"
+    ],
+    "classification_kept_doubtful": [
+      "dmath-ch06-kp-063",
+      "dmath-ch06-kp-064"
+    ],
+    "verified_practice_scope": [
+      "dmath-ch06-kp-060",
+      "dmath-ch06-kp-061",
+      "dmath-ch06-kp-062"
+    ],
+    "doubtful_excluded_from_verified": true
+  }
+}

@@ -14,7 +14,7 @@
 - [x] 2.4 将 bundle/problem-patch/card/quiz/figure相关应用拆为独立完整单元；修改旧all-or-nothing场景，保持单元一致、批次provenance和重试身份。（证据 `evidence/mature-course-content-operations/2026-11-09-units/2-4-independent-units.md`：四类通道门禁均只产出接受单元的计划，依赖只认「库内 ∪ 已接受知识点」（题目 kp_ids 与闪卡 kp_id 都查）；bundle 按章事务、章内单元独立 savepoint、插图同 savepoint 发布、批次只记实际落库；problem-patch/micro-quiz/card/figure 各自单元化；旧原子断言改写为单元语义，新增审计三条 P1 回归（重复零写入、悬空闪卡零写入、插图失败只回滚本单元）。按审查要求未采纳 stash；2.2/2.6 未做，不据此勾整包）
   - 2026-11-08 审查拒收 stash：重复题与悬空闪卡报错仍写入，附件失败触发整包回滚；不是仅改写旧测试即可交付。见 `docs/audits/2026-11-08-wp02-review.md`。stash 保留，未应用。
 - [x] 2.5 退役成功批次undo CLI/Agent提示/操作入口，历史 rolled_back 保持可读；用直接修正完成相同修错任务，FLOW-03实际走通。（证据 `evidence/mature-course-content-operations/2026-11-08-batch-undo/2-5-retire-batch-undo.md`：一次性移除 CLI/HTTP/前端按钮/Agent 提示/`rollback_batch` 及 7 个专用助手（净删 362 行）；保留 `rolled_back_at` 与历史卡片标记；FLOW-03 直接修正实跑：题号不变、作答原文不动、撤销入口已不存在；受影响套件 104 passed）
-- [ ] 2.6 用原文标注20个映射/完整性案例，分别报告结构检查和语义核对。限定章节分类补齐只改有依据项，疑点不进入已核对练习。
+- [x] 2.6 用原文标注20个映射/完整性案例，分别报告结构检查和语义核对。限定章节分类补齐只改有依据项，疑点不进入已核对练习。（证据 `evidence/mature-course-content-operations/2026-11-09-annotation/2-6-annotation.md` + `annotation-report.json`/`annotation-run.py`：26 条标注案例（超过 20），映射 8+2 门禁实测、语义核对含同义折叠/判重/歧义拒收/同义词不合并反例，完整性含 untitled / unmarked-objective / duplicates / figures；分类补齐 C1–C6：三条有依据项经 `data update kp` 补齐、两条疑点保持占位且按 types 检索不在已核对范围；全部在脱敏临时夹具执行，不触真实课程数据）
 
 ## 3. 契约与实际验收
 

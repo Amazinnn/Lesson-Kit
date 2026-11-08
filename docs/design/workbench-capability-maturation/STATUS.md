@@ -2,6 +2,14 @@
 
 # 规划交接状态
 
+# 规划交接状态
+
+## 2026-11-09 末：WP02 2.6 完成（6/15），§2 实现任务全部收口
+
+- **2.6 标注案例**（证据 `evidence/mature-course-content-operations/2026-11-09-annotation/`：`2-6-annotation.md` 26 行案例表 + `annotation-report.json` + `annotation-run.py`）：映射 8 条 + 2 条真实门禁执行 + 语义核对 2 条 + 完整性 4 条（untitled/unmarked-objective/duplicates/figures）+ 分类补齐 6 条（C1–C6）。结构检查（audit/门禁/字段）与语义核对（同义折叠、判重、人工证据）分开报告；分类补齐只改有依据项（3 条 method-modeling），两条疑点保持占位且按 types 检索不在已核对范围。
+- 全部案例在脱敏临时夹具执行；脚本注册工作区用 `LESSONKIT_WB_HOME` 隔离（曾误注册进真实注册表一次，已精确移除该条，22 个真实工作区完好）。
+- §2 实现任务（2.1–2.6）全部完成；WP02 6/15，剩 §3 契约/验收/发布任务（3.1 文档同步、3.2 DATA-01–05/CONTENT-01/FLOW-03 验收、3.3 RELEASE-01、3.4 RELEASE-02、3.5 独立验收、3.6 提交纪律）。
+
 ## 2026-11-09 续：WP02 2.2 完成（5/15），仅剩 2.6
 
 - **2.2 方法提案**（`7c90d201`，全仓 1582 passed / 432s）：`data method kp --input` 先按折叠标题查同义已有点——命中 1 个即复用身份（只追加适用原题关联，不改正文）、命中多个拒收并点名（要人工裁决）、未命中走治理新建（method-modeling / formula-calculation / algorithm-process 三类，分类不确定拒收零写入）；`problem_ids` 原题自动追加关联且既有关联保留，未知题号前置校验整体拒收。10 条用例（8 标注案例 + 同义多命中 + CLI 端到端）全过；L2/GLOSSARY（方法提案）/PRODUCT-MANUAL/ACTION-GRAPH 2026-11-09 留痕/agent_contracts 同批同步。
