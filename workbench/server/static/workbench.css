@@ -3176,10 +3176,8 @@ html[data-show-source="off"] .practice-source { display: none; }
 }
 .check-card-title { font-weight: 600; color: var(--ink-strong); }
 .check-card-detail { margin-top: 4px; color: var(--ink-muted); font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
-.check-card-rollback { margin-top: 8px; }
 .check-card-batch { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 6px; }
 .check-card-batch-label { color: var(--ink-muted); font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
-.check-card-batch .check-card-rollback { margin-top: 0; flex: none; }
 
 /* misc */
 h1 { font-size: 28px; line-height: 36px; margin: 0 0 8px; }

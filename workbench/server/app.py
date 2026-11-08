@@ -112,7 +112,6 @@ ROUTES = [
     ("POST", "/api/w/{name}/feedback", api_mod.feedback_record),
     ("GET", "/api/w/{name}/records", api_mod.records_overview),
     ("GET", "/api/w/{name}/ingest/batches", api_mod.ingest_batches),
-    ("POST", "/api/w/{name}/ingest/rollback", api_mod.ingest_rollback),
     ("GET", "/api/w/{name}/problem/{problem_id}", api_mod.problem_detail),
     ("GET", "/api/w/{name}/kp/{kp_id}", api_mod.kp_detail),
     ("GET", "/api/w/{name}/kp/{kp_id}/experience", experience_api.get),

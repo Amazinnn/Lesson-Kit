@@ -232,36 +232,6 @@ class CardIngestTests(unittest.TestCase):
             conn.close()
         self.assertEqual(count, 1)
 
-    def test_card_feedback_and_schedule_block_rollback_without_deleting(self):
-        batch_id = ingest.apply_flash_cards(
-            self.db_path, self.manifest([manifest_item()])
-        )["batch_id"]
-        conn = sqlite3.connect(self.db_path)
-        conn.execute(
-            "INSERT INTO feedback_events (item_type, item_id) VALUES ('card', ?)",
-            ("dmath-ch06-fc-001",),
-        )
-        conn.execute(
-            "INSERT INTO review_schedule (item_type, item_id) VALUES ('card', ?)",
-            ("dmath-ch06-fc-001",),
-        )
-        conn.commit()
-        conn.close()
-
-        with self.assertRaises(ValueError) as raised:
-            ingest.rollback_batch(self.db_path, batch_id)
-
-        self.assertIn("feedback_events", str(raised.exception))
-        self.assertIn("review_schedule", str(raised.exception))
-        conn = sqlite3.connect(self.db_path)
-        try:
-            self.assertEqual(conn.execute(
-                "SELECT COUNT(*) FROM flash_cards WHERE ingest_batch_id=?", (batch_id,)
-            ).fetchone()[0], 1)
-        finally:
-            conn.close()
-
-
 class CardPracticeTests(unittest.TestCase):
     def setUp(self):
         from tests.workbench.fixtures import WorkspaceFixture

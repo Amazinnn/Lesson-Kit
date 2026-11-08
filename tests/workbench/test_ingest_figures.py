@@ -110,23 +110,6 @@ class FigurePatchTests(unittest.TestCase):
         self.assertEqual((figures / self.name).read_bytes(), b"different-bytes")
         self.assertIsNone(self.row()[1])
 
-    def test_rollback_restores_the_previous_text(self):
-        path = Path(self.fixture.tmp.name) / "m.json"
-        path.write_text(json.dumps(
-            self.manifest(text=f"![]({self.logical})")), encoding="utf-8")
-        result = self.apply(self.db, path)
-        from workbench.ingest import rollback_batch
-
-        rollback_batch(self.db, result["batch_id"])
-
-        new_text, figure_paths, batch_stamp = self.row()
-        self.assertEqual(new_text, "P1")
-        self.assertIsNone(figure_paths)
-        self.assertIsNone(batch_stamp)
-        self.assertTrue(
-            (self.fixture.ws / ".lessonkit" / "figures" / "dmath" / "ch06" / self.name)
-            .is_file())
-
     def test_recipe_dispatch_applies_figures(self):
         from workbench.ingest import recipe
 

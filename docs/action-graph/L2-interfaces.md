@@ -59,7 +59,6 @@
 | POST `/ai/sessions/{id}/queue/reorder` | 读/写 | `{expected_order,turn_ids}`：完整队列排列的顺序 CAS；返回 `{conversation_id,queue_order}`，不改变消息上下文 | 浏 |
 | POST `/ai/sessions/{id}/turns/{turn}/interrupt` | 读/写 | `{expected_revision}`：原待发消息立即发送；复用身份与原上下文，审批/交接/过期版本冲突不修改 | 浏 |
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
-| POST `/ingest/rollback` | 写 | Check 整批回滚 | 双 |
 
 ## CLI 命令（`python -m workbench.cli.main …` / 安装入口 `lesson-kit …`；可用命令以 `workbench.cli.entry` 为准）
 
@@ -81,7 +80,7 @@
 | `mirror <workspace> figures --repo <checkout> --direction check|push|pull [--dry-run]` | 读 + 显式文件复制（池引用是成员关系；检查根目录和目标路径；push 写派生索引；不改池、不修剪、不执行 Git 网络操作） | Agent |
 | `bridge add / add-model / list` | 配置 provider 与**模型条目**（显示名自定，与 harness 解耦）/ 报告解析到的可执行文件、来源与条目 | 人 |
 | `guard` | 工作台守卫 | 双 |
-| `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |
+| `ingest`（+ `prepare/run/gate/apply/render/recipe/migrate-figures` 七子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；显式整批撤销已退役；figure-patch 快照保留前值） | 双 |
 | `experiment` | 只读实验评估器 | 人 |
 | `papers <workspace> save --input <manifest>` | 写（验证已导出的练习清单并保存到试卷列表；返回 JSON 回执） | Agent |
 | `papers <workspace> list/get <ps-id>` | 读（缺失题目不隐藏容器，返回独立进度） | Agent |

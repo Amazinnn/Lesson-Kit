@@ -451,81 +451,6 @@ class ContentBundleTests(unittest.TestCase):
         self.assertTrue(stored.is_file())
         self.assertEqual(stored.read_bytes(), payload)
 
-    def test_linked_problem_renders_and_rollback_removes_unreferenced_figure(self):
-        figure = self.image(name="unique.png")
-        result = self.apply({
-            "kind": "content-bundle",
-            "chapter": "ch06",
-            "problems": [formal(
-                "p1", ["dmath-ch06-kp-001"], text="图甲 ![图](figure:f1)",
-                figures=[{"key": "f1", "source_path": str(figure)}],
-            )],
-        })
-        logical = json.loads(self.query(
-            "SELECT figure_paths FROM problems WHERE ingest_batch_id=?",
-            (result["batch_id"],),
-        )[0][0])[0]
-        stored = self.ws / ".lessonkit" / "figures" / logical
-        self.assertTrue(stored.is_file())
-
-        rolled = ingest.rollback_batch(self.db_path, result["batch_id"])
-        self.assertEqual(rolled["deleted"], 1)
-        self.assertFalse(stored.exists())
-
-    def test_rollback_refuses_changed_inserted_row_without_backup(self):
-        applied = self.apply({
-            "kind": "content-bundle", "chapter": "ch06",
-            "problems": [formal("p1", ["dmath-ch06-kp-001"], text="A new question")],
-        })
-        with open_db(self.db_path) as conn:
-            conn.execute(
-                "UPDATE problems SET problem_text='edited after apply' "
-                "WHERE ingest_batch_id=?", (applied["batch_id"],),
-            )
-        backup = self.db_path.with_name(
-            f"{self.db_path.name}.{applied['batch_id']}-rollback-backup")
-
-        with self.assertRaisesRegex(ValueError, "changed after apply"):
-            ingest.rollback_batch(self.db_path, applied["batch_id"])
-
-        self.assertFalse(backup.exists())
-        self.assertEqual(self.query(
-            "SELECT problem_text FROM problems WHERE ingest_batch_id=?",
-            (applied["batch_id"],),
-        ), [("edited after apply",)])
-
-    def test_rollback_keeps_a_shared_figure(self):
-        figure = self.image(name="shared.png")
-        first = self.apply({
-            "kind": "content-bundle",
-            "chapter": "ch06",
-            "problems": [formal(
-                "p1", ["dmath-ch06-kp-001"], text="![图](figure:f1)",
-                figures=[{"key": "f1", "source_path": str(figure)}],
-            )],
-        })
-        second = self.apply({
-            "kind": "content-bundle",
-            "chapter": "ch06",
-            "problems": [formal(
-                "p2", ["dmath-ch06-kp-001"], text="图乙 ![图](figure:f2)",
-                figures=[{"key": "f2", "source_path": str(figure)}],
-            )],
-        })
-        logical = json.loads(self.query(
-            "SELECT figure_paths FROM problems WHERE ingest_batch_id=?",
-            (second["batch_id"],),
-        )[0][0])[0]
-        stored = self.ws / ".lessonkit" / "figures" / logical
-        self.assertTrue(stored.is_file())
-
-        ingest.rollback_batch(self.db_path, second["batch_id"])
-        self.assertTrue(stored.is_file())
-        ingest.rollback_batch(self.db_path, first["batch_id"])
-        self.assertFalse(stored.exists())
-
-    # -- append-only discipline ------------------------------------------
-
     def test_bundle_refuses_to_overwrite_existing_problem(self):
         with self.assertRaises(ValueError) as caught:
             self.apply({
@@ -537,30 +462,6 @@ class ContentBundleTests(unittest.TestCase):
                 )],
             })
         self.assertIn("already exists", str(caught.exception))
-
-    def test_rollback_refuses_when_the_new_kp_is_still_referenced(self):
-        bundle = self.apply({
-            "kind": "content-bundle",
-            "chapter": "ch06",
-            "knowledge_points": [{
-                "key": "kp-new", "knowledge_item": "电势",
-                "knowledge_type": "concept-property", "importance": "core",
-            }],
-            "problems": [formal("p1", ["kp-new"])],
-        })
-        kp_id = self.query(
-            "SELECT kp_id FROM knowledge_points WHERE ingest_batch_id=?",
-            (bundle["batch_id"],),
-        )[0][0]
-        # keep the problem, delete only its batch membership: the KP is now
-        # referenced by a surviving row, so the rollback must refuse.
-        conn = sqlite3.connect(self.db_path)
-        conn.execute("UPDATE problems SET ingest_batch_id=NULL WHERE problem_id LIKE '%-prob-%'")
-        conn.commit()
-        conn.close()
-        with self.assertRaises(ValueError) as caught:
-            ingest.rollback_batch(self.db_path, bundle["batch_id"])
-        self.assertIn(kp_id, str(caught.exception))
 
     def test_unknown_kind_is_refused(self):
         with self.assertRaises(ValueError) as caught:
@@ -617,21 +518,6 @@ class ContentBundleTests(unittest.TestCase):
         self.assertEqual(len(copied), 1)
         self.assertFalse((self.ws / ".lessonkit" / "figures" / "dmath" / "ch06").exists())
         self.assertEqual(len(self.query("SELECT batch_id FROM ingest_batches")), 2)
-
-    def test_each_chapter_batch_rolls_back_alone(self):
-        result = self.apply(self.two_chapter_manifest())
-        first, second = (batch["batch_id"] for batch in result["batches"])
-
-        rolled = ingest.rollback_batch(self.db_path, first)
-
-        self.assertEqual(rolled["counts"]["problems"], 1)
-        self.assertEqual(
-            [row[0] for row in self.query(
-                "SELECT problem_id FROM problems WHERE problem_id LIKE 'dmath-ch07-prob-%'")],
-            ["dmath-ch07-prob-001"], "the sibling batch stays")
-        states = dict(self.query("SELECT batch_id, rolled_back_at FROM ingest_batches"))
-        self.assertIsNotNone(states[first])
-        self.assertIsNone(states[second])
 
     def test_an_item_without_a_chapter_is_refused(self):
         manifest = self.two_chapter_manifest()

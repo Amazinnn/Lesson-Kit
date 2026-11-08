@@ -817,17 +817,6 @@ def ingest_batches(pool, workspace, params, body):
     return ingest.list_batches(pool.db_path)
 
 
-def ingest_rollback(pool, workspace, params, body):
-    body = _request_object(body)
-    batch_id = body.get("batch_id")
-    if not isinstance(batch_id, str) or not batch_id:
-        raise ApiError(400, "batch_id must be a non-empty string")
-    try:
-        return ingest.rollback_batch(pool.db_path, batch_id)
-    except ValueError as exc:
-        raise ApiError(400, str(exc)) from exc
-
-
 def problem_detail(pool, workspace, params, body):
     return queries.problem_detail(pool, params["problem_id"])
 

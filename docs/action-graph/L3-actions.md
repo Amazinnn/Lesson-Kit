@@ -78,7 +78,7 @@ Paper 操作补充（2026-10-19；2026-10-29 增补 append）：练习页只管�
 | ingest 配方（micro-quiz / flash-card） | CLI | 双（Agent 可直跑） | problems/flash_cards 单事务（记批次 id+行戳记+manifest 快照）；**id 必须带本工作区课程前缀**；**难度可选、填了必带依据**（2026-09-21） | 已实现 |
 | 客观题 payload 契约（`quiz_type/options/answer_key/source_evidence`；历史 `error_reason` 忽略、不展示） | content-bundle / problem-patch / 内容门禁 | 双 | 无新增写入；不再要求或渲染 `error_reason`；答案键、`solution`、来源证据保留 | 已实现（remove-micro-quiz-error-reason，2026-10-29） |
 | 全池备份 | ingest --backup | 同上 | pool/backups | 已实现 |
-| **Check 管线**（生成→校验→**直接入正式池**，无候选中间态；批次 id+整批回滚；候选组织并入校验环节） | CLI `ingest rollback --batch <id>` + 结果卡回滚按钮 + `POST /ingest/rollback` | Agent 主导 | 经门禁写池+批次标记+ingest_batches 登记 | **已实现**（introduce-check-pipeline，队列④） |
+| **Check 管线**（生成→校验→**直接入正式池**，无候选中间态；批次 id；候选组织并入校验环节） | 结果卡批次记录（无撤销入口） | Agent 主导 | 经门禁写池+批次标记+ingest_batches 登记 | **已实现**（introduce-check-pipeline，队列④） |
 | 抽取管线入池（教材→KP→题） | 管线脚本 | 人 | 全部内容表 | 已实现（一次性） |
 | 作者内容镜像引导（pool-first：池写修订号 1 JSON + 台账；已有同 id 文件按嵌入身份采纳/冲突拒绝；不可读文件进报告、被其点名 id 的实体拒绝建档、其余实体照常；逐实体可恢复） | CLI `mirror init --repo <checkout>`（`[--entity] [--dry-run]`） | Agent | 池 `content_mirror_state`/`content_mirror_log` + checkout JSON | 已实现（2026-10-10，json-content-repository-sync/PR110） |
 | 作者内容镜像只读分类（零写入；区分 noop/仓库→池/池→仓库/文件恢复/收敛/无效/冲突） | CLI `mirror check`·`mirror status --repo [--entity]` | Agent | — | 已实现（同上） |
@@ -109,7 +109,7 @@ Paper 操作补充（2026-10-19；2026-10-29 增补 append）：练习页只管�
 | replace_practice_selection（明确练习意图才生效；只替换组卷 Paper Scope，不组卷或开始 Practice Run） | 对话产出动作 | Agent | 练习 Scope | 已实现 |
 | paper_artifact（保存成功后的 Paper 工件卡：只按已保存 ps-NNN 记录展示标题/题数，不含 URL、零写入；打开试卷页是显式动作） | 对话产出动作 | Agent | —（只读已保存 Paper 记录） | 已实现（2026-10-16 PR137） |
 | content-bundle（内容批次：合法的纯新增动作自动执行，无关键词意图门；大清单暂存本对话 jobs 后由区块引用、小清单内联（`kind`/`type` 都认）→整份清单预检→一份备份→单事务 apply；**清单可跨章**，按每项声明的章发号/落图并**按章各记一个批次**，推不出章的条目点名拒收；**一轮里每个区块都应用**，学生说清几章就一轮导完；**题型（综合题/判断/小测）入库时可选，客观题允许无答案键**；失败逐条显式回对话流、零写入） | 对话产出动作 | Agent | 池内容 + `.lessonkit/figures/{course}/{chapter}/`（经门禁+按章批次标记）；补答案键走 `data update problem` | 已实现（2026-09-23；2026-09-25 跨章与多区块、题型与无键客观题） |
-| problem-patch（原地改已有题目：补答案键/改题型/补来源/把选项从题面拆进 `options`；单题 `data update problem`、批量 `ingest recipe problem-patch --apply`；未知字段与难度字段拒收，题号不可改；批次记旧值可回滚） | 对话产出动作 / CLI | Agent（仅明确指令）+人 | problems（原地 UPDATE，不插入不删行） | 已实现（2026-09-25） |
+| problem-patch（原地改已有题目：补答案键/改题型/补来源/把选项从题面拆进 `options`；单题 `data update problem`、批量 `ingest recipe problem-patch --apply`；未知字段与难度字段拒收，题号不可改；批次记旧值可供再次补丁写回） | 对话产出动作 / CLI | Agent（仅明确指令）+人 | problems（原地 UPDATE，不插入不删行） | 已实现（2026-09-25） |
 | 内容审计（重复题/疑似片段/未标客观题/缺标题/图片引用；只读，可 `--check` 筛选、`--json` 输出） | CLI `data <ws> audit` | Agent | —（数据库与文件零写入；有发现返回 1） | 已实现（content-dedup-and-audit） |
 | 整批回滚（结果卡按钮，与 CLI 同源 rollback；跨章导入时**每章一行、各撤各的**） | UI 结果卡 | 人 | 池内容（按批次删行） | 已实现（introduce-check-pipeline；2026-09-25 按章细化） |
 

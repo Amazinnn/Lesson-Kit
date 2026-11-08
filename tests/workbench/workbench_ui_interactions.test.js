@@ -3081,7 +3081,7 @@ test("a turn request carries no keyword-derived content intent", async () => {
   assert.equal(body.practice_intent, false);
 });
 
-test("a two-chapter bundle renders one rollback row per batch", async () => {
+test("a two-chapter bundle renders one row per batch with no undo entry", async () => {
   const result = {
     kind: "content-bundle", applied: true,
     counts: { knowledge_points: 3, problems: 10, flash_cards: 0, figures: 4 },
@@ -3121,22 +3121,15 @@ test("a two-chapter bundle renders one rollback row per batch", async () => {
   assert.match(rows[0].children[0].textContent, /批次 batch-010 · ch12 · 知识点 1/);
   assert.match(rows[1].children[0].textContent, /batch-011/);
   await flush();
-  // Only the rolled-back chapter loses its button and says so; its sibling keeps
-  // both the button and its own summary line.
+  // A historical rollback still says so; neither row offers an undo entry.
   assert.equal(rows[1].children.length, 1);
   assert.match(rows[1].children[0].textContent, /batch-011 已整批回滚/);
-  assert.equal(rows[0].children.length, 2);
+  assert.equal(rows[0].children.length, 1);
   assert.match(rows[0].children[0].textContent, /批次 batch-010 · ch12/);
-  assert.equal(rows[0].children[1].className, "check-card-rollback");
-
-  rows[0].children[1].click();
-  await flush();
-  const rollbackPost = calls.find(
-    (call) => call.url.endsWith("/ingest/rollback") && call.options);
-  assert.deepEqual(JSON.parse(rollbackPost.options.body), { batch_id: "batch-010" });
+  assert.ok(!calls.some((call) => call.url.endsWith("/ingest/rollback")));
 });
 
-test("check ingest success renders a batch result card whose rollback calls the API", async () => {
+test("check ingest success renders a batch result card with no undo entry", async () => {
   const result = {
     batch_id: "batch-001", kind: "content-bundle", applied: true,
     counts: { knowledge_points: 1, problems: 28, flash_cards: 2, figures: 1 },
@@ -3168,15 +3161,8 @@ test("check ingest success renders a batch result card whose rollback calls the 
   assert.match(detail, /工作区 uphy2/);
   assert.match(detail, /dmath-pre-batch-001\.db/);
   assert.doesNotMatch(detail, /backups\/dmath/);
-  const rollback = body.children[2];
-  assert.equal(rollback.className, "check-card-rollback");
-  rollback.click();
-  await flush();
-  const rollbackPost = calls.find((call) => call.url.endsWith("/ingest/rollback") && call.options);
-  assert.ok(rollbackPost);
-  assert.deepEqual(JSON.parse(rollbackPost.options.body), { batch_id: "batch-001" });
-  assert.ok(rollback.removed);
-  assert.match(body.children[1].textContent, /已整批回滚/);
+  assert.equal(body.children.length, 2, "the card carries no action button");
+  assert.ok(!calls.some((call) => call.url.endsWith("/ingest/rollback")));
 });
 
 test("a restored single-action turn renders one result card, not two", async () => {

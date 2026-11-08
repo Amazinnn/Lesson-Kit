@@ -5173,9 +5173,6 @@
     if (row) {
       var label = row.children[0];
       if (label) label.textContent = "批次 " + batchId + " 已整批回滚";
-      (row.children || []).slice().forEach(function (child) {
-        if (child.className === "check-card-rollback") child.remove();
-      });
       return;
     }
     var title = card.querySelector(".check-card-title");
@@ -5186,8 +5183,6 @@
       detail.textContent = "批次 " + batchId + " 已整批回滚"
         + (assets ? "（撤销 " + assets + "）" : "") + "，池中不再包含该批内容。";
     }
-    var button = card.querySelector(".check-card-rollback");
-    if (button) button.remove();
   }
 
   function aiBatchRow(card, batchId) {
@@ -5242,14 +5237,6 @@
       label.className = "check-card-batch-label";
       label.textContent = aiBatchLabel(batch);
       row.appendChild(label);
-      var button = document.createElement("button");
-      button.type = "button";
-      button.className = "check-card-rollback";
-      button.textContent = "整批回滚";
-      button.addEventListener("click", function () {
-        aiRollbackBatch(batch.batch_id, button);
-      });
-      row.appendChild(button);
       body.appendChild(row);
     });
     return card;
@@ -5298,56 +5285,10 @@
     text.className = "check-card-detail";
     text.textContent = detail;
     body.appendChild(text);
-    if (batchId) {
-      var button = document.createElement("button");
-      button.type = "button";
-      button.className = "check-card-rollback";
-      button.textContent = "整批回滚";
-      button.addEventListener("click", function () { aiRollbackBatch(batchId, button); });
-      body.appendChild(button);
-    }
     div.appendChild(body);
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     return div;
-  }
-
-  function aiRollbackBatch(batchId, button) {
-    function executeRollback() {
-      button.disabled = true;
-      api("/ingest/rollback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ batch_id: batchId }),
-      }).then(function (result) {
-        var card = button.closest(".check-card");
-        if (card) {
-          var detail = card.querySelector(".check-card-detail");
-          if (detail) {
-            detail.textContent = "批次 " + batchId + " 已整批回滚（撤销 "
-              + (result && result.deleted != null ? result.deleted : "?") + " 行）。";
-          }
-        }
-        button.remove();
-        aiSetStatus("批次已回滚");
-      }).catch(function (err) {
-        button.disabled = false;
-        aiSetStatus("回滚失败：" + (err && err.message ? err.message : "未知错误"));
-      });
-    }
-
-    var approval = {
-      title: "整批回滚 " + batchId,
-      reason: "内容变更不可撤销，需要你确认。",
-      impact: "这批内容会从池中删除。",
-      approveLabel: "确认回滚",
-    };
-    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.confirm
-        && AgentUISurfaces.confirm(approval, executeRollback)) {
-      return;
-    }
-    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？这批内容会从池中删除。")) return;
-    executeRollback();
   }
 
   function aiRecordRecent(type, id) {

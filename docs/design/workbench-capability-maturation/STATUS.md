@@ -1,5 +1,14 @@
 # 规划交接状态
 
+## 2026-11-08 收尾：WP02 2.5 完成（3/15），批次 undo 已退役
+
+- 一次性撤除显式成功批次撤销：CLI `ingest rollback`、`POST /ingest/rollback`（surface/app/api）、结果卡「整批回滚」按钮与确认面、`rollback_batch` 及 7 个专用助手（净删 362 行）、`agent_contracts` 两处提示。
+- 保留 `ingest_batches.rolled_back_at` 与历史卡片「已回滚」标记；批次快照改称"应用于记录"。
+- 文档同批：GLOSSARY（5 处）、FILE_CONTRACT、PRODUCT-MANUAL（第 8 章 6 处）、ACTION-GRAPH 2026-11-08 留痕 + L0–L4。
+- 测试：删 17 条纯回滚用例、改写 2 条非回滚意图用例、`real_pool_conformance` 去掉回滚校验；新增 `test_batch_undo_retired.py`（CLI 已无该子命令 / 历史 `rolled_back_at` 可读）；Node UI 断言改为"无撤销入口"且历史标记仍在（128 pass）。
+- **FLOW-03 实跑**：录一条作答 → 错改 → 同身份改正；题号不变、作答原文不动、撤销入口已不存在。证据 `evidence/mature-course-content-operations/2026-11-08-batch-undo/`。
+- 未做：2.2 提炼复用、2.4 拆独立有效单元、2.6 20 个标注案例。
+
 ## 2026-11-08 末：WP02 2.5 撤除面已勘察（未动手）
 
 全仓 **1577 passed（433s）**。`data move kp` / GAP-01 墓碑 / 章节归属均已提交并通过全仓回归。

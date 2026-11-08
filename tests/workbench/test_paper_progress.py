@@ -857,20 +857,6 @@ def test_multi_question_delete_failure_rolls_back_paper_files_and_learning_rows(
     assert evidence(pool) == before
 
 
-def test_batch_rollback_refuses_current_paper_references_without_learning_rows(pool):
-    import sqlite3
-    from workbench.ingest import _rollback_blockers
-    a = paper(pool, 'A', [Q, R])
-    pool.connect().execute('UPDATE problems SET ingest_batch_id=? WHERE problem_id=?', ('batch-999', Q))
-    pool.commit()
-    conn = sqlite3.connect(pool.db_path)
-    try:
-        assert any('saved Paper' in item for item in _rollback_blockers(conn, 'batch-999'))
-    finally:
-        conn.close()
-    assert practice_sets.get_saved(pool, a)['count'] == 2
-
-
 def test_completed_paper_retries_are_idempotent_and_stale_rating_writes_nothing(pool):
     a = paper(pool, 'A', [Q, R]); run = start(pool, a)
     token = active_practice.submission_context(run, 0)

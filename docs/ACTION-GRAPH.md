@@ -143,6 +143,8 @@ flowchart LR
 
 ## 变更留痕
 
+- 2026-11-08 退役显式成功批次撤销（mature-course-content-operations 2.5 / S008）：删除 CLI `ingest rollback`、`POST /ingest/rollback`、结果卡「整批回滚」按钮与其确认面、`rollback_batch` 及阻断/冲突/回滚实现；`ingest_batches.rolled_back_at` 与历史卡片标记保留，只退役入口与再次撤销的能力。修错改走直接修正：单题 `data update problem`、成批 `problem-patch`（不换题号、不动学习记录）。GLOSSARY、FILE_CONTRACT、PRODUCT-MANUAL、L0–L4 同批同步。
+
 - 2026-11-01 Agent 对话区简化（agent-chat-simplify）：**退役两个对话流卡**——工具调用卡
   的「已知影响／影响未知」行（卡片只报状态、摘要与输出，不再对写入效果作任何声明）与
   待处理 Paper 审批在消息流中的无按钮重复卡（决议只在输入框上方审批卡呈现一次，已决议

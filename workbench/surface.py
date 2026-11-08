@@ -120,7 +120,6 @@ ROUTES = {
         "the records page is server-rendered; `attempts list`/`data history` "
         "serve the CLI and Agent"),
     ("GET", "/api/w/{name}/ingest/batches"): (BOTH, ("ingest",), ""),
-    ("POST", "/api/w/{name}/ingest/rollback"): (BOTH, ("ingest",), ""),
     ("GET", "/api/w/{name}/problem/{problem_id}"): (BOTH, ("data",), ""),
     ("GET", "/api/w/{name}/kp/{kp_id}"): (BOTH, ("data",), ""),
     ("GET", "/api/w/{name}/kp/{kp_id}/experience"): (BOTH, ("experience",), ""),

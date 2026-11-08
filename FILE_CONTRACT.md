@@ -228,8 +228,8 @@ learner has recorded hangs off it:
   recipe problem-patch --input <manifest> --output <dir> --apply`, which
   prevalidates every item, refuses unknown ids and unknown field names, writes
   one recoverable backup and one transaction, records one batch id together with
-  **each row's previous values**, and can therefore be undone value-for-value
-  with `ingest rollback --batch batch-NNN`.
+  **each row's previous values**, so a mistaken edit is corrected field for field
+  by another patch; the explicit successful-batch undo was retired.
 
 Writable fields are the problem's descriptive ones plus its practice form:
 `problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`,

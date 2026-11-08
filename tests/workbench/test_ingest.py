@@ -405,24 +405,6 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(json.loads(batch[2]), {"problems": 2})
         self.assertEqual(Path(batch[3]), self.root / "formal-backup.db")
 
-    def test_formal_batch_rollback_restores_existing_solution_rows(self):
-        solutions, audits = self.qualified_files()
-        gate_path = self.root / "gate.json"
-        ingest.gate(self.db_path, solutions, audits, gate_path)
-        applied = ingest.apply(self.db_path, gate_path, self.root / "formal-backup.db")
-
-        rolled = ingest.rollback_batch(self.db_path, applied["batch_id"])
-
-        self.assertEqual(rolled["counts"], {"problems": 2, "knowledge_points": 0})
-        conn = sqlite3.connect(self.db_path)
-        try:
-            rows = conn.execute(
-                "SELECT problem_id, solution, ingest_batch_id FROM problems ORDER BY problem_id"
-            ).fetchall()
-        finally:
-            conn.close()
-        self.assertEqual(rows, [("p-1", "old one", None), ("p-2", "old two", None)])
-
     def test_formal_apply_clears_the_complete_problem_difficulty_rating(self):
         conn = sqlite3.connect(self.db_path)
         try:
@@ -691,7 +673,7 @@ class ContentPatchIngestTests(unittest.TestCase):
         finally:
             conn.close()
 
-    def test_gate_report_stamps_new_knowledge_points_and_restores_baseline(self):
+    def test_gate_report_stamps_new_knowledge_points(self):
         conn = sqlite3.connect(self.db_path)
         conn.execute("ALTER TABLE knowledge_points ADD COLUMN ingest_batch_id TEXT")
         conn.execute("CREATE TABLE flash_cards (card_id TEXT PRIMARY KEY, kp_id TEXT, "
@@ -703,7 +685,6 @@ class ContentPatchIngestTests(unittest.TestCase):
         solutions, audits, content, content_audit = self.qualified_files()
         gate_path = self.root / "gate.json"
         ingest.gate(self.db_path, solutions, audits, gate_path, content, content_audit)
-        before = self.snapshot()
 
         applied = ingest.apply(self.db_path, gate_path, self.root / "stamped-backup.db")
 
@@ -718,10 +699,6 @@ class ContentPatchIngestTests(unittest.TestCase):
             ).fetchall(), [("kp-1", None), ("kp-2", None)])
         finally:
             conn.close()
-        rolled = ingest.rollback_batch(self.db_path, applied["batch_id"],
-                                       self.root / "stamped-rollback.db")
-        self.assertEqual(rolled["counts"], {"problems": 2, "knowledge_points": 1})
-        self.assertEqual(self.snapshot(), before)
 
     def test_apply_uses_one_backup_and_transaction_for_solutions_kps_and_mappings(self):
         solutions, audits, content, content_audit = self.qualified_files()
@@ -855,94 +832,6 @@ class BatchRollbackTests(unittest.TestCase):
         self.assertTrue(backup.exists())
         self.assertFalse((self.root / "dmath.db.ingest-backup").exists())
 
-    def test_apply_batch_and_rollback_restore_content_snapshot(self):
-        before = self.content_snapshot()
-        applied = self.apply_batch()
-
-        self.assertEqual(applied, {
-            "ok": True,
-            "batch_id": "batch-001",
-            "kind": "micro-quiz-patch",
-            "counts": {"problems": 1},
-            "backup_path": str(self.db_path.with_name("dmath.db.ingest-backup")),
-            "applied": True,
-        })
-        result = ingest.rollback_batch(self.db_path, applied["batch_id"])
-
-        self.assertEqual(result["deleted"], 1)
-        self.assertEqual(result["accounting"], {
-            "knowledge_points": 1, "problems": 0, "knowledge_relations": 0,
-        })
-        self.assertEqual(self.content_snapshot(), before)
-        conn = sqlite3.connect(self.db_path)
-        try:
-            rolled_back_at = conn.execute(
-                "SELECT rolled_back_at FROM ingest_batches WHERE batch_id='batch-001'"
-            ).fetchone()[0]
-        finally:
-            conn.close()
-        self.assertIsNotNone(rolled_back_at)
-
-    def test_rollback_lists_all_problem_dependencies_and_deletes_nothing(self):
-        applied = self.apply_batch()
-        problem_id = self.manifest["items"][0]["problem_id"]
-        conn = sqlite3.connect(self.db_path)
-        conn.execute("INSERT INTO problem_attempts (problem_id) VALUES (?)", (problem_id,))
-        conn.execute("INSERT INTO problem_progress VALUES (?)", (problem_id,))
-        conn.execute(
-            "INSERT INTO feedback_events (item_type, item_id) VALUES ('problem', ?)",
-            (problem_id,),
-        )
-        conn.execute(
-            "INSERT INTO review_schedule (item_type, item_id) VALUES ('problem', ?)",
-            (problem_id,),
-        )
-        conn.execute(
-            "CREATE TABLE learning_current_state ("
-            "item_type TEXT NOT NULL, item_id TEXT NOT NULL, state TEXT NOT NULL, "
-            "PRIMARY KEY (item_type, item_id))"
-        )
-        conn.execute(
-            "INSERT INTO learning_current_state (item_type, item_id, state)"
-            " VALUES ('problem', ?, 'review')",
-            (problem_id,),
-        )
-        conn.execute(
-            "INSERT INTO learner_signals VALUES ('signal-1', 'problem', ?)",
-            (problem_id,),
-        )
-        conn.commit()
-        conn.close()
-
-        with self.assertRaises(ValueError) as raised:
-            ingest.rollback_batch(self.db_path, applied["batch_id"])
-
-        message = str(raised.exception)
-        for table in (
-                "problem_attempts", "problem_progress", "feedback_events",
-                "review_schedule", "learning_current_state", "learner_signals"):
-            self.assertIn(table, message)
-        conn = sqlite3.connect(self.db_path)
-        try:
-            self.assertEqual(conn.execute(
-                "SELECT COUNT(*) FROM problems WHERE ingest_batch_id='batch-001'"
-            ).fetchone()[0], 1)
-            self.assertIsNone(conn.execute(
-                "SELECT rolled_back_at FROM ingest_batches WHERE batch_id='batch-001'"
-            ).fetchone()[0])
-        finally:
-            conn.close()
-        self.assertFalse(self.db_path.with_name(
-            "dmath.db.batch-001-rollback-backup").exists())
-
-    def test_unknown_and_already_rolled_back_batches_are_rejected(self):
-        with self.assertRaisesRegex(ValueError, "unknown batch missing"):
-            ingest.rollback_batch(self.db_path, "missing")
-        batch_id = self.apply_batch()["batch_id"]
-        ingest.rollback_batch(self.db_path, batch_id)
-        with self.assertRaisesRegex(ValueError, "batch batch-001 already rolled back"):
-            ingest.rollback_batch(self.db_path, batch_id)
-
     def run_cli(self, *args):
         out = io.StringIO()
         workspace = {"path": str(self.root), "db": self.db_path.name}
@@ -951,26 +840,3 @@ class BatchRollbackTests(unittest.TestCase):
             code = cli_main.main(list(args))
         return code, json.loads(out.getvalue())
 
-    def test_cli_rollback_success(self):
-        batch_id = self.apply_batch()["batch_id"]
-        backup = self.root / "cli-rollback.db"
-
-        code, output = self.run_cli(
-            "ingest", "dmath", "rollback", "--batch", batch_id,
-            "--backup", str(backup),
-        )
-
-        self.assertEqual(code, 0)
-        self.assertEqual(output["result"]["batch_id"], batch_id)
-        self.assertTrue(backup.exists())
-
-    def test_cli_rollback_unknown_batch(self):
-        code, output = self.run_cli(
-            "ingest", "dmath", "rollback", "--batch", "missing",
-        )
-
-        self.assertEqual(code, 2)
-        self.assertEqual(output, {"error": "unknown batch missing"})
-
-if __name__ == "__main__":
-    unittest.main()

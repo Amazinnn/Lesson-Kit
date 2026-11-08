@@ -241,71 +241,7 @@ class ProblemPatchTests(unittest.TestCase):
 
     # -- rollback ---------------------------------------------------------
 
-    def test_rollback_restores_the_previous_values_exactly(self):
-        self.seed()
-        conn = sqlite3.connect(self.db_path)
-        conn.execute(
-            "UPDATE problems SET difficulty=2, difficulty_knowledge_breadth=2,"
-            " difficulty_reasoning_depth=2, difficulty_transfer_distance=2,"
-            " difficulty_construction_openness=2,"
-            " difficulty_model='cognitive-v1-equal-mean'"
-            " WHERE problem_id='dmath-ch06-prob-002'")
-        conn.commit()
-        conn.close()
-        before = self.row("dmath-ch06-prob-002")
-
-        applied = self.apply([patch_item(
-            "dmath-ch06-prob-002",
-            problem_text="改写后的题干",
-            practice_modes=["yes_no"],
-            micro_quiz={"quiz_type": "yes_no", "answer_key": "是",
-                        "error_reason": "因为…",
-                        "source_evidence": "教材 第6章 习题6-2"},
-            source_answer="是",
-        )])
-        self.assertEqual(self.row("dmath-ch06-prob-002")["practice_modes"], '["yes_no"]')
-
-        rolled = ingest.rollback_batch(self.db_path, applied["batch_id"])
-
-        self.assertTrue(rolled["ok"])
-        self.assertEqual(rolled["counts"], {"problems": 1})
-        restored = self.row("dmath-ch06-prob-002")
-        for column, value in before.items():
-            if column == "updated_at":
-                continue
-            self.assertEqual(restored[column], value, column)
-
-    def test_rollback_of_a_patch_is_refused_twice(self):
-        self.seed()
-        applied = self.apply([patch_item("dmath-ch06-prob-002",
-                                        display_title="补个标题")])
-        ingest.rollback_batch(self.db_path, applied["batch_id"])
-        with self.assertRaises(ValueError) as caught:
-            ingest.rollback_batch(self.db_path, applied["batch_id"])
-        self.assertIn("already rolled back", str(caught.exception))
-
-    def test_rollback_refuses_changed_post_state_before_creating_backup(self):
-        self.seed()
-        applied = self.apply([patch_item(
-            "dmath-ch06-prob-002", display_title="apply title")])
-        with open_db(self.db_path) as conn:
-            conn.execute(
-                "UPDATE problems SET display_title='later edit' "
-                "WHERE problem_id='dmath-ch06-prob-002'")
-        backup = self.db_path.with_name(
-            f"{self.db_path.name}.{applied['batch_id']}-rollback-backup")
-
-        with self.assertRaisesRegex(ValueError, "changed after apply"):
-            ingest.rollback_batch(self.db_path, applied["batch_id"])
-
-        self.assertFalse(backup.exists())
-        self.assertEqual(self.row("dmath-ch06-prob-002")["display_title"], "later edit")
-        self.assertIsNone(self.query(
-            "SELECT rolled_back_at FROM ingest_batches WHERE batch_id=?",
-            (applied["batch_id"],),
-        )[0][0])
-
-    def test_a_patch_survives_learning_records(self):
+    def test_a_patch_keeps_the_learning_records_it_touched(self):
         self.seed()
         conn = sqlite3.connect(self.db_path)
         conn.execute(
@@ -318,9 +254,14 @@ class ProblemPatchTests(unittest.TestCase):
                                         display_title="补个标题")])
 
         self.assertTrue(applied["ok"])
-        rolled = ingest.rollback_batch(self.db_path, applied["batch_id"])
-        self.assertTrue(rolled["ok"])
-        self.assertEqual(self.row("dmath-ch06-prob-002")["display_title"], None)
+        self.assertEqual(self.row("dmath-ch06-prob-002")["display_title"], "补个标题")
+        conn = sqlite3.connect(self.db_path)
+        try:
+            self.assertEqual(conn.execute(
+                "SELECT COUNT(*) FROM problem_attempts WHERE problem_id=?",
+                ("dmath-ch06-prob-002",)).fetchone()[0], 1)
+        finally:
+            conn.close()
 
     # -- recipe -----------------------------------------------------------
 

@@ -291,8 +291,9 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
   备份/事务覆盖整份清单而**按章各记一个批次**；题型由 `quiz_type` 决定（综合题/判断/小测），
   **客观题允许没有答案键**——这类题不判分、计入 `keyless` 计数并披露，答案键可在
   `data.content` 里事后补写（按该题 `quiz_type` 校验形状，空值清回无键）。
-- `ingest`：`prepare/run/gate/apply/apply_batch/rollback_batch`；生成内容只有通过
-  确定性门禁后才能以批次事务写入，并保留整批回滚边界。
+- `ingest`：`prepare/run/gate/apply/apply_batch`；生成内容只有通过
+  确定性门禁后才能以批次事务写入。批次快照保留每行改前值作为应用于记录；
+  显式整批撤销入口已于 2026-11-08 退役，修错走直接修正。
 - `domain.typesetting.check/render_text`：正文段落的纯测量与共用报告措辞；
   `data.typesetting.read_rows` 只从已有连接读取正文/id，不 ensure schema。
   ingest 的 `inspect_content_bundle_typesetting` 是纯预检；有效 bundle check 与

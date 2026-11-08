@@ -243,7 +243,6 @@ test("restored historical Artifact cards do not take over the current page", () 
 test("Workbench runtime keeps typing available and maps runtime and Artifact state", () => {
   assert.equal(workbench.includes("aiInput.disabled = running"), false);
   assert.ok(workbench.includes("AgentUISurfaces.activity"));
-  assert.ok(workbench.includes("AgentUISurfaces.confirm"));
   assert.ok(workbench.includes("AgentUISurfaces.resetTurn"));
   assert.ok(workbench.includes("AgentUISurfaces.artifact"));
   assert.ok(workbench.includes("paper_artifact"));

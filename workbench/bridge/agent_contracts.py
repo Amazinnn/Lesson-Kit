@@ -139,7 +139,7 @@ After any successful write, summarize the affected objects and user-accessible r
 
 Load this contract before creating or modifying managed learning content. It supersedes remembered older content-bundle conventions.
 
-1. Creation uses a `lessonkit-action` content-bundle, not direct `lesson-kit ingest` or database writes from the conversation. Pure valid additions may auto-apply; modification, deletion, rollback, and difficulty rating still require the learner's explicit request.
+1. Creation uses a `lessonkit-action` content-bundle, not direct `lesson-kit ingest` or database writes from the conversation. Pure valid additions may auto-apply; modification, deletion and difficulty rating still require the learner's explicit request.
 
 2. A large manifest is first written unchanged to the `staged_manifest_dir` supplied in the current turn context. The action then contains only:
 ```lessonkit-action
@@ -182,7 +182,7 @@ Objective source problems are still imported when the source has no known answer
 
 15. Existing problems are modified in place with a `problem-patch`; do not delete and re-import them merely to add an answer key, source metadata, objective-practice fields, or extracted options. Shape:
 {"kind":"problem-patch","items":[{"problem_id":"…", ...fields to change...}]}
-Patchable fields include `problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`, `origin_kind`, `source_evidence`, `source_answer`, `solution_origin`, `display_title`, `display_summary`, `exam_year`, `practice_modes`, `micro_quiz`, `parts`, and `answer_key`. Problem ids are immutable. Difficulty still uses `lesson-kit difficulty`. Converting an existing problem to yes/no/choice uses `practice_modes` plus the full `micro_quiz` object (`quiz_type`, `options`, `answer_key`, `error_reason`); preserve source option text rather than rewriting it. In-place patching preserves all learning history and is rollbackable by ingest batch.
+Patchable fields include `problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`, `origin_kind`, `source_evidence`, `source_answer`, `solution_origin`, `display_title`, `display_summary`, `exam_year`, `practice_modes`, `micro_quiz`, `parts`, and `answer_key`. Problem ids are immutable. Difficulty still uses `lesson-kit difficulty`. Converting an existing problem to yes/no/choice uses `practice_modes` plus the full `micro_quiz` object (`quiz_type`, `options`, `answer_key`, `error_reason`); preserve source option text rather than rewriting it. In-place patching preserves all learning history; a mistaken edit is corrected by the same patch path, not undone.
 
 16. Server validation is authoritative. If any item is invalid the entire submitted manifest is zero-write and the result names the failures. Correct the causes and resubmit the complete manifest; do not silently drop rejected items or claim success. If turn context includes `last_check_outcome`, obey it: after success do not duplicate the same content; after a rejection fix the reported causes before resubmission.
 

@@ -315,34 +315,10 @@ def run(name, before_path=None):
                         assert all(item.startswith(f"{course}-{batch['chapter']}-") for item in ids)
                         stamped[batch["batch_id"]][table] = ids
                 assert counts(applied_state)["ingest_batches"] == counts(baseline)["ingest_batches"] + len(stamped)
-            for index, batch in enumerate(applied["batches"], 1):
-                rolled = ingest.rollback_batch(database, batch["batch_id"],
-                                                backup_path=scratch / f"rollback-{index:03d}.db")
-                assert all(rolled["counts"][table] == batch["counts"][table]
-                           for table in (*CONTENT, "figures"))
-                assert rolled["deleted"] == sum(batch["counts"][table] for table in CONTENT)
-                with closing(sqlite3.connect(database)) as conn:
-                    preserve_existing(baseline, snapshot(conn))
-                    for table, id_column in CONTENT.items():
-                        assert conn.execute(f"SELECT COUNT(*) FROM {table} WHERE ingest_batch_id=?",
-                                            (batch["batch_id"],)).fetchone()[0] == 0
-                    for sibling in applied["batches"][index:]:
-                        for table, ids in stamped[sibling["batch_id"]].items():
-                            assert conn.execute(f"SELECT COUNT(*) FROM {table} WHERE ingest_batch_id=?",
-                                                (sibling["batch_id"],)).fetchone()[0] == len(ids)
-            with closing(sqlite3.connect(database)) as conn:
-                final = snapshot(conn)
-                for table in (*CONTENT, *LEARNING):
-                    if table in baseline:
-                        assert final[table] == baseline[table], f"rollback changed {table} baseline"
-                for batch in applied["batches"]:
-                    assert conn.execute("SELECT rolled_back_at FROM ingest_batches WHERE batch_id=?",
-                                        (batch["batch_id"],)).fetchone()[0] is not None
             report["verification_only_copy_inserts"] = {
                 "counts": applied["counts"], "chapter_batch_stamps": stamped,
                 "malformed_refusal_atomic": True, "real_stem_duplicate_refusal_atomic": True,
-                "existing_rows_unchanged": True, "rollback_content_learning_restored": True,
-                "sibling_preserved": True, "rolled_back_ledger_retained": True}
+                "existing_rows_unchanged": True, "sibling_preserved": True}
         assert snapshot(source) == source_before and source.total_changes == 0
         assert registry_path.read_bytes() == registry_before
         report["source_zero_write"] = {"mode": "ro", "query_only": True,

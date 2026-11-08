@@ -141,7 +141,7 @@ _Avoid_：客观题目难度向量、学习者评价
 （见「Check 管线」条目）。
 
 ### Check 管线 / Check pipeline
-内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规清单 → 确定性门禁校验 → **直接入正式池**（无候选中间态）。清单形态以 `content-bundle` 为主（可同时含知识点、正式题、微题、闪卡与必需原图，条数无上限，大清单暂存于本对话 jobs 目录），`flash-card-patch` / `micro-quiz-patch` 作为兼容通道保留。题目身份在整个课程池比较，不因跨来源或跨章重复入库。每次 apply 记批次 id、内容行带批次标记、图片按字节落 `figures/`；整批回滚先核对 apply 后状态，若后续内容有改动则在创建备份前拒绝；门禁失败逐条显式报错、零写入。对话桥的控制动作仍叫 `check_ingest`，但**不再有浏览器关键词意图门**——合法的纯新增动作自动执行；门禁是决断辅助不是权限闸门，AI 永不直写池数据库。
+内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规清单 → 确定性门禁校验 → **直接入正式池**（无候选中间态）。清单形态以 `content-bundle` 为主（可同时含知识点、正式题、微题、闪卡与必需原图，条数无上限，大清单暂存于本对话 jobs 目录），`flash-card-patch` / `micro-quiz-patch` 作为兼容通道保留。题目身份在整个课程池比较，不因跨来源或跨章重复入库。每次 apply 记批次 id、内容行带批次标记、图片按字节落 `figures/`；撤销入口已退役，修错改走直接修正（`data update problem` 或 `problem-patch` 清单）；门禁失败逐条显式报错、零写入。对话桥的控制动作仍叫 `check_ingest`，但**不再有浏览器关键词意图门**——合法的纯新增动作自动执行；门禁是决断辅助不是权限闸门，AI 永不直写池数据库。
 _Avoid_：generate 桥（旧称）、候选中间态、staging 区、逐题人工确认、关键词意图门
 出处：DISCUSSION-RECORD 专题 20/21/22；workbench-content-governance spec（introduce-check-pipeline）；first-use-conversation-content-fidelity
 
@@ -287,7 +287,7 @@ _Avoid_：靠文档计数描述接口覆盖（会漂移）、把归属当许可�
 出处：review-workbench spec「Declared interface surface」
 
 ### 附图 / Figure
-题干自带的教材原图或生成图：文件落在工作区 `.lessonkit/figures/{course}/{chapter}/`，文件名 = **内容 sha256 + 原扩展名**（由门禁计算，不由 manifest 声明）；池里只存逻辑路径（`figure_paths` 列）+ 题干里的标准 Markdown 引用。入池唯一通道 = figure-patch 门禁（图与替换后的题干全文同批校验，失败零写入）；回滚恢复题干与 figure_paths 前值，已落盘文件保留。
+题干自带的教材原图或生成图：文件落在工作区 `.lessonkit/figures/{course}/{chapter}/`，文件名 = **内容 sha256 + 原扩展名**（由门禁计算，不由 manifest 声明）；池里只存逻辑路径（`figure_paths` 列）+ 题干里的标准 Markdown 引用。入池唯一通道 = figure-patch 门禁（图与替换后的题干全文同批校验，失败零写入）；批次快照保留题干与 figure_paths 前值作为应用记录，已落盘文件保留；显式撤销入口已退役。
 _Avoid_：`{owner_id}-fig-{NNN}.png`（旧命名规则，2026-09-20 作废）、图片入库（base64）、任意路径引用
 出处：knowledge-figures spec「Declared figure area / Gated figure patch channel / Legacy source-image migration」；ADR 0017
 
@@ -573,12 +573,12 @@ _Avoid_：Practice Run 模式开关、单题学科形态 `problem_type`、一卷
 出处：review-workbench spec「Paper-backed Practice Run」；workbench-ui spec「Practice page」「Flash card item stacked presentation」
 
 ### 原地改题 / In-place Problem Edit
-不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、display_title、display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key）、answer_key。`topic_label` 已从题目字段移除，问题补丁会拒收；闪卡的同名字段仍由闪卡契约定义。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，`ingest rollback --batch` 会把旧值原样写回（不是删行），因此学习记录毫发无损。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
+不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、display_title、display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key）、answer_key。`topic_label` 已从题目字段移除，问题补丁会拒收；闪卡的同名字段仍由闪卡契约定义。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，改错再发一份补丁按字段写回（不删行），学习记录毫发无损；显式整批撤销入口已退役。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
 _Avoid_：把「改属性」当成「重导」、以为要删掉再导、以为题号可以换
 出处：in-place-problem-edits
 
 ### 拆选项 / Option Splitting
-把题面里自带的选项块（如 `A. … B. …`）原样搬进结构化 `options`，题面只留题干。这是原地改题的一种，用于让题库里那些「选项写在题面里」的单选题变成真正的小测题；**只搬动原文，不编造内容**，改动前的题面在补丁快照里可回滚。
+把题面里自带的选项块（如 `A. … B. …`）原样搬进结构化 `options`，题面只留题干。这是原地改题的一种，用于让题库里那些「选项写在题面里」的单选题变成真正的小测题；**只搬动原文，不编造内容**，改动前的题面保存在补丁快照里，可据以写回。
 _Avoid_：改写题目文字、把没有选项的题硬凑选项
 出处：in-place-problem-edits
 
@@ -935,7 +935,7 @@ _Avoid_：普通对话代填、跳过人确认直接创建
 出处：complete-goals-loop 归档；ai-teacher-bridge spec
 
 ### 内容批次动作 / content bundle action
-Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除、回滚与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份；**一份清单可以跨章**：每个知识点/题目/闪卡都可以写自己的 `chapter`，缺省用清单顶层的 `chapter`；两者都未提供时该项会被点名拒收，**不回退到工作区当前章**。服务端按每一项的章发号、按章落图、**按章各记一个批次**（各带自己的回滚标记，可单独撤销）。任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。一轮回复里的每个 content-bundle 区块都会被依次应用。成功以结果卡片呈现（每章一行：批次号、章、资产类型与数量、来源分布、工作区、备份、当前回滚状态）。
+Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份；**一份清单可以跨章**：每个知识点/题目/闪卡都可以写自己的 `chapter`，缺省用清单顶层的 `chapter`；两者都未提供时该项会被点名拒收，**不回退到工作区当前章**。服务端按每一项的章发号、按章落图、**按章各记一个批次**（各带自己的批次标记，便于按章溯源）。任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。一轮回复里的每个 content-bundle 区块都会被依次应用。成功以结果卡片呈现（每章一行：批次号、章、资产类型与数量、来源分布、工作区、备份、各章批次状态）。
 _Avoid_：关键词意图门、静默丢弃不合格条目、跳过门禁直写池、显式命令面板
 出处：ai-teacher-bridge spec「Atomic staged content bundle」；FILE_CONTRACT.md
 
@@ -950,14 +950,14 @@ _Avoid_：用 AI 解析覆盖教材答案、把来源证据只留在批次快照
 Pi 对话不再每轮起一个 `--print` 进程：每个对话一个隐藏的 `pi --mode rpc` 进程，以严格 LF JSONL 收发带 id 的命令与流式事件，空闲 30 分钟回收（不设并发上限，删除对话/关闭服务工作台都会回收）；取消先发 RPC `abort`，失效才 terminate/kill；启动或握手失败可重启一次，prompt 被接受后崩溃不得重放。所有 provider 子进程在 Windows 下都不弹终端窗口。
 
 ### 批次 id / Batch id
-一次门禁 apply 写入池的那批内容的唯一标识（可读顺序 id，形如 batch-NNN，禁哈希）；批次内每一内容行携带该标记，用于事后溯源与整批撤销。跨章清单一趟写出**多个**批次（一章一个），所以撤销可以按章进行；一次导入仍只有一份池级备份。
+一次门禁 apply 写入池的那批内容的唯一标识（可读顺序 id，形如 batch-NNN，禁哈希）；批次内每一内容行携带该标记，用于事后溯源。跨章清单一趟写出**多个**批次（一章一个），所以溯源可以按章进行；一次导入仍只有一份池级备份。
 _Avoid_：内容版本号、逐条审计日志、哈希 id
 出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 
-### 整批回滚 / Batch rollback
-按批次 id 一条命令撤销该批全部内容行的安全网（`lesson-kit ingest rollback --batch <id>`，对话桥结果卡片回滚按钮同源）；核对内容仍处于 apply 后状态且没有阻塞学习记录后才做安全备份，再回滚并输出 accounting。apply 后被改动的内容会在创建备份前触发冲突拒绝，不覆盖后续修改。
-_Avoid_：逐条手工删行、全池回退、静默丢弃练习记录
-出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
+### 整批回滚 / Batch rollback（已退役）
+**2026-11-08 退役**：按批次整批撤销的入口（CLI、HTTP、结果卡按钮）已全部移除，只保留批次记录与历史「已回滚」标记。修错改走**直接修正**——单题 `data update problem`、成批 `problem-patch` 清单；两者都不换题号、不动学习记录。
+_Avoid_：再提供整批撤销入口、按批次删行、把"文件丢了"当成"我删了"
+出处：DISCUSSION-RECORD 专题 20/22；2026-11-08 mature-course-content-operations 2.5（S008）
 
 ### 自绘下拉 / Custom select
 由**触发器 + 浮起面板**构成的单选控件，取代原生 `<select>`：触发器带 `combobox`

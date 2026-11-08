@@ -121,7 +121,7 @@ def test_managed_service_blocks_apply(course):
     assert (course / "pool" / "ads.db").is_file()
 
 
-def test_moved_history_still_rolls_back_and_new_figures_use_workspace_root(tmp_path, monkeypatch):
+def test_moved_history_resolves_and_new_figures_use_workspace_root(tmp_path, monkeypatch):
     from tests.workbench.fixtures import build_fixture_db, open_db
     from workbench import ingest
 
@@ -148,9 +148,6 @@ def test_moved_history_still_rolls_back_and_new_figures_use_workspace_root(tmp_p
     assert database.read_bytes() == before_db
     batch = ingest.list_batches(database)[0]
     assert Path(batch["backup_path"]).is_file()
-    assert ingest.rollback_batch(database, applied["batch_id"])["ok"]
-    with open_db(database) as conn:
-        assert conn.execute("SELECT problem_text FROM problems").fetchone()[0] == "P1"
     applied = ingest.apply_figure_patch(database, source, backup_path=database.with_suffix(".new-backup"))
     assert applied["ok"]
     assert (root / ".lessonkit" / "figures" / logical).is_file()

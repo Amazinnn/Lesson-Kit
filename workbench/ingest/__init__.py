@@ -51,7 +51,7 @@ FIGURE_PATCH_KIND = "figure-patch"
 # One atomic bundle of new knowledge points, problems, cards, and source figures.
 CONTENT_BUNDLE_KIND = "content-bundle"
 # In-place edits of problems that already exist; nothing is inserted, and the
-# batch snapshot keeps the previous values so a rollback restores them.
+# batch snapshot keeps the previous values as the applied-record history.
 PROBLEM_PATCH_KIND = "problem-patch"
 PROBLEM_TYPES = {
     "calculation", "proof", "modeling", "explanation", "experiment",
@@ -1393,70 +1393,6 @@ def _history_path(conn, reference):
     return resolve_history_path(database, reference)
 
 
-def _rollback_content_bundle(conn, database, batch_id):
-    """Delete this bundle's rows, then its now-unreferenced figure files."""
-    row = conn.execute(
-        "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
-    ).fetchone()
-    snapshot = json.loads(_history_path(conn, row[0]).read_text(encoding="utf-8"))
-    applied = snapshot.get("_applied") or {}
-    blockers = []
-    for kp_id in applied.get("knowledge_points", []):
-        for problem_id, in conn.execute(
-            "SELECT problem_id FROM problems WHERE kp_ids LIKE ?"
-            " AND (ingest_batch_id IS NULL OR ingest_batch_id<>?)",
-            (f'%\"{kp_id}\"%', batch_id),
-        ):
-            blockers.append(f"knowledge_points: {kp_id} referenced by problems:{problem_id}")
-        for card_id, in conn.execute(
-            "SELECT card_id FROM flash_cards WHERE kp_id=?"
-            " AND (ingest_batch_id IS NULL OR ingest_batch_id<>?)",
-            (kp_id, batch_id),
-        ):
-            blockers.append(f"knowledge_points: {kp_id} referenced by flash_cards:{card_id}")
-    if blockers:
-        raise ValueError(
-            f"batch {batch_id} created knowledge points that are still referenced:\n"
-            + "\n".join(blockers)
-        )
-    counts = {"problems": 0, "flash_cards": 0, "knowledge_points": 0,
-              "figures": 0, "figures_kept": 0}
-    counts["problems"] = conn.execute(
-        "DELETE FROM problems WHERE ingest_batch_id=?", (batch_id,)
-    ).rowcount
-    counts["flash_cards"] = conn.execute(
-        "DELETE FROM flash_cards WHERE ingest_batch_id=?", (batch_id,)
-    ).rowcount
-    for kp_id in applied.get("knowledge_points", []):
-        conn.execute(
-            "DELETE FROM knowledge_relations WHERE source_kp_id=? OR target_kp_id=?",
-            (kp_id, kp_id),
-        )
-        # A pool predating the relation column simply has no neighbours to clean.
-        if _has_column(conn, "knowledge_points", "related_kp_ids"):
-            for owner, related in conn.execute(
-                "SELECT kp_id, related_kp_ids FROM knowledge_points"
-                " WHERE related_kp_ids LIKE ?", (f"%{kp_id}%",),
-            ).fetchall():
-                remaining = [item for item in json.loads(related or "[]") if item != kp_id]
-                conn.execute(
-                    "UPDATE knowledge_points SET related_kp_ids=? WHERE kp_id=?",
-                    (json.dumps(remaining, ensure_ascii=False), owner),
-                )
-        conn.execute("DELETE FROM knowledge_points WHERE kp_id=?", (kp_id,))
-        counts["knowledge_points"] += 1
-    root = workspace_root(database)
-    for logical in applied.get("figures", []):
-        if _figure_is_referenced(conn, logical):
-            counts["figures_kept"] += 1
-            continue
-        path = root / ".lessonkit" / "figures" / logical
-        if path.is_file():
-            path.unlink()
-        counts["figures"] += 1
-    return counts
-
-
 def _figure_is_referenced(conn, logical):
     for table, column in (("problems", "figure_paths"), ("knowledge_points", "figure_paths")):
         if conn.execute(
@@ -1491,7 +1427,7 @@ def _write_snapshot(path, snapshot):
 
 def _save_post_state(conn, database, path, snapshot, row_specs, *,
                      batch_id=None, figures=()):
-    """Persist the exact applied rows/files needed to guard a later rollback."""
+    """Persist the exact applied rows/files as this batch's applied-record history."""
     tables = {}
     for table, spec in row_specs.items():
         id_column = spec["id_column"]
@@ -1509,7 +1445,7 @@ def _save_post_state(conn, database, path, snapshot, row_specs, *,
             cursor = conn.execute(sql, params)
             rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
         if {row[id_column] for row in rows} != set(ids):
-            raise ValueError(f"could not snapshot applied {table} rows for rollback")
+            raise ValueError(f"could not snapshot applied {table} rows")
         tables[table] = {
             "id_column": id_column,
             "batch_scoped": spec.get("batch_scoped", True),
@@ -1520,114 +1456,13 @@ def _save_post_state(conn, database, path, snapshot, row_specs, *,
     for logical in sorted(set(figures)):
         target = (root / logical).resolve()
         if not target.is_relative_to(root.resolve()) or not target.is_file():
-            raise ValueError(f"could not snapshot applied figure for rollback: {logical}")
+            raise ValueError(f"could not snapshot applied figure: {logical}")
         figure_states.append({
             "logical": logical,
             "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
         })
     snapshot["_post_state"] = {"tables": tables, "figures": figure_states}
     _write_snapshot(path, snapshot)
-
-
-def _rollback_conflicts(conn, database, kind, batch_id, snapshot):
-    """Find edits after apply that make restoring this snapshot unsafe."""
-    post_state = snapshot.get("_post_state")
-    if not isinstance(post_state, dict):
-        return [f"batch {batch_id} has no post-apply snapshot for safe rollback"]
-    conflicts = []
-    if kind in {CONTENT_BUNDLE_KIND, "gate-report"}:
-        applied = snapshot.get("_applied") or {}
-        for kp_id in applied.get("knowledge_points", []):
-            for problem_id, in conn.execute(
-                "SELECT problem_id FROM problems WHERE kp_ids LIKE ? "
-                "AND (ingest_batch_id IS NULL OR ingest_batch_id<>?)",
-                (f'%\"{kp_id}\"%', batch_id),
-            ):
-                conflicts.append(
-                    f"knowledge_points: {kp_id} referenced by problems:{problem_id}")
-            for card_id, in conn.execute(
-                "SELECT card_id FROM flash_cards WHERE kp_id=? "
-                "AND (ingest_batch_id IS NULL OR ingest_batch_id<>?)",
-                (kp_id, batch_id),
-            ):
-                conflicts.append(
-                    f"knowledge_points: {kp_id} referenced by flash_cards:{card_id}")
-            if _has_column(conn, "knowledge_points", "related_kp_ids"):
-                for owner, related in conn.execute(
-                    "SELECT kp_id, related_kp_ids FROM knowledge_points"
-                ):
-                    if owner in applied.get("knowledge_points", []):
-                        continue
-                    try:
-                        related_ids = json.loads(related or "[]")
-                    except (TypeError, json.JSONDecodeError):
-                        continue
-                    if isinstance(related_ids, list) and kp_id in related_ids:
-                        conflicts.append(
-                            f"knowledge_points: {kp_id} referenced by related_kp_ids:{owner}")
-            for relation_id, in conn.execute(
-                "SELECT relation_id FROM knowledge_relations "
-                "WHERE source_kp_id=? OR target_kp_id=?", (kp_id, kp_id),
-            ):
-                conflicts.append(
-                    f"knowledge_points: {kp_id} referenced by relation:{relation_id}")
-    for table, expected in post_state.get("tables", {}).items():
-        id_column = expected["id_column"]
-        expected_rows = expected.get("rows", [])
-        expected_ids = {row[id_column] for row in expected_rows}
-        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
-        if expected.get("batch_scoped", True) and "ingest_batch_id" in columns:
-            current_ids = {
-                row[0] for row in conn.execute(
-                    f"SELECT {id_column} FROM {table} WHERE ingest_batch_id=?",
-                    (batch_id,),
-                )
-            }
-            if current_ids != expected_ids:
-                conflicts.append(f"{table}: rows assigned to batch {batch_id} changed")
-        for saved in expected_rows:
-            row = conn.execute(
-                f"SELECT * FROM {table} WHERE {id_column}=?", (saved[id_column],)
-            ).fetchone()
-            if row is None:
-                conflicts.append(f"{table}: {saved[id_column]} is missing")
-                continue
-            actual = dict(zip(
-                (column[1] for column in
-                 conn.execute(f"PRAGMA table_info({table})")), row,
-            ))
-            if actual != saved:
-                conflicts.append(f"{table}: {saved[id_column]} changed after apply")
-
-    post_fields = snapshot.get("post")
-    if kind in {PROBLEM_PATCH_KIND, FIGURE_PATCH_KIND} and not isinstance(post_fields, list):
-        conflicts.append(f"batch {batch_id} has no expected patch values")
-    for entry in post_fields or []:
-        id_column = "owner_id" if kind == FIGURE_PATCH_KIND else "problem_id"
-        object_id = entry.get(id_column)
-        row = conn.execute(
-            "SELECT * FROM problems WHERE problem_id=?", (object_id,),
-        ).fetchone()
-        if row is None:
-            conflicts.append(f"problems: {object_id} is missing")
-            continue
-        columns = [column[1] for column in conn.execute("PRAGMA table_info(problems)")]
-        actual = dict(zip(columns, row))
-        for field, expected in (entry.get("fields") or {}).items():
-            if field in actual and actual[field] != expected:
-                conflicts.append(f"problems: {object_id}.{field} changed after apply")
-
-    root = (workspace_root(database) / ".lessonkit" / "figures").resolve()
-    for figure in post_state.get("figures", []):
-        logical = figure.get("logical")
-        path = (root / logical).resolve()
-        if not path.is_relative_to(root) or not path.is_file():
-            conflicts.append(f"figure {logical} is missing or outside the figure area")
-            continue
-        digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        if digest != figure.get("sha256"):
-            conflicts.append(f"figure {logical} changed after apply")
-    return conflicts
 
 
 def _record_batch(conn, batch_id, kind, manifest_path, counts, backup):
@@ -1857,50 +1692,6 @@ def _apply_problem_patch(database, manifest, backup, course=None):
             "backup_path": str(backup), "accounting": verified["accounting"]}
 
 
-def _rollback_problem_patch(conn, batch_id):
-    """Restore the previous values recorded by a problem patch."""
-    row = conn.execute(
-        "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
-    ).fetchone()
-    snapshot = json.loads(_history_path(conn, row[0]).read_text(encoding="utf-8"))
-    restored = 0
-    for entry in snapshot.get("previous", []):
-        fields = entry.get("fields") or {}
-        if not fields:
-            continue
-        assignments = [f"{field}=?" for field in fields]
-        values = list(fields.values())
-        assignments.append("updated_at=datetime('now')")
-        paper_progress.update_question(conn,
-            f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
-            (*values, entry["problem_id"]),
-        )
-        restored += 1
-    return {"problems": restored}
-
-
-def _rollback_gate_report(conn, batch_id):
-    """Restore solved rows and remove only knowledge points added by the batch."""
-    row = conn.execute(
-        "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
-    ).fetchone()
-    snapshot = json.loads(_history_path(conn, row[0]).read_text(encoding="utf-8"))
-    restored = 0
-    for entry in snapshot.get("previous", []):
-        fields = entry.get("fields") or {}
-        assignments = [f"{field}=?" for field in fields]
-        paper_progress.update_question(conn,
-            f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
-            (*fields.values(), entry["problem_id"]),
-        )
-        restored += 1
-    removed = 0
-    for kp_id in (snapshot.get("_applied") or {}).get("knowledge_points", []):
-        conn.execute("DELETE FROM knowledge_points WHERE kp_id=?", (kp_id,))
-        removed += 1
-    return {"problems": restored, "knowledge_points": removed}
-
-
 def _figures_root(database, course, chapter):
     """The figures directory of one course/chapter, which must stay in the workspace."""
     workspace = workspace_root(database)
@@ -2091,159 +1882,6 @@ def list_batches(db_path):
         }
         for batch_id, kind, counts_json, applied_at, rolled_back_at, backup_path in rows
     ]
-
-
-def rollback_batch(db_path, batch_id, backup_path=None):
-    database = Path(db_path)
-    conn = sqlite3.connect(database)
-    try:
-        conn.execute("BEGIN IMMEDIATE")
-        batch = conn.execute(
-            "SELECT kind, rolled_back_at FROM ingest_batches WHERE batch_id=?",
-            (batch_id,),
-        ).fetchone()
-        if batch is None:
-            raise ValueError(f"unknown batch {batch_id}")
-        if batch[1] is not None:
-            raise ValueError(f"batch {batch_id} already rolled back")
-        blockers = ([] if batch[0] in {PROBLEM_PATCH_KIND, "gate-report"}
-                    else _rollback_blockers(conn, batch_id))
-        if blockers:
-            raise ValueError(
-                f"batch {batch_id} has dependent learning records:\n"
-                + "\n".join(blockers)
-            )
-        backup = (Path(backup_path) if backup_path else
-                  database.with_name(f"{database.name}.{batch_id}-rollback-backup"))
-        if backup.exists():
-            raise FileExistsError(f"recoverable copy already exists: {backup}")
-        manifest_path = conn.execute(
-            "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
-        ).fetchone()[0]
-        snapshot = json.loads(resolve_history_path(database, manifest_path).read_text(encoding="utf-8"))
-        conflicts = _rollback_conflicts(conn, database, batch[0], batch_id, snapshot)
-        if conflicts:
-            raise ValueError(
-                f"batch {batch_id} changed after apply; rollback refused without backup:\n"
-                + "\n".join(conflicts)
-            )
-        _backup_database(database, backup)
-        if batch[0] == FIGURE_PATCH_KIND:
-            counts = _rollback_figure_patch(conn, batch_id)
-            deleted = counts.get("problems", 0)
-        elif batch[0] == PROBLEM_PATCH_KIND:
-            # A patch restores values instead of deleting rows, so the learning
-            # records it never touched need no blocker check.
-            counts = _rollback_problem_patch(conn, batch_id)
-            deleted = 0
-        elif batch[0] == "gate-report":
-            counts = _rollback_gate_report(conn, batch_id)
-            deleted = 0
-        elif batch[0] == CONTENT_BUNDLE_KIND:
-            counts = _rollback_content_bundle(conn, database, batch_id)
-            deleted = (counts["problems"] + counts["flash_cards"]
-                       + counts["knowledge_points"])
-        else:
-            table = "flash_cards" if batch[0] == FLASH_CARD_KIND else "problems"
-            cursor = conn.execute(
-                f"DELETE FROM {table} WHERE ingest_batch_id=?", (batch_id,),
-            )
-            deleted = cursor.rowcount
-            counts = {table: deleted}
-        conn.execute(
-            "UPDATE ingest_batches SET rolled_back_at=datetime('now') WHERE batch_id=?",
-            (batch_id,),
-        )
-        accounting = _accounting(conn)
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-    return {"ok": True, "batch_id": batch_id, "deleted": deleted,
-            "counts": counts, "backup_path": str(backup),
-            "accounting": accounting}
-
-
-def _rollback_figure_patch(conn, batch_id):
-    """Restore pre-patch text and figure paths from the batch snapshot."""
-    row = conn.execute(
-        "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
-    ).fetchone()
-    snapshot = json.loads(_history_path(conn, row[0]).read_text(encoding="utf-8"))
-    restored = 0
-    for previous in snapshot.get("previous", []):
-        paper_progress.update_question(conn,
-            "UPDATE problems SET problem_text=?, figure_paths=? WHERE problem_id=?",
-            (previous["text"], previous["figure_paths"], previous["owner_id"]),
-        )
-        restored += 1
-    return {"problems": restored}
-
-
-def _rollback_blockers(conn, batch_id):
-    queries = (
-        ("problem_attempts",
-         "SELECT DISTINCT a.problem_id FROM problem_attempts a "
-         "JOIN problems p ON p.problem_id=a.problem_id WHERE p.ingest_batch_id=?",
-         (batch_id,)),
-        ("problem_progress",
-         "SELECT DISTINCT x.problem_id FROM problem_progress x "
-         "JOIN problems p ON p.problem_id=x.problem_id WHERE p.ingest_batch_id=?",
-         (batch_id,)),
-        ("feedback_events",
-         "SELECT DISTINCT e.item_type, e.item_id FROM feedback_events e "
-         "LEFT JOIN problems p ON e.item_type='problem' AND p.problem_id=e.item_id "
-         "LEFT JOIN flash_cards c ON e.item_type='card' AND c.card_id=e.item_id "
-         "WHERE p.ingest_batch_id=? OR c.ingest_batch_id=?",
-         (batch_id, batch_id)),
-        ("review_schedule",
-         "SELECT DISTINCT r.item_type, r.item_id FROM review_schedule r "
-         "LEFT JOIN problems p ON r.item_type='problem' AND p.problem_id=r.item_id "
-         "LEFT JOIN flash_cards c ON r.item_type='card' AND c.card_id=r.item_id "
-         "WHERE p.ingest_batch_id=? OR c.ingest_batch_id=?",
-         (batch_id, batch_id)),
-        ("learning_current_state",
-         "SELECT DISTINCT s.item_type, s.item_id FROM learning_current_state s "
-         "JOIN problems p ON s.item_type='problem' AND p.problem_id=s.item_id "
-         "WHERE p.ingest_batch_id=?",
-         (batch_id,)),
-        ("learner_signals",
-         "SELECT DISTINCT s.target_id FROM learner_signals s "
-         "LEFT JOIN problems p ON p.problem_id=s.target_id "
-         "LEFT JOIN flash_cards c ON c.card_id=s.target_id "
-         "WHERE p.ingest_batch_id=? OR c.ingest_batch_id=?",
-         (batch_id, batch_id)),
-    )
-    blockers = []
-    for table, query, params in queries:
-        if table == "learning_current_state" and conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
-        ).fetchone() is None:
-            continue
-        for row in conn.execute(query, params):
-            blockers.append(f"{table}: {':'.join(str(value) for value in row)}")
-    # Rollback remains a refusal boundary, not an implicit Paper edit.
-    ids = {row[0] for row in conn.execute('SELECT problem_id FROM problems WHERE ingest_batch_id=?', (batch_id,))}
-    if ids and paper_progress.available(conn):
-        for row in conn.execute("SELECT item_id FROM active_practice_items WHERE item_type='problem'"):
-            if row[0] in ids:
-                blockers.append('active_practice: ' + row[0])
-        for row in conn.execute('SELECT checkpoint_json,pending_json FROM paper_state'):
-            for raw in row:
-                if not raw:
-                    continue
-                record = json.loads(raw)
-                items = record.get('plan', record).get('items', [])
-                if any(item.get('problem_id', item.get('item_id')) in ids for item in items):
-                    blockers.append('paper_state: current question reference')
-        database = Path(conn.execute('PRAGMA database_list').fetchone()[2])
-        for path in (workspace_root(database) / '.lessonkit' / 'practice-sets').glob('ps-*.json'):
-            record = json.loads(path.read_text(encoding='utf-8'))
-            if any(item.get('problem_id') in ids for item in record.get('plan', {}).get('items', [])):
-                blockers.append('saved Paper: ' + path.stem)
-    return blockers
 
 
 def _gate_flash_cards(conn, manifest, course=""):
