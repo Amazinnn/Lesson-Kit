@@ -28,4 +28,4 @@
 - compileall：lessonkit.py/workbench/pipeline/pool/tests 全过。
 - `openspec validate --specs --strict`：25/25；change strict：valid。
 - `guard extract-problems --course dmath --chapter ch06`：PASS（无阻断标记）。
-- 全仓 `pytest tests -q`：见后台终检记录（2.3 阶段 1583 passed；docs-only 改动后重跑）。
+- 全仓 `pytest tests -q`：**1583 passed（502.67s）**（WP03 全部代码 + 3.1 文档改后终检，exit 0）。
