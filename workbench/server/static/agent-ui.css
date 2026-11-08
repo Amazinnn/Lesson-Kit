@@ -8,7 +8,7 @@
 .agent-rail-home, #ai-chat-view { min-height: 0; }
 #ai-column { display: flex; }
 /* Bound cards outside the message list so history and input remain reachable. */
-.ai-paper-approval, .agent-composer-shell {
+.agent-composer-shell {
   flex-shrink: 0;
   max-height: 35%;
   overflow-y: auto;
@@ -293,79 +293,6 @@
   font-size: 11px;
   line-height: 17px;
 }
-
-/* Approval Gate replaces only the composer, never the conversation history. */
-.agent-approval-slot { padding: 0 0 4px; }
-.agent-approval-card {
-  padding: 11px 12px;
-  border: 1px solid var(--ink-strong);
-  border-left: 4px solid var(--role-yellow);
-  border-radius: 12px;
-  /* 底色走主题 token（IMPL-W2j 第 7 条 · 夜纸巡检 N1 §3.6）：
-     改造前写死 `#fff9df` ⇒ 夜纸下是一块约 15:1 的**浅黄亮块**压在夜纸卡面上
-     （硬编码亮色残留）。改读 `--role-yellow-soft`
-     （浅 `#fcf0cd` / 夜 `#3d3721`）⇒ 两主题都随主题翻转。 */
-  background: var(--role-yellow-soft);
-}
-.agent-approval-title { display: block; margin-top: 3px; font-size: 13px; }
-.agent-approval-reason,
-.agent-approval-impact {
-  margin: 5px 0 0;
-  color: var(--ink-muted);
-  font-size: 11px;
-  line-height: 17px;
-}
-.agent-approval-impact { color: var(--ink-strong); }
-.agent-approval-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 7px;
-  margin-top: 10px;
-}
-
-.ai-paper-approval {
-  margin-top: 8px;
-  padding: 9px 10px;
-  border: 1px solid var(--rule-hair);
-  border-left: 3px solid var(--role-yellow);
-  border-radius: 8px;
-  background: var(--surface-card);
-}
-.ai-paper-approval h2 { margin: 2px 0 0; font-size: 13px; line-height: 18px; }
-.ai-paper-approval-status,
-.ai-paper-approval-details p {
-  margin: 5px 0 0;
-  color: var(--ink-muted);
-  font-size: 11px;
-  line-height: 16px;
-}
-.ai-paper-approval-details { overflow-wrap: anywhere; }
-.ai-paper-approval-order-label { font-weight: 700; }
-.ai-paper-approval-order {
-  margin: 3px 0 0;
-  padding-left: 24px;
-  color: var(--ink-muted);
-  font-size: 10px;
-  line-height: 15px;
-}
-.ai-paper-approval-impact { color: var(--ink-strong) !important; }
-.ai-paper-approval-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 7px;
-  margin-top: 9px;
-}
-.ai-paper-approval-actions button:disabled { opacity: .55; cursor: wait; }
-.ai-paper-proposal-history {
-  padding: 9px 11px !important;
-  border: 1px solid var(--rule-hair) !important;
-  border-left: 3px solid var(--role-yellow) !important;
-  border-radius: 9px !important;
-  background: var(--surface-card) !important;
-}
-.ai-paper-approval-history-title { display: block; font-size: 12px; }
-.ai-paper-approval-history-status { font-weight: 700; }
-
 @media (max-width: 1100px) {
   .agent-artifact-split {
     position: fixed;

@@ -23,7 +23,7 @@ def test_internal_metadata_is_atomic_and_hidden_from_learner_list(pool, monkeypa
 @pytest.mark.parametrize('handler', [api.ai_session_get, api.ai_session_update, api.ai_session_delete,
     api.ai_turn_start, api.ai_turn_events, api.ai_turn_cancel, api.ai_turn_pending_update,
     api.ai_turn_pending_delete, api.ai_queue_reorder, api.ai_turn_interrupt,
-    api.ai_queue_continue, api.ai_paper_approval])
+    api.ai_queue_continue])
 def test_all_learner_session_operations_refuse_internal_before_body_or_turn_read(pool, monkeypatch, handler):
     internal = create(pool, monkeypatch, True)
     with pytest.raises(api.ApiError) as error:

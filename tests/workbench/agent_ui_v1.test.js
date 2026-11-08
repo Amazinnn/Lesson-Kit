@@ -56,7 +56,6 @@ function setup() {
     "ai-messages": new Element("ai-messages"),
     "ai-input": new Element("ai-input"),
     "ai-input-row": new Element("ai-input-row"),
-    "ai-approval-slot": new Element("ai-approval-slot"),
     middle: new Element("middle"),
     "agent-activity-float": new Element("agent-activity-float"),
     "agent-activity-body": new Element("agent-activity-body"),
@@ -66,7 +65,7 @@ function setup() {
     "agent-artifact-body": new Element("agent-artifact-body"),
     "agent-artifact-actions": new Element("agent-artifact-actions"),
   };
-  ["agent-activity-float", "agent-artifact-split", "ai-approval-slot"].forEach((id) => {
+  ["agent-activity-float", "agent-artifact-split"].forEach((id) => {
     elements[id].classList.add("hidden");
   });
   const document = {
@@ -84,11 +83,13 @@ function setup() {
 
 test("server shell loads Agent UI v1 foundation and declares transient surfaces", () => {
   for (const id of [
-    "ai-composer-shell", "ai-approval-slot",
+    "ai-composer-shell",
     "agent-activity-float", "agent-activity-toggle", "agent-artifact-split",
   ]) assert.ok(pages.includes(id), `${id} missing from shell`);
   assert.equal(pages.includes("ai-context-chips"), false,
     "context chips are retired (agent-chat-simplify)");
+  assert.equal(pages.includes("ai-approval-slot"), false,
+    "the approval composer replacement is retired (Q098/S008)");
   assert.equal(pages.includes("agent-bottom-dock"), false, "task progress must not render a Bottom Dock");
   assert.ok(pages.includes("aria-controls='agent-activity-body'"));
   assert.ok(pages.includes("/static/agent-ui.css"));
@@ -179,26 +180,13 @@ test("switching conversations clears transient activity and collapse state", () 
   assert.equal(ui.state.userCollapsed, false);
 });
 
-test("Approval Gate replaces the composer and restores it after an explicit decision", () => {
+test("the composer has no confirmation replacement surface (Q098/S008)", () => {
   const { elements, ui } = setup();
-  let approved = 0;
-  let denied = 0;
-  assert.equal(ui.confirm({
-    title: "整批回滚",
-    reason: "这会撤销当前入库批次。",
-    impact: "该批内容会从池中删除。",
-    approveLabel: "确认回滚",
-  }, () => { approved += 1; }, () => { denied += 1; }), true);
-  assert.equal(elements["ai-input-row"].classList.contains("hidden"), true);
-  assert.equal(elements["ai-approval-slot"].classList.contains("hidden"), false);
-  const card = elements["ai-approval-slot"].children[0];
-  const actions = card.children[card.children.length - 1];
-  actions.children[0].click();
-  assert.equal(denied, 1);
-  assert.equal(elements["ai-input-row"].classList.contains("hidden"), false);
-  ui.confirm({ title: "整批回滚" }, () => { approved += 1; });
-  elements["ai-approval-slot"].children[0].children.slice(-1)[0].children[1].click();
-  assert.equal(approved, 1);
+  assert.equal(ui.confirm, undefined,
+    "the composer-replacement approval gate is retired");
+  assert.equal(elements["ai-approval-slot"], undefined);
+  assert.equal(elements["ai-input-row"].classList.contains("hidden"), false,
+    "the composer always stays available");
 });
 
 test("Paper Artifact stays in chat and opens only a native safe Adaptive Split target", () => {

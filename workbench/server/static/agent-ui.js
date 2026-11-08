@@ -12,11 +12,9 @@
     running: false,
     activities: {},
     activityOrder: [],
-    approvalOpen: false,
     latestArtifact: null,
     renderedArtifacts: {},
   };
-  var approvalSequence = 0;
   var collapseHandler = null;
   var artifactPreviewHandler = null;
 
@@ -290,64 +288,9 @@
   }
 
   function restoreComposer() {
-    approvalSequence += 1;
-    state.approvalOpen = false;
-    setHidden(byId("ai-approval-slot"), true);
     setHidden(byId("ai-input-row"), false);
-    clear(byId("ai-approval-slot"));
   }
 
-  function confirm(spec, onApprove, onDeny) {
-    var slot = byId("ai-approval-slot");
-    var inputRow = byId("ai-input-row");
-    if (!slot || !inputRow) return false;
-    var currentApproval = ++approvalSequence;
-    state.approvalOpen = true;
-    clear(slot);
-    var card = document.createElement("section");
-    card.className = "agent-approval-card";
-    var title = document.createElement("strong");
-    title.className = "agent-approval-title";
-    title.textContent = spec && spec.title ? spec.title : "确认操作";
-    var reason = document.createElement("p");
-    reason.className = "agent-approval-reason";
-    reason.textContent = spec && spec.reason ? spec.reason : "此操作需要你的明确确认。";
-    card.appendChild(title);
-    card.appendChild(reason);
-    if (spec && spec.impact) {
-      var impact = document.createElement("p");
-      impact.className = "agent-approval-impact";
-      impact.textContent = spec.impact;
-      card.appendChild(impact);
-    }
-    var actions = document.createElement("div");
-    actions.className = "agent-approval-actions";
-    var deny = document.createElement("button");
-    deny.type = "button";
-    deny.className = "outline sm";
-    deny.textContent = "取消";
-    deny.addEventListener("click", function () {
-      if (!state.approvalOpen || currentApproval !== approvalSequence) return;
-      restoreComposer();
-      if (onDeny) onDeny();
-    });
-    var approve = document.createElement("button");
-    approve.type = "button";
-    approve.className = "primary sm";
-    approve.textContent = spec && spec.approveLabel ? spec.approveLabel : "确认";
-    approve.addEventListener("click", function () {
-      if (!state.approvalOpen || currentApproval !== approvalSequence) return;
-      restoreComposer();
-      if (onApprove) onApprove();
-    });
-    actions.appendChild(deny);
-    actions.appendChild(approve);
-    card.appendChild(actions);
-    slot.appendChild(card);
-    setHidden(inputRow, true);
-    setHidden(slot, false);
-    return true;
-  }
 
   function resetConversation() {
     state.renderedArtifacts = {};
@@ -406,7 +349,6 @@
     finishTurn: finishTurn,
     activity: activity,
     failure: failure,
-    confirm: confirm,
     restoreComposer: restoreComposer,
     artifact: artifact,
     openArtifact: openArtifact,

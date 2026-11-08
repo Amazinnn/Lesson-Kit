@@ -134,7 +134,6 @@ ROUTES = [
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}/interrupt", api_mod.ai_turn_interrupt),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/queue/reorder", api_mod.ai_queue_reorder),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/queue/continue", api_mod.ai_queue_continue),
-    ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/paper-approval", api_mod.ai_paper_approval),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/cancel", api_mod.ai_turn_cancel),
     ("GET", "/api/w/{name}/graph", api_mod.graph_artifact),
 ]
