@@ -10,6 +10,13 @@
 
 # 规划交接状态
 
+# 规划交接状态
+
+## 2026-11-09：stable-runtime-live-reload 归档；agent-chat-simplify 6.4 部分验收
+
+- **stable-runtime-live-reload 3.2 勾选并归档**（`ca9363b8`）：全仓多轮绿（最新 1582）+ 真实隔离验收（真子进程 harness 4/4 + 3097/3098 端口 daemon 探针）+ 独立复核；`runtime-live-reload` 能力进入 live specs（25/25 strict）。
+- **agent-chat-simplify 6.4 部分验收（未勾）**：隔离临时工作区 + daemon 3123 实测——`#ai-input`/`#ai-status` 存在、status 可见、Shift+Enter 不发送、空队列无出站行、审批卡槽存在，4 项过；**Enter/Ctrl+Enter 发送与长卡折叠/展开未验到**：Enter 的守卫是 `!aiConversation`（新建按钮未建立会话），需要 provider 支撑的真实会话才能走到发送与长卡渲染。剩余动作：配置临时 provider 起真实对话再跑 8 项清单。**6.4 保持未勾，不据部分结果勾选。**
+
 ## 2026-11-09 归档：WP02 已归档（live specs 24/24）
 
 - `mature-course-content-operations` 归档为 `archive/2026-08-…`（目录名 2026-11-08 前缀为归档日期规则）：`knowledge-content-operations` 新能力进入 live specs；五个 MODIFIED capability（governance/bridge/flash-card/figures/micro-quiz）的单元化、分类补齐与 undo 退役规则并入。live specs strict **24/24**。
