@@ -8,6 +8,13 @@
 
 # 规划交接状态
 
+# 规划交接状态
+
+## 2026-11-09 归档：WP02 已归档（live specs 24/24）
+
+- `mature-course-content-operations` 归档为 `archive/2026-08-…`（目录名 2026-11-08 前缀为归档日期规则）：`knowledge-content-operations` 新能力进入 live specs；五个 MODIFIED capability（governance/bridge/flash-card/figures/micro-quiz）的单元化、分类补齐与 undo 退役规则并入。live specs strict **24/24**。
+- 活跃 change 降至 19。**WP02 无剩余任务**；后续（部署/推送/真实环境验收）按所有者安排。
+
 ## 2026-11-09 终：WP02 15/15 ✓ Complete
 
 - §1 基线任务（1.1 工件/身份/重叠、1.2 delta 逐条核对、1.3 失败检查先行）补记并勾选——证据 `evidence/mature-course-content-operations/2026-11-09-baseline/1-1-1-2-1-3-baseline.md`。其中核出 5 个 MODIFIED 块对 live 场景零丢失；扫描器对 knowledge-figures 的 REMOVED 报"场景缺失"属误报（REMOVED 不携带场景，Reason/Migration 齐全）。
