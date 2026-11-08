@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import sqlite3
+from contextlib import contextmanager
 import subprocess
 from pathlib import Path
 
@@ -427,7 +428,8 @@ def _gate_micro_quiz(conn, manifest, course=""):
                 f"{problem_id}: this pool has no exam_year column yet — run: "
                 "python pool/scripts/migrate-progress.py --db pool/<course>.db"
             )
-    errors.extend(_problem_identity_errors(conn, identity_candidates))
+    identity_errors, _refused = _problem_identity_errors(conn, identity_candidates)
+    errors.extend(identity_errors)
     return {"ok": not errors, "errors": errors, "accounting": _accounting(conn)}
 
 
@@ -773,7 +775,7 @@ def _has_parts_column(conn):
 def _problem_identity_errors(conn, candidates):
     """Refuse identities already in this pool or repeated within the batch."""
     if not candidates:
-        return []
+        return [], set()
     has_evidence = _has_column(conn, "problems", "source_evidence")
     select_evidence = ", source_evidence" if has_evidence else ", NULL"
     rows = conn.execute(
@@ -787,6 +789,7 @@ def _problem_identity_errors(conn, candidates):
             existing.setdefault(identity, []).append((problem_id, evidence))
 
     errors = []
+    refused = set()
     grouped = {}
     for candidate in candidates:
         identity = content_identity.problem_identity(candidate.get("text"))
@@ -800,6 +803,7 @@ def _problem_identity_errors(conn, candidates):
             if evidence:
                 detail += f" (source evidence: {evidence})"
             errors.append(detail)
+            refused.add(candidate["problem_id"])
     for members in grouped.values():
         if len(members) < 2:
             continue
@@ -812,7 +816,8 @@ def _problem_identity_errors(conn, candidates):
             if other.get("source_evidence"):
                 detail += f" (source evidence: {other['source_evidence']})"
             errors.append(detail)
-    return errors
+        refused.update(candidate["problem_id"] for candidate in members)
+    return errors, refused
 
 
 def _bundle_micro_payload(item):
@@ -866,6 +871,7 @@ def _gate_content_bundle(conn, manifest, course=""):
 
     for index, item in enumerate(kp_items):
         label = f"knowledge point {index + 1}"
+        refused_before = len(errors)
         if not isinstance(item, dict):
             errors.append(f"{label}: must be an object")
             continue
@@ -900,6 +906,8 @@ def _gate_content_bundle(conn, manifest, course=""):
         if exists or kp_id in kp_ids:
             errors.append(f"{label}: {kp_id} already exists")
             continue
+        if len(errors) > refused_before:
+            continue
         keys.add(key)
         kp_ids.append(kp_id)
         kp_plans.append({"key": key, "kp_id": kp_id, "chapter": item_chapter,
@@ -911,13 +919,14 @@ def _gate_content_bundle(conn, manifest, course=""):
         return reference
 
     known_kps = {row[0] for row in conn.execute("SELECT kp_id FROM knowledge_points")}
-    known_kps |= set(kp_ids)
+    known_kps |= {plan["kp_id"] for plan in kp_plans}
 
     problem_plans = []
     identity_candidates = []
     seen_problem_keys = set()
     for index, item in enumerate(problem_items):
         label = f"problem {index + 1}"
+        refused_before = len(errors)
         if not isinstance(item, dict):
             errors.append(f"{label}: must be an object")
             continue
@@ -1065,6 +1074,8 @@ def _gate_content_bundle(conn, manifest, course=""):
             "text": fields["problem_text"],
             "source_evidence": fields["source_evidence"],
         })
+        if len(errors) > refused_before:
+            continue
         problem_plans.append({
             "key": key, "problem_id": problem_id, "chapter": item_chapter,
             "fields": fields, "is_micro": is_micro, "figures": plans["figures"],
@@ -1077,6 +1088,7 @@ def _gate_content_bundle(conn, manifest, course=""):
     seen_card_keys = set()
     for index, item in enumerate(card_items):
         label = f"flash card {index + 1}"
+        refused_before = len(errors)
         if not isinstance(item, dict):
             errors.append(f"{label}: must be an object")
             continue
@@ -1115,16 +1127,22 @@ def _gate_content_bundle(conn, manifest, course=""):
         }
         errors.extend(f"{label}: {reason}" for reason in card_rules.validate_card_row(row))
         row["chapter"] = item_chapter
+        if len(errors) > refused_before:
+            continue
         card_plans.append(row)
 
-    errors.extend(_problem_identity_errors(conn, identity_candidates))
-    if errors:
-        return {"ok": False, "errors": errors}
+    identity_errors, refused_problems = _problem_identity_errors(
+        conn, identity_candidates)
+    errors.extend(identity_errors)
+    if refused_problems:
+        problem_plans = [plan for plan in problem_plans
+                         if plan["problem_id"] not in refused_problems]
+    # Plans carry only accepted units; `ok` still means "the whole bundle is valid".
     chapters = sorted({
         plan["chapter"] for plan in (*kp_plans, *problem_plans, *card_plans)
     })
     return {
-        "ok": True, "errors": [], "course": course,
+        "ok": not errors, "errors": errors, "course": course,
         "chapter": bundle_chapter or (chapters[0] if len(chapters) == 1 else ""),
         "chapters": chapters,
         "knowledge_points": kp_plans, "problems": problem_plans,
@@ -1182,204 +1200,266 @@ def _plan_bundle_figures(item, label, text, course, chapter):
     return {"text": rewritten, "figures": planned, "errors": errors}
 
 
+@contextmanager
+def _unit(conn):
+    """One independent content unit; a failure rolls back only itself."""
+    conn.execute("SAVEPOINT unit")
+    try:
+        yield
+    except Exception:
+        conn.execute("ROLLBACK TO unit")
+        conn.execute("RELEASE unit")
+        raise
+    else:
+        conn.execute("RELEASE unit")
+
+
+def _publish_figure(database, course, chapter, entry, created_files):
+    figures_root = _figures_root(database, course, chapter)
+    figures_root.mkdir(parents=True, exist_ok=True)
+    destination = figures_root / entry["name"]
+    if destination.exists():
+        if destination.read_bytes() != entry["content"]:
+            raise ValueError(f"destination conflict for {entry['name']}")
+        return
+    shutil.copyfile(entry["source"], destination)
+    created_files.append(destination)
+
+
+def _bundle_kp_row(plan):
+    fields = plan["fields"]
+    return {
+        "kp_id": plan["kp_id"],
+        "knowledge_item": fields["knowledge_item"],
+        "knowledge_type": fields["knowledge_type"],
+        "importance": fields["importance"],
+        "source_location": fields["source_location"],
+        "body": fields["body"],
+        "graph_label": fields["graph_label"],
+        "learning_action": fields["learning_action"],
+        "fragile": (
+            json.dumps(fields["fragile"], ensure_ascii=False)
+            if isinstance(fields["fragile"], (dict, list))
+            else fields["fragile"]
+        ),
+        "chapter": plan["chapter"],
+    }
+
+
+def _bundle_problem_insert(conn, plan):
+    fields = plan["fields"]
+    paths = [entry["logical"] for entry in plan["figures"]]
+    columns = [
+        "problem_id", "kp_ids", "problem_text", "solution", "problem_type",
+        "source_kind", "origin_kind", "display_title",
+        "display_summary", "practice_modes", "micro_quiz", "figure_paths",
+        "source_evidence", "source_answer", "solution_origin",
+    ]
+    values = [
+        plan["problem_id"],
+        json.dumps(fields["kp_ids"], ensure_ascii=False),
+        fields["problem_text"], fields["solution"],
+        fields["problem_type"], fields["source_kind"], fields["origin_kind"],
+        fields["display_title"],
+        fields["display_summary"],
+        json.dumps(fields["practice_modes"], ensure_ascii=False)
+        if fields.get("practice_modes") else None,
+        json.dumps(fields["micro_quiz"], ensure_ascii=False)
+        if fields.get("micro_quiz") else None,
+        json.dumps(paths, ensure_ascii=False) if paths else None,
+        fields["source_evidence"], fields["source_answer"],
+        fields["solution_origin"],
+    ]
+    if _has_exam_year(conn):
+        columns.append("exam_year")
+        values.append(fields["exam_year"])
+    if fields.get("parts") and _has_parts_column(conn):
+        columns.append("parts")
+        values.append(json.dumps(fields["parts"], ensure_ascii=False))
+    conn.execute(
+        f"INSERT INTO problems ({', '.join(columns)})"
+        f" VALUES ({', '.join('?' for _ in columns)})",
+        tuple(values),
+    )
+
+
 def _apply_content_bundle(database, manifest, backup, course=None):
+    """Apply every accepted unit on its own; a refused unit writes nothing."""
     if backup.exists():
         raise FileExistsError(f"recoverable copy already exists: {backup}")
     course = course or database.stem          # the pool file name is the course id
     conn = sqlite3.connect(database)
-    created_files = []
+    errors = []
+    applied = {"knowledge_points": [], "problems": [], "flash_cards": []}
+    batches = {}
     try:
         conn.execute("BEGIN IMMEDIATE")
-        verified = _gate_content_bundle(conn, manifest, course)
-        if not verified["ok"]:
-            raise ValueError("\n".join(verified["errors"]))
-        # One chapter, one batch: a bundle that spans chapters records a batch per
-        # chapter, so each chapter's content can be rolled back on its own.
-        batches = {}
-        for item_chapter in verified["chapters"]:
-            batch_id = _allocate_batch_id(conn)
-            snapshot = {
-                **{key: manifest[key] for key in _BUNDLE_LISTS if key in manifest},
-                "kind": CONTENT_BUNDLE_KIND,
-                "chapter": item_chapter,
-                "_applied": {
-                    "knowledge_points": [
-                        plan["kp_id"] for plan in verified["knowledge_points"]
-                        if plan["chapter"] == item_chapter
-                    ],
-                    "problems": [
-                        plan["problem_id"] for plan in verified["problems"]
-                        if plan["chapter"] == item_chapter
-                    ],
-                    "flash_cards": [
-                        plan["card_id"] for plan in verified["flash_cards"]
-                        if plan["chapter"] == item_chapter
-                    ],
-                    "figures": sorted({
-                        entry["logical"] for plan in verified["problems"]
-                        if plan["chapter"] == item_chapter
-                        for entry in plan["figures"]
-                    }),
-                },
-            }
-            batches[item_chapter] = {
-                "batch_id": batch_id,
-                "chapter": item_chapter,
-                "manifest_path": _write_manifest_snapshot(database, batch_id, snapshot),
-                "counts": {"knowledge_points": 0, "problems": 0, "flash_cards": 0,
-                           "figures": 0, "keyless": 0},
-                "origins": {},
-            }
+        gate = _gate_content_bundle(conn, manifest, course)
+        errors.extend(gate.get("errors") or [])
+        kp_plans = gate.get("knowledge_points") or []
+        problem_plans = gate.get("problems") or []
+        card_plans = gate.get("flash_cards") or []
+        if not (kp_plans or problem_plans or card_plans):
+            raise ValueError("\n".join(errors) or "content-bundle has no valid item")
         _backup_database(database, backup)
-        for item_chapter in verified["chapters"]:
-            planned = [
-                entry for plan in verified["problems"]
-                if plan["chapter"] == item_chapter for entry in plan["figures"]
-            ]
-            if not planned:
+        existing_kps = {row[0] for row in conn.execute(
+            "SELECT kp_id FROM knowledge_points")}
+        chapters = sorted({plan["chapter"]
+                           for plan in (*kp_plans, *problem_plans, *card_plans)})
+        for item_chapter in chapters:
+            # One chapter is one batch, so its rows, its figures and its batch
+            # record commit or roll back together; units inside stay independent.
+            chapter_files = []
+            chapter_applied = {"knowledge_points": [], "problems": [], "flash_cards": []}
+            try:
+                with _unit(conn):
+                    applied_kps = set()
+                    for plan in (item for item in kp_plans
+                                 if item["chapter"] == item_chapter):
+                        try:
+                            with _unit(conn):
+                                _insert_row(conn, "knowledge_points",
+                                            _bundle_kp_row(plan))
+                        except Exception as exc:
+                            errors.append(f"{plan['kp_id']}: {exc}")
+                            continue
+                        chapter_applied["knowledge_points"].append(plan)
+                        applied_kps.add(plan["kp_id"])
+                    for plan in (item for item in problem_plans
+                                 if item["chapter"] == item_chapter):
+                        missing = [item for item in plan["fields"]["kp_ids"]
+                                   if item not in existing_kps
+                                   and item not in applied_kps]
+                        if missing:
+                            errors.append(
+                                f"{plan['problem_id']}: depends on a rejected "
+                                f"knowledge point {missing[0]}")
+                            continue
+                        unit_files = []
+                        try:
+                            with _unit(conn):
+                                _bundle_problem_insert(conn, plan)
+                                for entry in plan["figures"]:
+                                    _publish_figure(database, course, item_chapter,
+                                                    entry, unit_files)
+                        except Exception as exc:
+                            for path in unit_files:
+                                path.unlink(missing_ok=True)
+                            errors.append(f"{plan['problem_id']}: {exc}")
+                            continue
+                        chapter_files.extend(unit_files)
+                        chapter_applied["problems"].append(plan)
+                    for row in (item for item in card_plans
+                                if item["chapter"] == item_chapter):
+                        if row["kp_id"] not in existing_kps \
+                                and row["kp_id"] not in applied_kps:
+                            errors.append(
+                                f"{row['card_id']}: depends on a rejected "
+                                f"knowledge point {row['kp_id']}")
+                            continue
+                        try:
+                            with _unit(conn):
+                                _insert_row(conn, "flash_cards", {
+                                    **{key: value for key, value in row.items()
+                                       if key != "chapter"},
+                                    "directions": json.dumps(
+                                        row["directions"], ensure_ascii=False),
+                                })
+                        except Exception as exc:
+                            errors.append(f"{row['card_id']}: {exc}")
+                            continue
+                        chapter_applied["flash_cards"].append(row)
+                    if any(chapter_applied.values()):
+                        batch_id = _allocate_batch_id(conn)
+                        ids = {
+                            "knowledge_points": [plan["kp_id"] for plan in
+                                                 chapter_applied["knowledge_points"]],
+                            "problems": [plan["problem_id"] for plan in
+                                         chapter_applied["problems"]],
+                            "flash_cards": [row["card_id"] for row in
+                                            chapter_applied["flash_cards"]],
+                        }
+                        figures = sorted({entry["logical"] for plan in
+                                          chapter_applied["problems"]
+                                          for entry in plan["figures"]})
+                        counts = {
+                            "knowledge_points": len(ids["knowledge_points"]),
+                            "problems": len(ids["problems"]),
+                            "flash_cards": len(ids["flash_cards"]),
+                            "figures": len(figures),
+                            "keyless": sum(1 for plan in chapter_applied["problems"]
+                                           if plan.get("keyless")),
+                        }
+                        origins = {}
+                        for plan in chapter_applied["problems"]:
+                            origin = plan["fields"].get("origin_kind")
+                            if isinstance(origin, str):
+                                origins[origin] = origins.get(origin, 0) + 1
+                        for kind, id_column in (("knowledge_points", "kp_id"),
+                                                ("problems", "problem_id"),
+                                                ("flash_cards", "card_id")):
+                            for item_id in ids[kind]:
+                                conn.execute(
+                                    f'UPDATE "{kind}" SET ingest_batch_id=? '
+                                    f'WHERE {id_column}=?', (batch_id, item_id))
+                        snapshot = {
+                            **{key: manifest[key] for key in _BUNDLE_LISTS
+                               if key in manifest},
+                            "kind": CONTENT_BUNDLE_KIND,
+                            "chapter": item_chapter,
+                            "_applied": {**ids, "figures": figures},
+                        }
+                        manifest_path = _write_manifest_snapshot(
+                            database, batch_id, snapshot)
+                        _save_post_state(
+                            conn, database, manifest_path, snapshot,
+                            {
+                                "knowledge_points": {
+                                    "id_column": "kp_id",
+                                    "ids": ids["knowledge_points"]},
+                                "problems": {"id_column": "problem_id",
+                                             "ids": ids["problems"]},
+                                "flash_cards": {"id_column": "card_id",
+                                               "ids": ids["flash_cards"]},
+                            },
+                            batch_id=batch_id,
+                            figures=figures,
+                        )
+                        _record_batch(conn, batch_id, CONTENT_BUNDLE_KIND,
+                                      manifest_path, counts, backup)
+                        batches[item_chapter] = {
+                            "batch_id": batch_id, "chapter": item_chapter,
+                            "counts": counts, "origins": origins}
+            except Exception as exc:
+                for path in chapter_files:
+                    path.unlink(missing_ok=True)
+                errors.append(f"{item_chapter}: {exc}")
                 continue
-            figures_root = _figures_root(database, course, item_chapter)
-            figures_root.mkdir(parents=True, exist_ok=True)
-            for entry in planned:
-                    destination = figures_root / entry["name"]
-                    if destination.exists():
-                        if destination.read_bytes() != entry["content"]:
-                            raise ValueError(
-                                f"{plan['problem_id']}: destination conflict for {entry['name']}")
-                        continue
-                    shutil.copyfile(entry["source"], destination)
-                    created_files.append(destination)
-
-        counts = {"knowledge_points": 0, "problems": 0, "flash_cards": 0, "figures": 0,
-                  "keyless": 0}
-        for plan in verified["knowledge_points"]:
-            fields = plan["fields"]
-            _insert_row(conn, "knowledge_points", {
-                "kp_id": plan["kp_id"],
-                "knowledge_item": fields["knowledge_item"],
-                "knowledge_type": fields["knowledge_type"],
-                "importance": fields["importance"],
-                "source_location": fields["source_location"],
-                "body": fields["body"],
-                "graph_label": fields["graph_label"],
-                "learning_action": fields["learning_action"],
-                "fragile": (
-                    json.dumps(fields["fragile"], ensure_ascii=False)
-                    if isinstance(fields["fragile"], (dict, list))
-                    else fields["fragile"]
-                ),
-                "ingest_batch_id": batches[plan["chapter"]]["batch_id"],
-                "chapter": plan["chapter"],
-            })
-            batches[plan["chapter"]]["counts"]["knowledge_points"] += 1
-            counts["knowledge_points"] += 1
-        for plan in verified["problems"]:
-            fields = plan["fields"]
-            paths = [entry["logical"] for entry in plan["figures"]]
-            columns = [
-                "problem_id", "kp_ids", "problem_text", "solution", "problem_type",
-                "source_kind", "origin_kind", "display_title",
-                "display_summary", "practice_modes", "micro_quiz", "figure_paths",
-                "source_evidence", "source_answer", "solution_origin", "ingest_batch_id",
-            ]
-            values = [
-                plan["problem_id"],
-                json.dumps(fields["kp_ids"], ensure_ascii=False),
-                fields["problem_text"], fields["solution"],
-                fields["problem_type"], fields["source_kind"], fields["origin_kind"],
-                fields["display_title"],
-                fields["display_summary"],
-                json.dumps(fields["practice_modes"], ensure_ascii=False)
-                if fields.get("practice_modes") else None,
-                json.dumps(fields["micro_quiz"], ensure_ascii=False)
-                if fields.get("micro_quiz") else None,
-                json.dumps(paths, ensure_ascii=False) if paths else None,
-                fields["source_evidence"], fields["source_answer"],
-                fields["solution_origin"], batches[plan["chapter"]]["batch_id"],
-            ]
-            if _has_exam_year(conn):
-                columns.append("exam_year")
-                values.append(fields["exam_year"])
-            if fields.get("parts") and _has_parts_column(conn):
-                columns.append("parts")
-                values.append(json.dumps(fields["parts"], ensure_ascii=False))
-            conn.execute(
-                f"INSERT INTO problems ({', '.join(columns)})"
-                f" VALUES ({', '.join('?' for _ in columns)})",
-                tuple(values),
-            )
-            entry = batches[plan["chapter"]]
-            entry["counts"]["problems"] += 1
-            entry["counts"]["figures"] += len(paths)
-            if plan.get("keyless"):
-                entry["counts"]["keyless"] += 1
-            origin = fields.get("origin_kind")
-            if isinstance(origin, str):
-                entry["origins"][origin] = entry["origins"].get(origin, 0) + 1
-            counts["problems"] += 1
-            counts["figures"] += len(paths)
-            if plan.get("keyless"):
-                counts["keyless"] += 1
-        for row in verified["flash_cards"]:
-            _insert_row(conn, "flash_cards", {
-                **{key: value for key, value in row.items() if key != "chapter"},
-                "directions": json.dumps(row["directions"], ensure_ascii=False),
-                "ingest_batch_id": batches[row["chapter"]]["batch_id"],
-            })
-            batches[row["chapter"]]["counts"]["flash_cards"] += 1
-            counts["flash_cards"] += 1
-        for item_chapter in verified["chapters"]:
-            entry = batches[item_chapter]
-            snapshot = json.loads(Path(entry["manifest_path"]).read_text(encoding="utf-8"))
-            batch_id = entry["batch_id"]
-            _save_post_state(
-                conn, database, entry["manifest_path"], snapshot,
-                {
-                    "knowledge_points": {
-                        "id_column": "kp_id",
-                        "ids": snapshot["_applied"]["knowledge_points"],
-                    },
-                    "problems": {
-                        "id_column": "problem_id",
-                        "ids": snapshot["_applied"]["problems"],
-                    },
-                    "flash_cards": {
-                        "id_column": "card_id",
-                        "ids": snapshot["_applied"]["flash_cards"],
-                    },
-                },
-                batch_id=batch_id,
-                figures=snapshot["_applied"].get("figures", []),
-            )
-            _record_batch(conn, entry["batch_id"], CONTENT_BUNDLE_KIND,
-                          entry["manifest_path"], entry["counts"], backup)
+            for kind in chapter_applied:
+                applied[kind].extend(chapter_applied[kind])
         accounting = _accounting(conn)
         conn.commit()
     except Exception:
         conn.rollback()
-        for path in created_files:
-            try:
-                path.unlink()
-            except OSError:
-                pass
         raise
     finally:
         conn.close()
+    counts = {"knowledge_points": len(applied["knowledge_points"]),
+              "problems": len(applied["problems"]),
+              "flash_cards": len(applied["flash_cards"]),
+              "figures": sum(len(plan["figures"]) for plan in applied["problems"]),
+              "keyless": sum(1 for plan in applied["problems"] if plan.get("keyless"))}
     origins = {}
-    for plan in verified["problems"]:
+    for plan in applied["problems"]:
         origin = plan["fields"].get("origin_kind")
         if isinstance(origin, str):
             origins[origin] = origins.get(origin, 0) + 1
-    recorded = [
-        {"batch_id": batches[item_chapter]["batch_id"], "chapter": item_chapter,
-         "counts": batches[item_chapter]["counts"],
-         "origins": batches[item_chapter]["origins"]}
-        for item_chapter in verified["chapters"]
-    ]
-    result = {"ok": True, "applied": True, "kind": CONTENT_BUNDLE_KIND,
+    recorded = [batches[chapter] for chapter in sorted(batches)]
+    result = {"ok": not errors, "applied": True, "kind": CONTENT_BUNDLE_KIND,
               "batches": recorded, "counts": counts, "origins": origins,
               "backup_path": str(backup), "accounting": accounting,
-              "typesetting": verified["typesetting"]}
+              "typesetting": gate.get("typesetting"), "errors": errors,
+              "partial": bool(errors)}
     if len(recorded) == 1:
         # A single-chapter bundle keeps the historical shape as well.
         result["batch_id"] = recorded[0]["batch_id"]

@@ -269,48 +269,52 @@ class ContentBundleTests(unittest.TestCase):
 
     # -- all-or-nothing ---------------------------------------------------
 
-    def test_missing_required_image_blocks_the_whole_bundle(self):
+    def test_a_problem_with_a_missing_image_is_refused_alone(self):
         before = (self.count("problems"), self.count("knowledge_points"),
                   self.count("flash_cards"))
-        with self.assertRaises(ValueError) as caught:
-            self.apply({
-                "kind": "content-bundle",
-                "chapter": "ch06",
-                "knowledge_points": [{
-                    "key": "kp-new", "knowledge_item": "电场",
-                    "knowledge_type": "concept-property", "importance": "core",
-                }],
-                "problems": [
-                    formal("p1", ["kp-new"]),
-                    formal("p2", ["kp-new"], text="图题 ![图](figure:f1)",
-                           figures=[{"key": "f1", "source_path": str(
-                               Path(self.fixture.tmp.name) / "absent.png")}]),
-                ],
-            })
-        message = str(caught.exception)
-        self.assertIn("absent.png", message)
-        self.assertEqual(
-            (self.count("problems"), self.count("knowledge_points"),
-             self.count("flash_cards")),
-            before,
-        )
-        self.assertEqual(self.count("ingest_batches"), 0)
-        self.assertFalse((self.ws / ".lessonkit" / "figures").exists())
 
-    def test_unknown_reference_blocks_the_whole_bundle(self):
+        result = self.apply({
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "knowledge_points": [{
+                "key": "kp-new", "knowledge_item": "电场",
+                "knowledge_type": "concept-property", "importance": "core",
+            }],
+            "problems": [
+                formal("p1", ["kp-new"]),
+                formal("p2", ["kp-new"], text="图题 ![图](figure:f1)",
+                       figures=[{"key": "f1", "source_path": str(
+                           Path(self.fixture.tmp.name) / "absent.png")}]),
+            ],
+        })
+
+        self.assertFalse(result["ok"])
+        message = chr(10).join(result["errors"])
+        self.assertIn("absent.png", message)
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertEqual(result["counts"]["knowledge_points"], 1)
+        self.assertEqual(
+            (self.count("problems"), self.count("knowledge_points")),
+            (before[0] + 1, before[1] + 1),
+        )
+        self.assertEqual(self.count("ingest_batches"), 1)
+
+    def test_an_unknown_reference_refuses_only_that_unit(self):
         before = self.count("problems")
-        with self.assertRaises(ValueError) as caught:
-            self.apply({
-                "kind": "content-bundle",
-                "chapter": "ch06",
-                "problems": [
-                    formal("p1", ["dmath-ch06-kp-001"]),
-                    formal("p2", ["dmath-ch06-kp-999"]),
-                ],
-            })
-        self.assertIn("dmath-ch06-kp-999", str(caught.exception))
-        self.assertEqual(self.count("problems"), before)
-        self.assertEqual(self.count("ingest_batches"), 0)
+
+        result = self.apply({
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [
+                formal("p1", ["dmath-ch06-kp-001"]),
+                formal("p2", ["dmath-ch06-kp-999"]),
+            ],
+        })
+
+        self.assertFalse(result["ok"])
+        self.assertIn("dmath-ch06-kp-999", chr(10).join(result["errors"]))
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertEqual(self.count("problems"), before + 1)
 
     def test_unreferenced_declared_figure_is_refused(self):
         figure = self.image(name="unused.png")
@@ -525,11 +529,16 @@ class ContentBundleTests(unittest.TestCase):
         manifest["knowledge_points"][0].pop("chapter", None)
         before = self.count("problems")
 
-        with self.assertRaises(ValueError) as caught:
-            self.apply(manifest)
+        result = self.apply(manifest)
 
-        self.assertIn("knowledge point 1: chapter is required", str(caught.exception))
-        self.assertEqual(self.count("problems"), before)
+        self.assertFalse(result["ok"])
+        message = chr(10).join(result["errors"])
+        self.assertIn("knowledge point 1: chapter is required", message)
+        # Only the sibling chapter's problem lands; the chapter-less unit and its
+        # dependent problem write nothing.
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertEqual(self.count("problems"), before + 1)
+        self.assertEqual(result["counts"]["knowledge_points"], 1)
 
     def test_bundle_refuses_existing_content_identity_with_source_evidence(self):
         with open_db(self.db_path) as conn:
@@ -608,18 +617,32 @@ class ContentBundleTests(unittest.TestCase):
     def test_a_bad_chapter_value_is_refused(self):
         manifest = self.two_chapter_manifest()
         manifest["problems"][1]["chapter"] = "第7章"
-        with self.assertRaises(ValueError) as caught:
-            self.apply(manifest)
-        self.assertIn("chapter must be a lowercase ASCII identifier", str(caught.exception))
+
+        result = self.apply(manifest)
+
+        self.assertFalse(result["ok"])
+        self.assertTrue(any("chapter must be a lowercase ASCII identifier" in item
+                            for item in result["errors"]), result["errors"])
+        # The refused problem writes nothing; both chapters still land, because
+        # each still owns a valid knowledge point.
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertEqual([batch["chapter"] for batch in result["batches"]],
+                         ["ch06", "ch07"])
+        self.assertEqual(result["counts"]["knowledge_points"], 2)
 
     def test_an_explicit_id_must_name_the_items_chapter(self):
         manifest = self.two_chapter_manifest()
         manifest["problems"][1]["problem_id"] = "dmath-ch08-prob-001"
-        with self.assertRaises(ValueError) as caught:
-            self.apply(manifest)
-        message = str(caught.exception)
+
+        result = self.apply(manifest)
+
+        self.assertFalse(result["ok"])
+        message = chr(10).join(result["errors"])
         self.assertIn("must start with dmath-ch07-", message)
         self.assertIn("it belongs to ch08", message)
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertFalse(self.query(
+            "SELECT 1 FROM problems WHERE problem_id='dmath-ch08-prob-001'"))
 
     def test_a_single_chapter_bundle_keeps_the_legacy_result(self):
         manifest = {
@@ -769,6 +792,111 @@ class ContentBundleTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(ValueError, "cannot combine"):
             self.apply(manifest)
+
+
+    # -- independent valid units (WP02 2.4) -------------------------------
+
+    def test_a_refused_unit_writes_nothing_and_keeps_its_neighbours(self):
+        result = self.apply({
+            "kind": "content-bundle", "chapter": "ch06",
+            "knowledge_points": [
+                {"key": "good", "knowledge_item": "好点", "body": "正文"},
+                {"key": "broken"}],
+            "problems": [formal("p-good", ["good"])],
+        })
+
+        self.assertFalse(result["ok"])
+        self.assertTrue(result["partial"])
+        self.assertEqual(result["counts"]["knowledge_points"], 1)
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertIn("knowledge_item is required", chr(10).join(result["errors"]))
+        self.assertEqual(self.count("knowledge_points"), 2)
+
+    def test_duplicate_content_is_reported_and_never_written(self):
+        before = self.count("problems")
+        result = self.apply({
+            "kind": "content-bundle", "chapter": "ch06",
+            "knowledge_points": [{"key": "kp", "knowledge_item": "概念", "body": "正文"}],
+            "problems": [
+                formal("p1", ["kp"], text="同一道题"),
+                formal("p2", ["kp"], text="同一道题"),
+            ],
+        })
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["counts"]["problems"], 0)
+        self.assertEqual(self.count("problems"), before)
+        self.assertIn("duplicate content", chr(10).join(result["errors"]))
+
+    def test_a_card_whose_knowledge_point_was_refused_is_not_written(self):
+        result = self.apply({
+            "kind": "content-bundle", "chapter": "ch06",
+            "knowledge_points": [
+                {"key": "bad"},
+                {"key": "good", "knowledge_item": "好点", "body": "正文"}],
+            "flash_cards": [
+                {"key": "c-bad", "kp_id": "bad", "front": "问", "back": "答",
+                 "source_evidence": "教材"},
+                {"key": "c-good", "kp_id": "good", "front": "问", "back": "答",
+                 "source_evidence": "教材"}],
+        })
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["counts"]["flash_cards"], 1)
+        self.assertEqual(self.query(
+            "SELECT COUNT(*) FROM flash_cards WHERE kp_id='bad'"), [(0,)])
+        self.assertIn("unknown knowledge point bad", chr(10).join(result["errors"]))
+
+    def test_a_figure_publication_failure_rolls_back_only_its_unit(self):
+        figure = self.image("unit.png")
+        manifest = {
+            "kind": "content-bundle", "chapter": "ch06",
+            "knowledge_points": [{"key": "kp", "knowledge_item": "概念", "body": "正文"}],
+            "problems": [
+                formal("plain", ["kp"]),
+                formal("illustrated", ["kp"], text="图题 ![图](figure:f1)",
+                       figures=[{"key": "f1", "source_path": str(figure)}]),
+            ],
+        }
+        original = ingest._publish_figure
+
+        def fail_for_illustrated(database, course, chapter, entry, created_files):
+            raise OSError("injected figure publication failure")
+
+        from unittest import mock
+        with mock.patch.object(ingest, "_publish_figure", fail_for_illustrated):
+            result = self.apply(manifest)
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertEqual(result["batches"][0]["counts"]["problems"], 1)
+        self.assertIn("injected figure publication failure",
+                      chr(10).join(result["errors"]))
+        self.assertEqual(self.count("problems"), 2)          # fixture row + plain
+        written = self.query(
+            "SELECT figure_paths FROM problems ORDER BY problem_id")
+        self.assertTrue(all(row[0] is None for row in written))
+        self.assertFalse((self.ws / ".lessonkit" / "figures").exists())
+        self.assertTrue(original)                            # nothing to restore
+
+    def test_a_corrected_retry_applies_the_missing_unit_only(self):
+        first = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
+            {"key": "k1", "kp_id": "dmath-ch06-kp-900",
+             "knowledge_item": "一", "body": "正文"}]}
+        self.assertTrue(self.apply(first)["ok"])
+
+        retry = copy.deepcopy(first)
+        retry["knowledge_points"].append(
+            {"key": "k2", "kp_id": "dmath-ch06-kp-901",
+             "knowledge_item": "二", "body": "正文"})
+        second = self.apply(retry)
+
+        self.assertFalse(second["ok"])
+        self.assertEqual(second["counts"]["knowledge_points"], 1)
+        self.assertIn("already exists", chr(10).join(second["errors"]))
+        self.assertEqual(self.query(
+            "SELECT COUNT(*) FROM knowledge_points WHERE kp_id='dmath-ch06-kp-900'"),
+            [(1,)])
 
 
 if __name__ == "__main__":
