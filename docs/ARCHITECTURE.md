@@ -276,7 +276,7 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
   轮次预算是**静默预算**而非总时长：任一输出行或事件都重置时钟，命令/工具在飞时改用
   更长的工具预算（`bridge add --timeout/--tool-timeout`），因此长回答与慢命令都不会被
   截停；真正卡住的轮次仍如实记为 `provider timed out`。
-- 试卷进度重置审批复用会话/轮次 JSON：Bridge 在当前 worker 释放前保存待审批方案并暂停该对话队列，不保持 provider 等待用户。页面批准请求由薄 API 交给 Bridge 校验归属与版本，再委托既有 Data 试卷预览/更新逻辑；显式排队消息可保留，但中断/立即发送被拒绝而不降级为排队，继续队列不能绕过待审批决定。刷新恢复待审批状态，不自动写入；批准/取消后仍须手动继续。题目实体与历史作答不由审批存储管理，不新增 SQLite 审批表或调度服务。
+- Paper 更新直接执行（Q098/S008，审批退役）：Bridge 收到 `paper_update_proposal` 后经 Data 预览校验输入并直接应用（提交点重校验 confirmation），无批准状态、无派发暂停；遗留 pending approval 在打开会话/开始轮次/发送排队消息时一次性迁移（有效按原身份执行一次，失效如实记未完成）。练习重做为已选动作，直接 `replace` 重启，不再二次询问。显式排队消息仍可保留，中断/立即发送的交接与版本冲突规则不变（不再与审批挂钩）。题目实体与历史作答仍不由任何审批存储管理，SQLite 无审批表。
 - `bridge.conversation_actions` 只解析模型回复里的动作区块并校验包装形状；会话并发、持久化、执行与失败提示仍由 `bridge.conversations` 编排。
 - Agent 会话在创建时绑定一个不可变的 harness；模型目标记录 model/entry args，只允许在该 harness 内切换。Codex 通过 app-server `model/list` 枚举，Claude Code 使用其支持模型 catalog，Pi 使用 RPC `get_available_models`；Pi 同 harness 优先 RPC `set_model` 原生切换。更换 harness 必须新建会话。
 - CLI 安装入口、`python -m workbench.cli.main` 与 `python -m workbench.cli.entry` 共用实际 argparse 树；扩展命令与 `ingest bundle` 复用已有参数定义和处理函数，命令清单从 parser 派生，不重建业务逻辑或序列化参数。

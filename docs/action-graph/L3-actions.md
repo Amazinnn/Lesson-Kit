@@ -94,7 +94,7 @@ Paper 操作补充（2026-10-19；2026-10-29 增补 append）：练习页只管�
 | 重排待发消息（拖动或键盘，完整顺序 CAS） | Composer / `POST /queue/reorder` | 人 | conversation.queue_order；消息身份、文字和上下文不变 | 已实现（compact-agent-queue-and-direct-interrupt） |
 | 立即发送原待发消息（独立停止交接，不新增提交） | Pending row / `POST /turns/{turn}/interrupt` | 人 | 原 turn 路由及队列顺序；保留身份、当前文字与原上下文，其他消息暂停 | 已实现（compact-agent-queue-and-direct-interrupt） |
 | 编辑/移除待处理消息并显式继续暂停队列 | Pending controls / `PATCH`·`DELETE /turns/{turn}` / `POST /queue/continue` | 人 | 现有 turn/conversation JSON；移除保留 cancelled 记录 | 已实现（queue-agent-messages-and-interrupt） |
-| 批准/取消 Agent 提议的既有 Paper 更新（显示当前与拟议题序及进度/草稿影响；过期预览刷新后须重新点击） | Paper approval card / `POST /paper-approval` | 人 | 仅批准时更新目标 Paper，并清除受影响的未完成进度/草稿；取消零写入，历史作答与其他 Paper 保留 | 已实现（complete-agent-message-lifecycle） |
+| ~~批准/取消 Agent 提议的既有 Paper 更新~~（2026-11-08 退役：无审批卡，无效/过期输入如实失败零写入） | Agent `paper_update_proposal` 动作 → Data 预览+提交点重校验直接应用 | Agent/服务端 | 按原身份更新目标 Paper；受影响未完成进度/草稿按生命周期处理；历史作答与其他 Paper 保留 | 已退役（retire-project-approval-gates） |
 | 设置运行中发送默认动作 | 工作区浏览器设置 | 人 | `runningSendAction`；只影响后续提交 | 已实现（queue-agent-messages-and-interrupt） |
 | 恢复未确认或被拒绝的 Agent 消息（本地发送箱；核对时复用原提交标识/内容；不覆盖新草稿） | UI 对话流 | 人 | 浏览器 localStorage + 原 turn | 已实现（preserve-agent-messages-and-tool-outcomes） |
 | 显式重试已接收的失败轮次（新 turn 通过 `retry_of` 关联原消息；不自动重放） | UI 对话流 | 人 | 新 turn artifact | 已实现（preserve-agent-messages-and-tool-outcomes） |
@@ -257,7 +257,7 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
   内容/关系校验器写池，内容+状态+日志同一池事务；缺失文件按新修订恢复、删除请求只报告
   不执行、永不因仓库缺文件删池）。CLI 顶层命令增至 24；不执行 Git clone/pull/commit/push。
 
-2026-10-20 新增/改级（compact-agent-queue-and-direct-interrupt）：输入区拖动或键盘重排待发消息（人 → 薄 API → Bridge，读写 queue_order）；排队行立即发送（人 → 薄 API → Bridge，复用原 turn 并停止交接）；中断后发送从队列优先项改为独立交接。编辑/删除/继续保持原责任层级。待审批或另一停止交接时拒绝立即发送，恢复原文不覆盖草稿。
+2026-10-20 新增/改级（compact-agent-queue-and-direct-interrupt）：输入区拖动或键盘重排待发消息（人 → 薄 API → Bridge，读写 queue_order）；排队行立即发送（人 → 薄 API → Bridge，复用原 turn 并停止交接）；中断后发送从队列优先项改为独立交接。编辑/删除/继续保持原责任层级。另一停止交接时拒绝立即发送（2026-11-08 起无审批拦截），恢复原文不覆盖草稿。
 
 2026-10-21 新增（workbench-visual-language-v2）：第七节「外观与设置」新增两条动作——打开/关闭
 **工作台设置视图**（入口 = 左栏「设置」区开关，只切换中栏视图，不写池）与修改外观偏好

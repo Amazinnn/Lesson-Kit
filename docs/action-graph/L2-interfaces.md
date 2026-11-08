@@ -33,11 +33,11 @@
 | GET `/practice-sets` | 读 | 已保存 Paper 列表与独立进度 | 浏览器；Agent `papers list` |
 | POST `/practice-sets` | 写 | 保存 Agent/CLI authoring 产出的 Paper，使用现有 Data 写入器 | Agent/CLI |
 | GET `/practice-sets/{practice_set_id}` | 读 | 显式 Paper 详情与不可用题目引用 | 浏览器预览；Agent `papers get` |
-| PATCH `/practice-sets/{practice_set_id}` | 写 | 浏览器可直接改标题；结构性成员/顺序更新仍经有影响预览与确认的 Agent 审批 | 浏览器改标题；Agent/CLI + 审批流程改结构 |
+| PATCH `/practice-sets/{practice_set_id}` | 写 | 浏览器可直接改标题；结构性成员/顺序更新由 Agent 更新动作经 Data 预览校验后直接应用（2026-11-08 审批退役） | 浏览器改标题；Agent 动作/CLI 改结构 |
 | DELETE `/practice-sets/{practice_set_id}` | 写 | 删除 Paper 容器和未完成状态，不删题目与学习证据 | 浏览器；Agent `papers delete` |
 | GET `/practice-sets/{practice_set_id}/render` | 读 | 已保存 Paper 题面与导出渲染 | 浏览器 |
 | POST `/practice-sets/{practice_set_id}/start` | 写 | 开始或继续既有 Paper；恢复该卷独立进度 | 浏览器 |
-| POST `/practice-sets/{practice_set_id}/preview` | 读 | 预览 Agent 更新与其进度影响 | 浏览器审批流程；Agent `papers preview` |
+| POST `/practice-sets/{practice_set_id}/preview` | 读 | 预览 Agent 更新与其进度影响（直接执行前的输入校验） | Agent 更新动作与 `papers preview` |
 | POST `/pull` | 读 | Agent/CLI authoring 拉取（`filters` 四维：来源类型/题目来源方式/年份/文档，维度内 OR、维度间 AND；顶层 `origin_kinds` 同义） | Agent/CLI；无学习者选题页 |
 | GET `/pull-facets` | 读 | 兼容筛选维度与计数查询；浏览器不再呈现来源筛选浮窗 | 只读 API |
 | GET `/search/problems?stem=&source=` | 读 | 只读题目发现（题干/来源域多词 AND）；不接入浏览器选题或 Paper 组装，精确题号仍由 Agent/CLI `pull --problem` 在组卷前指定 | 只读 API |
@@ -57,7 +57,7 @@
 | GET·POST `/ai/sessions`；PATCH·DELETE·GET `/ai/sessions/{id}` | 读/写 | 对话（id 必须是 `conv-NNN`，越界 400） | 浏 |
 | POST `/ai/sessions/{id}/turns` · GET/PATCH/DELETE `…/turns/{turn}` · POST `…/queue/continue` · POST `…/cancel` | 读/写 | 对话（turn 必须是 `turn-NNN`；POST 可带 `submission_id`、`retry_of` 和 `queue_action`；编辑/删除带 `expected_revision`；continue 返回 `{conversation_id, queue_paused, turn}`，`turn` 可为 null；pending 读取不暴露捕获上下文） | 浏 |
 | POST `/ai/sessions/{id}/queue/reorder` | 读/写 | `{expected_order,turn_ids}`：完整队列排列的顺序 CAS；返回 `{conversation_id,queue_order}`，不改变消息上下文 | 浏 |
-| POST `/ai/sessions/{id}/turns/{turn}/interrupt` | 读/写 | `{expected_revision}`：原待发消息立即发送；复用身份与原上下文，审批/交接/过期版本冲突不修改 | 浏 |
+| POST `/ai/sessions/{id}/turns/{turn}/interrupt` | 读/写 | `{expected_revision}`：原待发消息立即发送；复用身份与原上下文，交接/过期版本冲突不修改 | 浏 |
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 
 ## CLI 命令（`python -m workbench.cli.main …` / 安装入口 `lesson-kit …`；可用命令以 `workbench.cli.entry` 为准）
@@ -112,7 +112,7 @@
 > （2026-09-21 workspace-file-isolation）。多个工作区注册时，不带名的命令拒绝猜，
 > 报错给出「`lesson-kit <cmd> <工作区名>`」的可粘贴形式。
 
-2026-10-20 新增同会话操作：`POST /ai/sessions/{id}/queue/reorder` 接收 `{expected_order,turn_ids}`，返回 `{conversation_id,queue_order}`；`POST /ai/sessions/{id}/turns/{turn}/interrupt` 接收 `{expected_revision}`，返回该原 turn 的 canonical response。重排仅接受完整排列和匹配的旧顺序；revision/dispatch/审批/另一中断冲突返回 409 且无变更，非法请求 400。重复已提升 turn 的立即发送返回同一结果，不重跑。
+2026-10-20 新增同会话操作：`POST /ai/sessions/{id}/queue/reorder` 接收 `{expected_order,turn_ids}`，返回 `{conversation_id,queue_order}`；`POST /ai/sessions/{id}/turns/{turn}/interrupt` 接收 `{expected_revision}`，返回该原 turn 的 canonical response。重排仅接受完整排列和匹配的旧顺序；revision/dispatch/另一中断冲突返回 409 且无变更，非法请求 400。重复已提升 turn 的立即发送返回同一结果，不重跑。
 
 ### Runtime lifecycle endpoints (human owner)
 | Method | Path | Purpose |
