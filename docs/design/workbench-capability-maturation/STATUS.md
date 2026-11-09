@@ -6,7 +6,7 @@
 
 - 独立审查两轮：主审（报告 `tmp/agent-runs/IA-REVIEW-report.md`，七项全结论、无 P1、probe3–6 隔离实测 119 项检查）+ 重启后终验（结论"可以归档"）。唯一阻塞 P2（legacy 归档场景未限定 active/parked）已按 change 自身 design D-4 裁决收窄并登记（`efe3755b`：delta 措辞 + design Reconciliation addendum + 停放 legacy 不归档回归测试；实测确认停放 legacy 恢复也不自动归档，spec 措辞与事实一致）；Risks 节散文同步（`710f9ae6`）。P3×4 与终验备注（Risks 散文）均已登记或同步，无遗留阻塞。
 - 归档 `archive/2026-11-09-import-attempts-into-paper-progress`：四 capability delta 并入 live（aapr/pse/rw/ai-teacher-bridge），strict **26/26**，15 项逐块验证（ADDED 在场/场景保全/收窄措辞落 live）全过。
-- 全仓基线：**1,613 passed / 477.25s**、compileall、`--all --strict` 42/42、guard、`git diff --check`。未推送；真实工作区与既有服务全程未干扰。
+- 全仓基线：**1,613 passed / 477.25s**、compileall、`--all --strict` 42/42、guard、`git diff --check`。真实工作区与既有服务全程未干扰。2026-11-09 所有者授权后 `b6881510..555ec55c`（24 提交）已推送 origin/main，main 与远端同步。
 
 ## 2026-11-09：import-attempts-into-paper-progress 收尾（33/37 → 36/37，5.1 待归档）
 
