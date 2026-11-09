@@ -622,6 +622,8 @@ The Agent column's maximum width SHALL be 960px at viewport widths of at least 1
 
 The Agent chat SHALL constrain its message region to the available column height and allow normal mouse-wheel vertical scrolling when messages exceed that height.
 
+Project approval SHALL be retired. Any persisted legacy pending approval SHALL be reconciled under direct-project-actions and SHALL NOT block dispatch solely for approval. All unrelated identity, single-flight, stop-handoff and context constraints SHALL remain applicable.
+
 #### Scenario: Read long conversation
 
 - **WHEN** the Agent message list is taller than the visible right column
@@ -629,8 +631,8 @@ The Agent chat SHALL constrain its message region to the available column height
 
 #### Scenario: Read long cards while chatting
 
-- **WHEN** a Paper approval or another card above the input exceeds the available height
-- **THEN** its content scrolls within a bounded region, the conversation remains scrollable, and the input stays within the column
+- **WHEN** a request encounters a legacy pending approval state
+- **THEN** that state is reconciled without an approval gate and the requested operation follows normal identity, ownership and concurrency rules without approval-driven blocking
 
 ### Requirement: Fixed outer sidebar boundaries
 
@@ -1031,25 +1033,22 @@ surfaces. Raw HTML SHALL remain escaped/rejected.
 
 ### Requirement: Content results expose type, source, and rollback state
 
-An automatically executed append action SHALL render a result card containing
-the final asset types/counts, affected workspace, source summary, figure count,
-batch id, backup, and current rollback state. Formal/linked problems SHALL show
-concise source evidence. Solution reveal SHALL preserve source answers and useful
-normal explanations without a standalone `AI 生成解析` panel. Identical detailed
-solution text already shown as the answer or quiz explanation SHALL appear once.
-Stored solution content and provenance SHALL NOT be deleted by this presentation change.
+Normal content-result presentation SHALL show a concise truthful result through the existing conversation, without default source, reason or rollback-state fields and without explicit successful-batch undo controls. Detailed counts, provenance and per-item failures SHALL remain available in CLI receipts and verification artifacts. Historical records SHALL remain accurate and user-requested explanations SHALL match actual writes.
 
 #### Scenario: Source problem enters automatically
-- **WHEN** an Agent action imports formal source problems
-- **THEN** the result card states that type and every rendered problem shows its source evidence
+
+- **WHEN** a governed content result is rendered or reopened
+- **THEN** its actual outcome is represented once with the minimal normal presentation, no rollback action, and detailed evidence available through the existing retrieval path
 
 #### Scenario: Reopen a rolled-back result
-- **WHEN** a conversation is reopened after its batch was rolled back
-- **THEN** the card shows `已回滚` and exposes no rollback button
+
+- **WHEN** a governed content result is rendered or reopened
+- **THEN** its actual outcome is represented once with the minimal normal presentation, no rollback action, and detailed evidence available through the existing retrieval path
 
 #### Scenario: Generated explanation repeats the normal explanation
-- **WHEN** detailed solution text repeats the displayed quiz explanation or source answer
-- **THEN** the text is not repeated in another panel, no standalone AI explanation label appears, and stored fields remain intact
+
+- **WHEN** a governed content result is rendered or reopened
+- **THEN** its actual outcome is represented once with the minimal normal presentation, no rollback action, and detailed evidence available through the existing retrieval path
 
 ### Requirement: Failed activities expose a concise error summary
 
@@ -1373,6 +1372,8 @@ activities, polling position, and callbacks owned by the previous conversation.
 Late responses from the previous conversation SHALL NOT update or act on the
 newly selected conversation.
 
+Project approval SHALL be retired. Any persisted legacy pending approval SHALL be reconciled under direct-project-actions and SHALL NOT block dispatch solely for approval. All unrelated identity, single-flight, stop-handoff and context constraints SHALL remain applicable.
+
 #### Scenario: Type during a running turn
 
 - **WHEN** an Agent turn is active and the learner sends another message
@@ -1390,37 +1391,13 @@ newly selected conversation.
 
 #### Scenario: Switch sessions with pending runtime state
 
-- **WHEN** the learner switches conversations while an activity, progress request, or approval is pending
-- **THEN** the old state is cleared and any late callback is ignored without mutating or sending an action for the new conversation
+- **WHEN** a request encounters a legacy pending approval state
+- **THEN** that state is reconciled without an approval gate and the requested operation follows normal identity, ownership and concurrency rules without approval-driven blocking
 
 #### Scenario: Progress polling fails before a terminal response
 
 - **WHEN** the progress endpoint is temporarily unavailable while a turn is active
 - **THEN** the interface keeps the active turn identity, reports unavailable progress, and does not treat the provider as failed or start a concurrent turn
-
-### Requirement: Low-reversibility rollback requires an Approval Gate
-
-A content-batch rollback initiated from an Agent result card SHALL require an Approval Gate before the existing rollback operation is called. The gate SHALL identify the batch, explain the reason and impact, and replace the normal composer until the learner approves or cancels. Approval SHALL call the existing rollback operation once. Cancellation SHALL restore the composer without issuing a rollback request. Ordinary reversible provider activity SHALL NOT use this gate. A conversation change SHALL invalidate any approval callback from the prior conversation.
-
-#### Scenario: Review a rollback request
-
-- **WHEN** the learner selects the rollback control on a content-batch result
-- **THEN** the Approval Gate replaces the composer and identifies the batch and the effect of rollback
-
-#### Scenario: Approve rollback
-
-- **WHEN** the learner approves the displayed rollback
-- **THEN** the existing rollback operation is issued once for the displayed batch
-
-#### Scenario: Cancel rollback
-
-- **WHEN** the learner cancels the displayed rollback
-- **THEN** the composer returns and no rollback request is issued
-
-#### Scenario: Switch conversations while approval is open
-
-- **WHEN** the learner changes conversations before deciding on a rollback
-- **THEN** the gate closes and its old callback cannot roll back the prior batch
 
 ### Requirement: Agent Artifact handoff previews the saved Paper
 
@@ -1655,54 +1632,6 @@ submission, which follows the running-send preference directly.
 
 - **WHEN** every Paper approval has been resolved, no queued messages are retained, and the learner submits a new message while no turn is running
 - **THEN** the message starts immediately under the running-send preference instead of joining a paused queue
-
-### Requirement: Existing approval controls remain truthful and scoped
-Governed Paper-reset and rollback confirmations SHALL show their exact impact and remain bound to the intended workspace/conversation/message/revision; cancellation or stale approval SHALL perform no write. Paper approval SHALL identify the existing Paper, proposed item membership/order change, and affected unfinished completion/draft counts from the existing backend preview. The Agent SHALL propose rather than apply this Paper update; a learner click SHALL cause the page to request the existing validated update. A preview snapshot or chat reply alone SHALL NOT constitute that click. This change adds no generic approval gate to ordinary tools.
-
-Paper approval SHALL coexist with the ordinary composer. A pending Paper approval SHALL be presented exactly once, in the composer-side approval card that carries the decision actions; the message flow SHALL NOT duplicate it and SHALL retain only resolved approval history cards. New messages explicitly submitted with queue SHALL be retained in the paused queue with their submission-time contexts. Interrupt-and-send and send-now SHALL be rejected without queue fallback or message loss; neither operation SHALL bypass the pending approval. Pending approval SHALL prevent queue continuation. Approval or cancellation SHALL leave the queue paused only while retained messages exist; when no approvals remain pending and no messages are retained, the queue SHALL NOT stay paused and new submissions follow the running-send preference. Existing rollback SHALL retain its composer-replacement interaction.
-
-If the Paper or progress snapshot changed before approval, the UI SHALL perform no update, display a refreshed impact for the same proposed update and require a new approval click without requiring another Agent turn. Reload/reopen SHALL restore the pending approval and paused queue without automatic writes or provider execution. Missing/invalid targets SHALL produce actionable feedback without creating a replacement Paper. Duplicate approval attempts SHALL NOT reset progress twice.
-
-#### Scenario: Cancel an existing Paper reset approval
-- **WHEN** the learner cancels a governed Paper-reset approval or switches conversations before deciding
-- **THEN** no Paper write occurs and the existing approval callback cannot act on the new conversation
-
-#### Scenario: Approve the displayed Paper update
-- **WHEN** the learner approves the current displayed Paper impact
-- **THEN** the page requests the exact proposed update with its current confirmation; Paper ID, questions, historical attempts/ratings and other Papers remain unchanged, while only the target Paper's affected unfinished progress/drafts reset
-
-#### Scenario: Pending approval appears once
-- **WHEN** a Paper update awaits the learner's decision
-- **THEN** only the composer-side approval card offers approve/cancel actions and the message flow shows no duplicate pending card alongside it
-
-#### Scenario: Continue composing while approval is pending
-- **WHEN** B/C are already queued and the learner explicitly queues another message while a Paper update awaits approval
-- **THEN** the composer stays usable and the new message joins the paused queue; no queued provider runs and Continue cannot bypass the approval
-
-#### Scenario: Resolve approval before continuing the queue
-- **WHEN** the learner approves or cancels the pending Paper update
-- **THEN** the queue stays paused only while retained messages exist; if no messages are retained the pause lifts and the next new submission follows the running-send preference
-
-#### Scenario: Practice advances before approval
-- **WHEN** the learner answers more questions or the Paper changes before the approval request is validated
-- **THEN** no update/reset occurs from the old confirmation, the latest impact is displayed for another click, and no additional Agent request is required
-
-#### Scenario: Restore a pending Paper approval
-- **WHEN** the learner reloads or reopens the owning conversation after a Paper approval was persisted
-- **THEN** the pending decision and paused queue reappear, with no automatic update or provider launch and with impact revalidation before execution
-
-#### Scenario: Navigate or switch conversations during approval
-- **WHEN** middle navigation or a conversation switch occurs while approval is pending
-- **THEN** middle navigation preserves the decision; switching conversations makes old callbacks inert, and any restored approval remains bound to its original workspace/conversation/turn/Paper/revision
-
-#### Scenario: Repeat an approval request
-- **WHEN** an approval is double-clicked or its response is lost and the decision is submitted again
-- **THEN** the operation is not executed a second time and the UI does not claim a second reset
-
-#### Scenario: Interrupt cannot bypass approval or silently queue
-
-- **WHEN** the learner chooses interrupt-and-send or send-now while a Paper update awaits approval
-- **THEN** the UI explains that approval must be resolved first, retains the composer text or original queued item, and neither starts a provider nor silently enqueues an interrupt message
 
 ### Requirement: Minimal Paper start and practice controls
 

@@ -190,19 +190,22 @@ execution from the archived fixed items.
 Learner pages SHALL manage and practise existing Papers without manual item selection, condition-based assembly or membership/order editing. Agent/CLI authoring SHALL retain existing scope, filter, exact-id and save contracts.
 
 ### Requirement: Saved Paper updates preserve container identity
-An update explicitly targeting an existing Paper SHALL retain its Paper ID. Effective title/description-only or no-op changes SHALL retain unfinished execution progress. A manual change to item membership or order SHALL first report its exact progress impact and require confirmation, then reset only that Paper's unfinished progress/drafts without modifying questions, historical attempts, ratings or other Papers. Cancellation SHALL leave both content and progress unchanged. Saving SHALL NOT automatically start practice.
+
+Updates explicitly targeting an existing Paper SHALL retain Paper ID. Title/description-only and no-op changes SHALL retain unfinished execution state. Membership/order updates SHALL apply directly without extra approval and SHALL preserve unaffected items' progress and drafts through the content lifecycle. Removed or changed items SHALL be coordinated explicitly without modifying historical attempts, ratings or unrelated Papers. Saving SHALL NOT start practice automatically. Legacy rejected or obsolete callbacks SHALL perform no write.
 
 #### Scenario: Update the original Paper instead of creating another
-- **WHEN** the caller confirms a membership/order update of a partially practiced saved Paper
-- **THEN** the same Paper ID contains the new ordered items and its unfinished progress is reset, while learning evidence and other Papers remain unchanged
+
+- **WHEN** a valid requested membership or order update targets a partially practiced saved Paper
+- **THEN** the same Paper is updated directly and unaffected progress, questions, learning evidence and other Papers remain
 
 #### Scenario: Rename without resetting practice
 - **WHEN** only a saved Paper's title or description changes
 - **THEN** its unfinished state, drafts and item order remain unchanged
 
 #### Scenario: Cancel a structure change
-- **WHEN** the user rejects the displayed progress-reset impact
-- **THEN** neither the Paper nor any execution or learning record changes
+
+- **WHEN** a rejected legacy operation or obsolete callback is received
+- **THEN** the obsolete input performs no write and does not create another approval gate
 
 ### Requirement: Saved container management does not depend on live item availability
 The system SHALL keep saved Paper metadata visible, inspectable, repairable and deletable even when an item is missing. It SHALL report missing item identities explicitly and SHALL NOT silently omit the container from its list. Starting an invalid or empty Paper SHALL fail clearly without starting an execution or writing learning state. Deleting a Paper SHALL remove only its container and unfinished progress/drafts, preserving questions, learning evidence and historical runs with the deleted source identity/label.
@@ -280,3 +283,4 @@ Each ordinary-problem Paper's unfinished run SHALL independently retain Answer R
 #### Scenario: A repeated Paper has two answer sheets
 - **WHEN** a completed Paper is started again
 - **THEN** new progress cannot overwrite the previous answer sheet or self-ratings
+

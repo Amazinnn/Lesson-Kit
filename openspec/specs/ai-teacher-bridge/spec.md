@@ -812,6 +812,8 @@ Conversation history SHALL include accepted turn messages independently of succe
 
 An explicit interrupt-and-send SHALL durably accept its message and bind its cancellation request to the running turn that was current at acceptance. It SHALL start the interrupt message directly only after that captured turn's provider worker reaches an authoritative terminal state and releases ownership. The interrupt SHALL NOT be inserted into the ordinary queue, depend on queue continuation, or fall back to queue routing; waiting for stop confirmation is an independent handoff state. A stop request, timeout, or missing progress response alone SHALL NOT authorize concurrent execution. The bridge SHALL preserve already completed effects and SHALL NOT resume or roll back the old task automatically. Messages queued before the interrupt SHALL remain paused after the interrupt message, including when it succeeds. While an interrupt message is waiting for stop confirmation, another distinct interrupt submission SHALL be rejected as a conflict without discarding the accepted one.
 
+Project approval SHALL be retired. Any persisted legacy pending approval SHALL be reconciled under direct-project-actions and SHALL NOT block dispatch solely for approval. All unrelated identity, single-flight, stop-handoff and context constraints SHALL remain applicable.
+
 #### Scenario: Interrupt A with queued B/C and send D
 
 - **WHEN** A is running, B and C are queued, and D is accepted with interrupt-and-send
@@ -839,13 +841,13 @@ An explicit interrupt-and-send SHALL durably accept its message and bind its can
 
 #### Scenario: Interrupt when no provider is running
 
-- **WHEN** D is submitted with interrupt-and-send while no provider owns the conversation and no approval or other handoff blocks acceptance
-- **THEN** D starts directly without an artificial queue step or explicit continue action, and any pre-existing paused queued messages remain paused
+- **WHEN** a request encounters a legacy pending approval state
+- **THEN** that state is reconciled without an approval gate and the requested operation follows normal identity, ownership and concurrency rules without approval-driven blocking
 
 #### Scenario: Approval blocks interrupt acceptance
 
-- **WHEN** a new interrupt message is submitted while a Paper approval is pending
-- **THEN** the service rejects it with a conflict before accepting or enqueuing it, and no provider or Paper operation runs
+- **WHEN** a request encounters a legacy pending approval state
+- **THEN** that state is reconciled without an approval gate and the requested operation follows normal identity, ownership and concurrency rules without approval-driven blocking
 
 #### Scenario: Service restarts during an interrupt handoff
 
@@ -859,6 +861,8 @@ A pending message SHALL retain its current text and captured context in its acce
 The learner SHALL also be able to reorder the ordinary queued messages or send one of them now. Reorder SHALL atomically compare the complete expected pending order with the current order under the same dispatch ownership lock, accept only a permutation of exactly the queued entries, and preserve message identities, text and contexts. A stale order or an ineligible entry SHALL conflict without partial mutation.
 
 Send-now SHALL atomically validate the target queued message and expected revision, remove it from the ordinary queue and use the direct interrupt-and-send path. It SHALL preserve that accepted turn identity, its current edited text and original captured context, rather than creating a duplicate turn. Existing queued peers SHALL retain their relative order and remain paused. Repetition for the same already-promoted turn SHALL return the same accepted result without cancelling a later running turn or dispatching twice. Ordinary submission-identity reconciliation SHALL NOT itself promote an accepted message.
+
+Project approval SHALL be retired. Any persisted legacy pending approval SHALL be reconciled under direct-project-actions and SHALL NOT block dispatch solely for approval. All unrelated identity, single-flight, stop-handoff and context constraints SHALL remain applicable.
 
 #### Scenario: Edit a queued message
 
@@ -912,37 +916,8 @@ Send-now SHALL atomically validate the target queued message and expected revisi
 
 #### Scenario: Send-now is blocked
 
-- **WHEN** a pending approval or a different stop handoff blocks send-now
-- **THEN** the request conflicts and the original message stays queued with its original text, context and order
-
-### Requirement: Paper update approval pauses conversation dispatch
-
-The Bridge SHALL retain an Agent-proposed existing-Paper update and its approval state in the existing conversation/turn artifacts without applying it. Before the proposing provider turn releases ownership to the next queued message, the Bridge SHALL persist the pending approval and pause that conversation's dispatch. Waiting for learner approval SHALL NOT keep a provider task running. While approval is pending, messages explicitly submitted with queue MAY be accepted into the paused queue with their captured context. Interrupt-and-send and send-now SHALL be rejected without creating or rerouting a queued item; queue continuation SHALL NOT bypass the decision.
-
-Only the page's explicit learner-approval operation SHALL apply this proposed update through the existing Paper preview/confirmation and update rules. A stale impact SHALL cause no write and require refreshed impact plus another learner click. Cancellation SHALL cause no Paper write. Both approval and cancellation SHALL retain older queued messages and leave continuation manual. Repeated approval attempts SHALL NOT apply the update or reset progress twice.
-
-Pending approval SHALL survive page reload/reopen and service recovery with dispatch paused and no automatic approval or replay. Workspace, conversation, proposing turn, target Paper and operation revision SHALL scope each decision. This integration SHALL NOT alter historical attempts/ratings, question entities, unrelated Papers or the existing direct manual CLI contract.
-
-#### Scenario: A proposes a Paper update with B/C queued
-- **WHEN** provider turn A completes with a Paper update requiring approval while B/C are queued
-- **THEN** its pending approval is persisted and dispatch is paused before ownership handoff; B/C do not start even with the browser closed
-
-#### Scenario: Approval is resolved
-- **WHEN** the learner approves or cancels the pending operation
-- **THEN** only a current valid approval may write the target Paper, B/C remain retained and paused, and explicit continuation is required
-
-#### Scenario: New work is accepted during approval
-- **WHEN** another message is accepted with queue while the conversation has a pending Paper approval
-- **THEN** its text and submission context are retained without provider dispatch or implicit resolution of the approval
-
-#### Scenario: Recover a pending operation
-- **WHEN** the service recovers a conversation with a persisted pending Paper approval
-- **THEN** the operation remains pending, the queue stays paused, and neither the Paper update nor a queued provider starts automatically
-
-#### Scenario: Interrupt is refused during approval
-
-- **WHEN** the learner submits interrupt-and-send or send-now while a Paper approval is pending
-- **THEN** the operation conflicts without provider dispatch, Paper writes, or conversion of the interrupt into queued work; an existing queued send-now target remains unchanged
+- **WHEN** a request encounters a legacy pending approval state
+- **THEN** that state is reconciled without an approval gate and the requested operation follows normal identity, ownership and concurrency rules without approval-driven blocking
 
 ### Requirement: Bundled Lesson Kit drill skill
 
