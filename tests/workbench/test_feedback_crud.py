@@ -224,6 +224,79 @@ class FeedbackCrudTests(unittest.TestCase):
         self.assertEqual(result["existing_event_id"], event_id)
         self.assertEqual(len(self.rows("SELECT * FROM feedback_events")), 1)
 
+    def test_agent_chooses_a_rating_without_a_learner_supplied_value(self):
+        # 4.6: the contract lets the Agent pick the 1-5 itself; the learner does
+        # not have to supply a number. The chosen rating lands through the
+        # ordinary evaluation paths.
+        from workbench.bridge import agent_contracts
+
+        attempts_topic = agent_contracts.get("attempts")
+        self.assertIn("You MAY choose it yourself", attempts_topic)
+        self.assertIn("the learner does not need to supply a number", attempts_topic)
+
+        self.pool.connect().execute(
+            "INSERT INTO problem_attempts (problem_id, status, answer_text) "
+            "VALUES (?, 'answered', '浏览器作答')", (PROBLEM,))
+        self.pool.commit()
+        attempt_id = self.rows(
+            "SELECT id FROM problem_attempts WHERE problem_id=?", (PROBLEM,))[0]["id"]
+
+        code, output = self.run_cli(
+            "feedback", "dmath", "add", "--item", "problem", "--id", PROBLEM,
+            "--attempt-id", str(attempt_id), "--rating", "3", "--note", "Agent 选定的评价")
+        self.assertEqual(code, 0, output)
+        event_id = self.list_event_id("problem", PROBLEM, attempt_id)
+        self.assertEqual(self.event(event_id)["rating"], 3)
+
+        # The Agent may also pick the new value when editing, again without a
+        # learner-supplied number — expected values still gate the write.
+        code, output = self.run_cli(
+            "feedback", "dmath", "update", "--event-id", str(event_id),
+            "--expected-rating", "3", "--expected-note", "Agent 选定的评价",
+            "--rating", "4", "--note", "Agent 复核后改判")
+        self.assertEqual(code, 0, output)
+        self.assertEqual(self.event(event_id)["rating"], 4)
+
+    def test_browser_stale_edit_after_an_agent_edit_is_refused(self):
+        # 4.9: the Agent edits the shared evaluation row first; the browser's
+        # next in-place edit still carries its old expected values and must
+        # conflict with zero writes.
+        import sys
+
+        from workbench.data import attempts as attempts_data
+
+        self.pool.connect().execute(
+            "INSERT INTO problem_attempts (problem_id, status, answer_text) "
+            "VALUES (?, 'answered', '浏览器作答')", (PROBLEM,))
+        self.pool.commit()
+        attempt_id = self.rows(
+            "SELECT id FROM problem_attempts WHERE problem_id=?", (PROBLEM,))[0]["id"]
+        attempts_data.record_browser_feedback(
+            self.pool, "problem", PROBLEM, rating=2, note="browser first",
+            attempt_id=attempt_id, request_id="browser-rating-1")
+        event_id = self.list_event_id("problem", PROBLEM, attempt_id)
+
+        code, output = self.run_cli(
+            "feedback", "dmath", "update", "--event-id", str(event_id),
+            "--expected-rating", "2", "--expected-note", "browser first",
+            "--rating", "5", "--note", "agent edit")
+        self.assertEqual(code, 0, output)
+
+        before = self.event(event_id)
+        with self.assertRaises(Exception) as caught:
+            attempts_data.record_browser_feedback(
+                self.pool, "problem", PROBLEM, rating=4, note="stale browser edit",
+                attempt_id=attempt_id, request_id="browser-rating-2",
+                edit_existing=True, expected_rating=2, expected_note="browser first")
+        self.assertIn(
+            self.event(event_id)["rating"], {5},
+            "the agent's edit survives the stale browser attempt")
+        self.assertEqual(self.event(event_id)["note"], "agent edit")
+        self.assertEqual(
+            len(self.rows("SELECT * FROM feedback_events")),
+            len(self.rows("SELECT id FROM feedback_events")))
+
+
     def test_legacy_feedback_add_still_works(self):
         code, output = self.run_cli(
             "feedback", "dmath", "--item", "problem", "--id", PROBLEM,

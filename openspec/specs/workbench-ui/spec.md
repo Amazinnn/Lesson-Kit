@@ -1186,7 +1186,7 @@ The self-rating preference SHALL be a checkbox, defaulting to on: self-rating be
 as before. With it off, no self-rating surface SHALL appear anywhere in the
 flow — the rating-timing choice is hidden and not required to start, the
 feedback panel never renders, a finished round takes the no-session-end path,
-and records label the round 关闭自评. The preference SHALL persist per
+and records label the round 关闭评价. The preference SHALL persist per
 workspace in the browser across tabs and restarts, and SHALL immediately hide or show eligible self-rating controls in an open ordinary Paper, including a Paper started with rating off. Answer locking, navigation, objective grading and the recorded round mode SHALL remain unchanged. Legacy card/session timing retains its existing round mode.
 
 #### Scenario: The preference survives a restart
@@ -1200,7 +1200,7 @@ workspace in the browser across tabs and restarts, and SHALL immediately hide or
 - **WHEN** a round starts with the preference off
 - **THEN** the rating-timing fieldset is absent, no feedback panel appears
   during the round, the round ends without the session-end view, and records
-  show 关闭自评 for it
+  show 关闭评价 for it
 
 #### Scenario: On keeps today's behavior
 
