@@ -51,4 +51,4 @@
 - [x] 6.2 `python -m compileall -q lessonkit.py workbench pipeline pool tests`（本会话已跑并通过：全仓 pytest 1,547 passed、compileall、openspec --specs --strict、guard extract-problems）
 - [x] 6.3 `openspec validate --specs --strict`（本会话已跑并通过：全仓 pytest 1,547 passed、compileall、openspec --specs --strict、guard extract-problems）
 - [x] 6.4 `python lessonkit.py guard extract-problems --course dmath --chapter ch06`（本会话已跑并通过：全仓 pytest 1,547 passed、compileall、openspec --specs --strict、guard extract-problems）
-- [ ] 6.5 Temporary-workspace smoke: save Paper, check/apply import, read progress, append a problem, import again, submit.
+- [x] 6.5 Temporary-workspace smoke: save Paper, check/apply import, read progress, append a problem, import again, submit.隔离临时工作区真实 CLI+浏览器六步全过（A–G），证据 `evidence.md`：check 零写入（24 表快照 diff 空）、apply 只写 attempt+绑定、浏览器恢复导入进度并继续作答后交卷归档、活动卷/停放卷互不干扰、受治理补题+append 幂等+重放零重复、三类拒绝零残留。
