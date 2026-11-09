@@ -1217,6 +1217,40 @@ class PaperBoundImportTests(AttemptsTestCase):
         finally:
             pool.close()
 
+    def test_parked_legacy_import_keeps_the_checkpoint_unarchived(self):
+        """Parked legacy Papers are not archived by the import (delta scoped to
+        the selected execution); the checkpoint keeps its answered items."""
+        from workbench.data import active_practice
+
+        a = self.save_paper("LegacyA", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        b = self.save_paper("LegacyB", ["dmath-ch12-prob-001"])
+        pool = self.open_pool()
+        try:
+            active_practice.start_saved(pool, a)   # legacy: no reveal_timing
+            active_practice.start_saved(pool, b)   # parks A
+            code, result = self.apply_to_paper(
+                "import-parked-legacy", a,
+                [{"problem_id": "dmath-ch12-prob-001", "answer_text": "答案一"},
+                 {"problem_id": "dmath-ch12-prob-002", "answer_text": "答案二"}])
+
+            self.assertEqual(code, 0)
+            self.assertEqual(result["paper"]["mode"], "parked")
+            self.assertFalse(result["paper"]["completed"])
+            self.assertIsNone(result["paper"]["run_id"])
+            self.assertEqual(self.rows("SELECT * FROM practice_runs"), [])
+            checkpoint = json.loads(self.rows(
+                "SELECT checkpoint_json FROM paper_state WHERE paper_id=?",
+                (a,))[0]["checkpoint_json"])
+            self.assertIsNone(checkpoint.get("reveal_timing"))
+            self.assertEqual([item["state"] for item in checkpoint["items"]],
+                             ["answered", "answered"])
+            # Resuming it does not archive by itself either; the existing
+            # legacy rules stay in charge of later completion.
+            active_practice.start_saved(pool, a)
+            self.assertEqual(self.rows("SELECT * FROM practice_runs"), [])
+        finally:
+            pool.close()
+
     def test_legacy_active_paper_archives_when_import_fills_the_last_item(self):
         from workbench.data import active_practice
 

@@ -114,6 +114,17 @@ content and structure changes; the change does not add a bypass.
   its reset rule for manual membership/order edits. `papers append` is a separate
   requirement and does not use that path.
 
+### Reconciliation addendum (2026-11-09, independent review P2)
+
+The delta scenario "Legacy last item archives" originally said "a legacy Paper"
+without scoping active/parked, while D-4 and the implementation archive only the
+selected (active) execution. Adjudicated per D-4 (the change's own decision):
+the requirement and scenario now scope legacy archiving to the selected
+execution, and state that the import does not archive a parked execution — a
+parked legacy Paper keeps its checkpoint and completes through the existing
+legacy rules on later learner action (verified: resume of a fully answered
+parked legacy checkpoint does not archive by itself).
+
 ## Risks
 
 - An import that fills the last pending item of a legacy Paper archives it

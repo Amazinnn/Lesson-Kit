@@ -21,10 +21,14 @@ while preserving any recorded reference-view fact. Importing into a Paper that
 is not the selected Paper SHALL NOT pause, replace, or otherwise modify the
 selected Paper's execution.
 
-Completion SHALL follow the target execution's existing mode: a legacy execution
-whose last pending item becomes answered SHALL archive as completed, while an
-explicit `per_item` or `on_submit` execution SHALL wait for the learner's
-explicit Paper submission. An ungraded import SHALL change only Paper execution
+Completion SHALL follow the target execution's existing mode: a legacy selected
+(active) execution whose last pending item becomes answered SHALL archive as
+completed, while an explicit `per_item` or `on_submit` execution SHALL wait for
+the learner's explicit Paper submission. The import itself SHALL NOT archive a
+parked execution; a legacy Paper that was parked at import time keeps its
+checkpoint and completes through the existing legacy rules on later
+learner action. An ungraded import SHALL
+change only Paper execution
 progress and SHALL NOT change learning progress, signals, current states, or
 schedule. Repeating an identical manifest SHALL return the original binding
 result without creating another attempt or moving progress twice; reusing the
@@ -57,8 +61,8 @@ request id with a different Paper or item set SHALL fail.
 
 #### Scenario: Legacy last item archives
 
-- **WHEN** the last pending item of a legacy Paper is imported as answered
-- **THEN** the execution archives as completed exactly once under the existing legacy rule
+- **WHEN** the last pending item of a legacy selected Paper is imported as answered
+- **THEN** that execution archives as completed exactly once under the existing legacy rule, while parked legacy Papers keep their checkpoints until the learner resumes them
 
 #### Scenario: Invalid item protects the batch
 
