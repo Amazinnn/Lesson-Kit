@@ -30,11 +30,11 @@
 - [x] 4.1 Cover active explicit binding, active legacy completion, parked binding, new checkpoint creation, and untouched selected Paper.（实现/契约/测试已在当前树核对）
 - [x] 4.2 Cover re-binding an answered/stuck item and old attempt retention.（实现/契约/测试已在当前树核对）
 - [x] 4.3 Cover ungraded import changing only execution progress.（实现/契约/测试已在当前树核对）
-- [ ] 4.4 Cover invalid Paper/member/batch rollback and idempotent replay.
+- [x] 4.4 Cover invalid Paper/member/batch rollback and idempotent replay.+ 未知 Paper 拒绝零写入（attempt_operations 也零写）；中段写入失败（第二个条目 `_record` 注入 OSError）已验证第一批 attempt、operation 与 Paper 进度整批回滚；非成员题目拒绝与相同 manifest 幂等重放由既有用例覆盖。
 - [x] 4.5 Cover `attempts check` zero writes.（实现/契约/测试已在当前树核对）
 - [x] 4.6 Cover append on active, parked, and no-progress Papers; idempotent repeat; invalid/duplicate refusal.（实现/契约/测试已在当前树核对）
 - [x] 4.7 Cover `papers append` CLI end to end.（实现/契约/测试已在当前树核对）
-- [ ] 4.8 Cover the Agent contract text for `paper_id` and the three-step repair.
+- [x] 4.8 Cover the Agent contract text for `paper_id` and the three-step repair.尝试：attempts/practice/content 三主题 + `_prompt` 的 paper_id、绑定三模式、无 rating 边界、三步补题、显式意图门槛（讨论不写入）共 4 个用例 11 passed。
 
 ## 5. Contracts and docs
 

@@ -1307,6 +1307,61 @@ class PaperBoundImportTests(AttemptsTestCase):
         self.assertEqual(self.learning_rows(), learning_before)
         self.assertEqual(self.paper_rows(), paper_before)
 
+    def test_import_rejects_an_unknown_paper_with_zero_writes(self):
+        paper_before = self.paper_rows()
+        learning_before = self.learning_rows()
+
+        code, result = self.apply_to_paper(
+            "import-unknown-paper", "ps-999",
+            [{"problem_id": "dmath-ch12-prob-001", "answer_text": "纸上作答"}])
+
+        self.assertEqual(code, 2)
+        self.assertIn("unknown Paper", result["error"])
+        self.assertEqual(self.paper_rows(), paper_before)
+        self.assertEqual(self.learning_rows(), learning_before)
+        self.assertEqual(self.rows("SELECT * FROM attempt_operations"), [])
+
+    def test_a_failed_later_item_rolls_back_the_whole_batch(self):
+        """A mid-batch write failure must not keep the earlier attempt or progress.
+
+        The whole apply is one transaction: a second-item failure rolls the first
+        item's attempt, operation rows and any Paper progress write back together.
+        """
+        from unittest import mock
+
+        from workbench.data import attempts as attempts_data
+
+        paper_id = self.save_paper(
+            "卷子", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        paper_before = self.paper_rows()
+        learning_before = self.learning_rows()
+        real_record = attempts_data._record
+        seen = []
+
+        def flaky_record(pool, request_id, kind, item, batch):
+            seen.append(item["problem_id"])
+            if len(seen) == 2:
+                raise OSError(
+                    "injected: disk failure while recording the second item")
+            return real_record(pool, request_id, kind, item, batch)
+
+        with mock.patch.object(attempts_data, "_record", flaky_record):
+            code, result = self.apply_to_paper(
+                "import-rollback", paper_id,
+                [{"problem_id": "dmath-ch12-prob-001", "answer_text": "第一题"},
+                 {"problem_id": "dmath-ch12-prob-002", "answer_text": "第二题"}])
+
+        self.assertEqual(code, 2)
+        self.assertIn("disk failure", result["error"])
+        self.assertEqual(seen, ["dmath-ch12-prob-001", "dmath-ch12-prob-002"],
+                         "the failure must hit the second item, after the first "
+                         "attempt was already written inside the transaction")
+        self.assertEqual(self.learning_rows(), learning_before,
+                         "no attempt, feedback or operation row survives")
+        self.assertEqual(self.paper_rows(), paper_before,
+                         "no Paper progress, checkpoint or execution id survives")
+        self.assertEqual(self.rows("SELECT * FROM attempt_operations"), [])
+
 
 if __name__ == "__main__":
     unittest.main()

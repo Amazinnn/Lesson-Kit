@@ -128,6 +128,80 @@ class AgentContractTests(unittest.TestCase):
         self.assertIn("1–3 个代表例子", prompt)
         self.assertIn("证据不足时降低结论强度", prompt)
 
+    def test_attempts_contract_documents_paper_bound_import(self):
+        from workbench.bridge import agent_contracts
+
+        attempts = agent_contracts.get("attempts")
+        # Explicit learner intent is the only import trigger; discussion is not.
+        self.assertIn(
+            "Use this contract only when the learner explicitly asks to record",
+            attempts)
+        self.assertIn("Ordinary tutoring and reading existing answers are "
+                      "zero-write", attempts)
+        self.assertIn("MUST NOT create attempts or ratings", attempts)
+        # Manifest-level paper_id and the binding modes it selects.
+        self.assertIn('"paper_id": "ps-001"', attempts)
+        self.assertIn("`paper_id` is optional", attempts)
+        self.assertIn("binds the answers to that Paper's progress in the same "
+                      "transaction", attempts)
+        self.assertIn("A selected Paper is updated in place", attempts)
+        self.assertIn("parked checkpoint", attempts)
+        self.assertIn("new `on_submit` checkpoint without becoming the active "
+                      "practice", attempts)
+        # Re-binding keeps history; ungraded import stops at execution progress.
+        self.assertIn("new attempt appended and re-linked; the old attempt "
+                      "remains", attempts)
+        self.assertIn("changes only Paper execution progress, not learning "
+                      "signals", attempts)
+        # Completion follows the execution mode; a legacy Paper may archive.
+        self.assertIn("legacy Paper may archive when its last pending item is "
+                      "imported", attempts)
+        self.assertIn("wait for the learner's explicit submission", attempts)
+
+    def test_attempts_and_content_contracts_document_the_three_step_repair(self):
+        from workbench.bridge import agent_contracts
+
+        attempts = agent_contracts.get("attempts")
+        content = agent_contracts.get("content")
+        practice = agent_contracts.get("practice")
+        for topic in (attempts, content, practice):
+            self.assertIn("lesson-kit papers", topic)
+            self.assertIn("append", topic)
+        # Governed content creation first, never invented inside the manifest.
+        self.assertIn("do not invent it inside the manifest", attempts)
+        self.assertIn("governed content path", attempts)
+        self.assertIn("truthful source evidence", attempts)
+        self.assertIn("Never edit `.lessonkit/practice-sets/ps-*.json`", attempts)
+        self.assertIn("ordinary governed content", content)
+        self.assertIn("truthful `source_evidence`", content)
+        self.assertIn("Do not invent the problem, its knowledge point, or its source",
+                      content)
+
+    def test_practice_contract_separates_append_from_membership_update(self):
+        from workbench.bridge import agent_contracts
+
+        practice = agent_contracts.get("practice")
+        self.assertIn(
+            "lesson-kit papers <workspace> append <ps-NNN> --problem <problem-id>",
+            practice)
+        self.assertIn("appends at the end, preserves every existing item's state",
+                      practice)
+        self.assertIn("idempotent", practice)
+        self.assertIn("`papers update` remains the membership/order edit that "
+                      "resets unfinished progress", practice)
+        self.assertIn("do not use it for the missing-problem repair", practice)
+
+    def test_prompt_carries_paper_import_and_repair_rule(self):
+        from workbench.bridge import conversations
+
+        prompt = conversations._prompt("把纸上写的答案导入试卷进度", {
+            "workspace": {"name": "dmath", "course": "dmath", "chapter": "ch06"},
+        })
+        self.assertIn("导入纸上作答时，attempts 清单可带 paper_id 绑定已保存试卷", prompt)
+        self.assertIn("题池缺题时先用 content-bundle", prompt)
+        self.assertIn("papers append 追加到卷末，最后导入", prompt)
+        self.assertIn("不得直接改试卷 JSON", prompt)
+
 
 if __name__ == "__main__":
     unittest.main()
