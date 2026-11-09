@@ -31,6 +31,11 @@ Recovery of a legacy pending approval SHALL revalidate its current target and ex
 - **WHEN** an obsolete approval callback is repeated after resolution
 - **THEN** it cannot repeat the operation or create another approval state
 
+#### Scenario: Recovery encounters an operational error
+
+- **WHEN** preview or execution of a still-pending legacy action encounters a temporary operational error
+- **THEN** recovery reports the error without changing the action to invalid; a later normal recovery revalidates the original action and cannot execute it twice
+
 ### Requirement: Successful-batch undo is retired
 
 Explicit rollback of successfully applied content batches SHALL be retired from CLI, Agent suggestions and result controls. Ordinary direct repair and data-consistent failed-unit handling SHALL remain available.
@@ -48,4 +53,3 @@ A prepared and verified runtime or data change SHALL perform its normal cutover 
 
 - **WHEN** backup and isolated migration verification complete for an authorized update
 - **THEN** normal cutover proceeds and the installed runtime identity is checked
-

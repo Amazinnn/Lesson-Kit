@@ -197,6 +197,26 @@ class DirectPaperActionTests(unittest.TestCase):
         )
         self.assertNotEqual(self.conversation().get("queue_paused"), True)
 
+    def test_operational_failure_preserves_legacy_action_for_recovery(self):
+        from unittest import mock
+        for operation in ("preview_update", "update_saved"):
+            with self.subTest(operation=operation):
+                paper_id = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
+                target = ["dmath-ch06-prob-002", "dmath-ch06-prob-001"]
+                self.legacy_pending(paper_id, target)
+                path = self.pool.jobs_dir() / "conv-001" / "turn-001.json"
+                before = json.loads(path.read_text(encoding="utf-8"))["paper_approval"]
+                with mock.patch.object(self.practice_sets, operation,
+                                       side_effect=OSError("temporary disk failure")):
+                    with self.assertRaisesRegex(OSError, "temporary disk failure"):
+                        self.conversations.get(self.pool, "conv-001")
+                self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["paper_approval"], before)
+                self.conversations.get(self.pool, "conv-001")
+                self.assertEqual(self.saved_order(paper_id), target)
+                with mock.patch.object(self.practice_sets, "update_saved") as update:
+                    self.conversations.get(self.pool, "conv-001")
+                    update.assert_not_called()
+
     def test_obsolete_resolved_callback_performs_no_write(self):
         paper_id = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
         approval = self.legacy_pending(paper_id, [
@@ -217,6 +237,24 @@ class DirectPaperActionTests(unittest.TestCase):
             .get("pending_paper_approval"),
             "no new approval state is created",
         )
+
+    def test_publication_file_disappearing_is_not_a_missing_paper(self):
+        from unittest import mock
+        paper_id = self.paper(["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
+        target = ["dmath-ch06-prob-002", "dmath-ch06-prob-001"]
+        self.legacy_pending(paper_id, target)
+        path = self.pool.jobs_dir() / "conv-001" / "turn-001.json"
+        before = json.loads(path.read_text(encoding="utf-8"))["paper_approval"]
+        with mock.patch.object(self.practice_sets, "_atomic_json",
+                               side_effect=FileNotFoundError("temporary publication path")):
+            with self.assertRaisesRegex(FileNotFoundError, "temporary publication path"):
+                self.conversations.get(self.pool, "conv-001")
+        self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["paper_approval"], before)
+        self.conversations.get(self.pool, "conv-001")
+        self.assertEqual(self.saved_order(paper_id), target)
+        with mock.patch.object(self.practice_sets, "update_saved") as update:
+            self.conversations.get(self.pool, "conv-001")
+            update.assert_not_called()
 
 
 if __name__ == "__main__":

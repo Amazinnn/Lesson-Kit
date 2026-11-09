@@ -99,6 +99,29 @@ def test_an_uncertain_classification_is_not_created(pool):
     assert len(content.list_items(pool, "kp")) == before
 
 
+def test_new_association_invalidates_rating_but_repeated_association_keeps_it(pool):
+    problem_id = "dmath-ch06-prob-001"
+    conn = pool.connect()
+
+    def rate():
+        values = (3.0, 1, 2, 3, 4, "old-model")
+        conn.execute("UPDATE problems SET " + ",".join(
+            f"{field}=?" for field in content.DIFFICULTY_COLUMNS
+        ) + " WHERE problem_id=?", (*values, problem_id))
+        pool.commit()
+        return values
+
+    rate()
+    result = content.apply_method_proposal(pool, proposal(problem_ids=[problem_id]))
+    assert result["associations_added"] == 1
+    row = content.get(pool, "problem", problem_id)
+    assert all(row[field] is None for field in content.DIFFICULTY_COLUMNS)
+    rated = rate()
+    assert content.apply_method_proposal(pool, proposal(problem_ids=[problem_id]))["associations_added"] == 0
+    row = content.get(pool, "problem", problem_id)
+    assert tuple(row[field] for field in content.DIFFICULTY_COLUMNS) == rated
+
+
 def test_a_non_method_type_is_refused(pool):
     with pytest.raises(ValueError) as caught:
         content.apply_method_proposal(

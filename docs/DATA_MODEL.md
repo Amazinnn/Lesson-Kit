@@ -124,7 +124,7 @@ job 行，不伪造结论）；显式批改请求以带 `pool/scripts/migrate-pr
 
 对知识点与题目的 `figure_paths`，`data.content_mirror` 是受治理的 JSON 引用 writer：写入前复用现有课程相对路径规则预检两侧引用；它不创建、复制或改名图像字节。`data.figure_mirror` 仍只读消费池引用并按显式方向同步文件。现有文件名主体为 64 个小写十六进制字符的路径继续按 `knowledge-figures` 的内容哈希身份处理；mirror 在无法从现存副本保留该身份时拒绝同步。全仓库的图片命名策略仍为 unresolved。
 
-正式题的四维难度、派生总分与模型必须全空或全有。`data.difficulty.check/apply` 保持现有校验/事务 authority；`data.content_mirror` 只在显式仓库同步时接受四维评级，先调用 `data.difficulty.check` 重算总分与模型，再在其逐实体事务内写入完整组。内容轴变更清除当前池投影中实际存在的难度列；旧 schema 不迁移列，显式评级要求完整组。
+正式题的四维难度、派生总分与模型必须全空或全有。`data.difficulty.check/apply` 保持现有校验/事务 authority；`data.content_mirror` 只在显式仓库同步时接受四维评级，先调用 `data.difficulty.check` 重算总分与模型，再在其逐实体事务内写入完整组。内容轴变更清除当前池投影中实际存在的难度列；方法提案追加 `kp_ids` 也走共享题目更新 writer 并清除完整组，重复的既有关联不改评级。旧 schema 不迁移列，显式评级要求完整组。
 
 已删除字段：`problems.topic_label`。schema ensure 物理删除旧池同名列，重建表也不含该列；
 这取代 PR111 的普通 ensure 保留语义。历史值仅可留在数据库之外的恢复备份，不能留在当前池

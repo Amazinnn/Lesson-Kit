@@ -403,3 +403,5 @@ flowchart LR
 - 2026-11-07 课程交换首次接收（expand-file-mediated-course-sync / WP01 续）：既有 receive 增加未注册工作区的 `--to` 创建与注册编排，复用规范建库入口；先校验包再创建，已注册目标只允许同目录。提交边界异常保存本次部分结果并要求检查落盘状态；未新增审批动作。
 
 - 2026-11-07 改卷生命周期首段（adaptive-paper-content-lifecycle）：**改级**「改名单 / 改题序」——由「整卷重置未完成进度」改为按题目身份协调：存活题的状态、attempt 关联与草稿跟随新位置，新增或替换题从 pending 开始，被移除题写入保留历史 `retired_paper_items`；游标先跟原题、否则顺延到后一道再前一道存活题；结构版本递增一次；只有整卷一道不剩时才清空该卷执行。预览新增 `preserved_items/added_items/removed_items`，`resets_progress` 只在无存活项时为真；确认仍是并发 expected-state 守卫，不是额外审批。学习证据、已完成轮次与其他卷不变。DATA_MODEL、FILE_CONTRACT、PRODUCT-MANUAL 与 change delta 同步。
+
+- 2026-11-09 审查修复（repair-recent-content-actions）：既有 ingest 动作补齐精确内容复用、双向跨章依赖及图片/批次失败清理；方法关联复用题目 writer 失效旧难度；旧 pending 恢复区分真实目标缺失与操作故障。无新增、退役或改级动作。

@@ -3165,6 +3165,28 @@ test("check ingest success renders a batch result card with no undo entry", asyn
   assert.ok(!calls.some((call) => call.url.endsWith("/ingest/rollback")));
 });
 
+for (const batchCount of [0, 1, 2]) {
+  test(`partial ingest with ${batchCount} batches keeps rejected-item reasons visible`, async () => {
+    const batches = Array.from({ length: batchCount }, (_, i) => ({
+      batch_id: `batch-00${i + 1}`, chapter: `ch0${i + 1}`, counts: { problems: 1 },
+    }));
+    const result = { kind: "content-bundle", ok: false, partial: true, applied: true,
+      errors: ["bad-item: source_kind is required"], batches, counts: { problems: batchCount } };
+    if (batchCount === 1) result.batch_id = batches[0].batch_id;
+    const action = { type: "check_ingest", result };
+    const { elements } = checkIngestHarness(null, [
+      { role: "assistant", content: "已处理", action },
+    ], batches);
+    await openFirstAiSession(elements);
+    await flush();
+    const cards = elements["ai-messages"].children.filter(node => node.className === "msg ai check-card");
+    assert.equal(cards.length, 1);
+    const body = cards[0].children[0];
+    assert.equal(body.children[0].textContent, batchCount ? "部分入库" : "入库未执行");
+    assert.match(body.children[1].textContent, /bad-item: source_kind is required/);
+  });
+}
+
 test("a restored single-action turn renders one result card, not two", async () => {
   // The mirror records both keys for a one-action turn; the restore path must
   // render the list and skip the single action, or the card appears twice.

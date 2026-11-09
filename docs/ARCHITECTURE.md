@@ -210,7 +210,7 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
   年份，如 `2023-2024秋冬`，前缀匹配筛选），以及 `problems` 的可空四维
   客观难度、REAL 总分和 `difficulty_model`。四维、总分与模型全空或全有；旧标量
   迁移清空，不伪造向量。`knowledge_points.difficulty` 保留 legacy 语义。
-- 内容批次：一次门禁 apply 一份清单、一次预检、一份可恢复备份；清单可跨章，按每一项声明的章发号与落图（`figures/{course}/{chapter}/`），并**按章各记一个批次**，因此 rollback 的粒度是「一章」而不是「一次导入」。
+- 内容批次：一次门禁 apply 一份清单、一次预检、一份可恢复备份；清单可跨章，按每一项声明的章发号与落图（`figures/{course}/{chapter}/`），并**按章各记一个批次**。先写入所有相连章节的新知识点，再写题目/卡片；每条单元独立 savepoint，依赖检查只认实际存在的知识点。章节快照或批次登记失败时，回滚新知识点引用相连的未提交章节，其他章节可继续；最终事务失败清理本次新建图片/快照，既有共享图片保留。显式成功批次撤销已退役。
 - 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪；`{course}`
   是「课程标识符」而不是工作区名）、
   `.lessonkit/jobs/conv-###/`（provider 会话指针、带队列状态的会话/轮次 JSON、运行事件与成功问答镜像，gitignored）、
@@ -276,7 +276,7 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
   轮次预算是**静默预算**而非总时长：任一输出行或事件都重置时钟，命令/工具在飞时改用
   更长的工具预算（`bridge add --timeout/--tool-timeout`），因此长回答与慢命令都不会被
   截停；真正卡住的轮次仍如实记为 `provider timed out`。
-- Paper 更新直接执行（Q098/S008，审批退役）：Bridge 收到 `paper_update_proposal` 后经 Data 预览校验输入并直接应用（提交点重校验 confirmation），无批准状态、无派发暂停；遗留 pending approval 在打开会话/开始轮次/发送排队消息时一次性迁移（有效按原身份执行一次，失效如实记未完成）。练习重做为已选动作，直接 `replace` 重启，不再二次询问。显式排队消息仍可保留，中断/立即发送的交接与版本冲突规则不变（不再与审批挂钩）。题目实体与历史作答仍不由任何审批存储管理，SQLite 无审批表。
+- Paper 更新直接执行（Q098/S008，审批退役）：Bridge 收到 `paper_update_proposal` 后经 Data 预览校验输入并直接应用（提交点重校验 confirmation），无批准状态、无派发暂停；遗留 pending approval 在打开会话/开始轮次/发送排队消息时一次性迁移（有效按原身份执行一次，失效如实记未完成；操作性 IO/SQLite 错误不改 pending，向调用者报错，下次正常恢复重校验，文件发布失败与目标不存在分开）。练习重做为已选动作，直接 `replace` 重启，不再二次询问。显式排队消息仍可保留，中断/立即发送的交接与版本冲突规则不变（不再与审批挂钩）。题目实体与历史作答仍不由任何审批存储管理，SQLite 无审批表。
 - `bridge.conversation_actions` 只解析模型回复里的动作区块并校验包装形状；会话并发、持久化、执行与失败提示仍由 `bridge.conversations` 编排。
 - Agent 会话在创建时绑定一个不可变的 harness；模型目标记录 model/entry args，只允许在该 harness 内切换。Codex 通过 app-server `model/list` 枚举，Claude Code 使用其支持模型 catalog，Pi 使用 RPC `get_available_models`；Pi 同 harness 优先 RPC `set_model` 原生切换。更换 harness 必须新建会话。
 - CLI 安装入口、`python -m workbench.cli.main` 与 `python -m workbench.cli.entry` 共用实际 argparse 树；扩展命令与 `ingest bundle` 复用已有参数定义和处理函数，命令清单从 parser 派生，不重建业务逻辑或序列化参数。

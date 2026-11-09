@@ -1489,6 +1489,7 @@ class ConversationTests(unittest.TestCase):
                 "counts": {"flash_cards": 1},
                 "backup_path": "pool/backups/batch-001.sqlite",
                 "applied": ["card-001"],
+                "ok": True,
                 "workspace": "dmath",
             },
         })
@@ -1679,6 +1680,44 @@ class ConversationTests(unittest.TestCase):
         self.assertIsNone(json.loads(row[1])["answer_key"])
         self.assertIn("未录答案键 1", outcome)
         self.assertIn("不要让学生再说一次「继续」", outcome)
+
+    def test_content_receipt_preserves_partial_errors_for_next_turn(self):
+        from workbench.bridge import conversations
+        from tests.workbench.test_content_bundle import formal
+        folder = self.pool.jobs_dir() / "conv-001"
+        folder.mkdir(parents=True, exist_ok=True)
+        action = {"type": "check_ingest", "manifest": {
+            "kind": "content-bundle", "chapter": "ch06",
+            "knowledge_points": [{"key": "good", "knowledge_item": "Good"}],
+            "problems": [formal("bad", ["good"], source_kind="invalid")]}}
+        conversations._apply_content_action(action, self.fixture.ws, self.workspace,
+            "conv-001", "turn-001", folder / "events.jsonl", "test-ingest")
+        self.assertTrue(action["result"]["partial"])
+        self.assertFalse(action["result"]["ok"])
+        self.assertIn("source_kind", "\n".join(action["result"]["errors"]))
+        outcome = conversations._content_outcome([action])
+        self.assertIn("部分入库", outcome)
+        self.assertIn("source_kind", outcome)
+        events = [json.loads(line) for line in (folder / "events.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertIn("部分", events[-1]["label"])
+
+    def test_zero_success_receipt_reports_failures_without_a_fake_batch(self):
+        from workbench.bridge import conversations
+        result = {"kind": "content-bundle", "applied": True, "partial": True,
+                  "ok": False, "batches": [], "counts": {"problems": 0},
+                  "errors": ["injected unit write failure"]}
+        folder = self.pool.jobs_dir() / "conv-001"
+        folder.mkdir(parents=True, exist_ok=True)
+        action = {"type": "check_ingest", "manifest": {"kind": "content-bundle"}}
+        with mock.patch.object(conversations.ingest, "apply_batch", return_value=result):
+            conversations._apply_content_action(action, self.fixture.ws, self.workspace,
+                "conv-001", "turn-001", folder / "events.jsonl", "test-ingest")
+        outcome = conversations._content_outcome([action])
+        self.assertIn("injected unit write failure", outcome)
+        self.assertNotIn("成功入库", outcome)
+        event = json.loads((folder / "events.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+        self.assertEqual(event["status"], "failed")
+        self.assertNotIn("批次 None", event["output"])
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_a_conversation_remembers_its_model_and_can_switch_it(self, get_provider):

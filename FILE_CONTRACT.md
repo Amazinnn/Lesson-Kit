@@ -190,10 +190,20 @@ chapter the learner happens to be viewing.
 
 The manifest is checked and applied through the workbench ingest boundary as one
 prevalidation and one recoverable backup, recording one batch per applied chapter
-(`batch-NNN` each, in chapter order). Units are independent: an accepted item —
-its rows, its figures and that chapter's batch record — commits inside its
-chapter's transaction, while a refused item writes nothing for itself and is
-reported with its reasons; valid neighbours still land. Source figures are copied
+(`batch-NNN` each, reserved in chapter order; failed chapters may leave gaps).
+New knowledge points are written before their dependent problems/cards, including
+references in either cross-chapter direction. Item validation or write failures
+leave independent valid neighbours intact. Chapters connected by new knowledge-point
+references share a savepoint for provenance: a failed chapter snapshot/batch record
+rolls back that connected component, while disconnected chapters can complete.
+Only actual writes enter per-chapter counts. Public apply receipts and conversation mirrors retain `ok`, `partial` and `errors` alongside applied counts/batches. Partial results preserve rejected-item reasons in next-turn context and existing result cards; zero applied batches do not produce a success claim or a synthetic batch id. An outer transaction failure removes
+newly published figures and snapshots; pre-existing shared figures remain intact.
+An interrupted figure copy removes its partial destination so a correction can retry.
+An unchanged auto-ID knowledge point may resolve a local key to one existing entity
+only when every authored field matches exactly within the resolved chapter. It is
+reported as already existing and is neither rewritten nor counted as new; multiple
+matches are refused. Local keys do not identify requests across imports. A changed
+existing entity must use its stable ID and the ordinary update path. Source figures are copied
 byte for byte into `.lessonkit/figures/{course}/{chapter}/` and referenced by
 logical path.
 
@@ -747,7 +757,10 @@ Runtime assets follow the hidden dot-directory convention and live under
   starts and before a queued message is promoted): a still-valid unapplied
   action executes with its original identity through the same Data writer; a
   target that no longer exists or no longer matches the recorded input is marked
-  `invalid` with the real error; replaying after a lost status flip cannot write
+  `invalid` with the real error. Operational IO/SQLite errors propagate and leave
+  the original pending artifact and confirmation recoverable; a publication-path
+  `FileNotFoundError` is not a missing Paper. A later normal recovery revalidates
+  the same action. Replaying after a lost status flip cannot write
   twice (the applied Paper changes the confirmation snapshot). Session GET still
   exposes `pending_paper_approval` (the current public projection or null); with
   migration in place it is null. The `POST .../paper-approval` decision route

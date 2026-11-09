@@ -314,8 +314,7 @@ def apply_method_proposal(pool, proposal):
             association = json.loads(row[0] or "[]")
             if kp_id not in association:
                 association.append(kp_id)
-                conn.execute("UPDATE problems SET kp_ids=? WHERE problem_id=?",
-                             (json.dumps(association, ensure_ascii=False), problem_id))
+                update(pool, "problem", problem_id, {"kp_ids": association})
                 added += 1
     if unknown:
         raise ValueError("unknown problems for the associations: "

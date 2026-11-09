@@ -20,6 +20,10 @@ FIELDS = {"kind", "title", "course", "request", "shortage", "items", "descriptio
 ITEM_FIELDS = {"problem_id", "reason"}
 
 
+class UnknownPracticeSet(FileNotFoundError):
+    """The requested Paper is absent, rather than a publication IO failure."""
+
+
 def build(title, problems, request=None):
     """One manifest describing the selected problems in order."""
     return {
@@ -281,12 +285,12 @@ def _get_saved(pool, practice_set_id):
     if paper_progress.available(pool.connect()):
         pending = paper_progress.state(pool.connect(), practice_set_id)
         if pending['pending_delete']:
-            raise FileNotFoundError(f'unknown practice set: {practice_set_id}')
+            raise UnknownPracticeSet(f'unknown practice set: {practice_set_id}')
         if pending['pending_json']:
             raw = json.loads(pending['pending_json'])
             return _saved_record(pool, practice_set_id, raw['plan'], raw['created_at'], raw['updated_at'])
     if not path.is_file():
-        raise FileNotFoundError(f"unknown practice set: {practice_set_id}")
+        raise UnknownPracticeSet(f"unknown practice set: {practice_set_id}")
     raw = json.loads(path.read_text(encoding="utf-8"))
     return _saved_record(
         pool, raw["practice_set_id"], raw["plan"],

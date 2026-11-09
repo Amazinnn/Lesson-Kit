@@ -512,7 +512,7 @@ def _reconcile_legacy_paper_approvals(pool, record):
                 int(approval.get("revision") or 1),
                 practice_set_id, problem_ids,
             )
-        except Exception as exc:
+        except (ValueError, KeyError, TypeError, practice_sets.UnknownPracticeSet) as exc:
             approval["status"] = "invalid"
             approval["error"] = conversation_providers._pi_safe_text(
                 str(exc), conversation_providers._PI_SUMMARY_LIMIT,
@@ -529,7 +529,7 @@ def _reconcile_legacy_paper_approvals(pool, record):
                     )
                     approval["status"] = "applied"
                     approval["resolved_at"] = _now()
-                except Exception as exc:
+                except (ValueError, KeyError, TypeError, practice_sets.UnknownPracticeSet) as exc:
                     approval["status"] = "invalid"
                     approval["error"] = conversation_providers._pi_safe_text(
                         str(exc), conversation_providers._PI_SUMMARY_LIMIT,
@@ -858,8 +858,8 @@ def _prompt(message, context):
         "11) 闪卡字段：kp_id/front/back/source_evidence，可选 topic_label；directions 表示单/双向。"
         "12) 出题入库不携带难度字段；只有学生明确要求评级时才用 lesson-kit difficulty。"
         "数学乘号一律用 ×。学生明确要求修改已有题目时使用 problem-patch 原地修改，不要删了重导。"
-        "服务端整份清单预检；失败零写入并按原因修正。若 context 中有 last_check_outcome，"
-        "按其结果避免重复提交或修正后再提交。\n\n"
+        "服务端整份清单预检；无效单元及其依赖零写入，独立有效项照常完成。"
+        "若 context 中有 last_check_outcome，按逐项结果修正失败项，避免重复已完成内容。\n\n"
         "对话承接规则：上轮只有一个明确待确认动作时，学生的好、可以、继续等短确认承接该动作及其范围，"
         "直接执行，不重复审批；多个互斥方案或对象确实不明时才澄清。不要把同意执行误读成结束问答。"
         "在可用对话历史或全局要求中的持续授权有效，直到学生撤销或修改；不要要求逐轮重述。"
@@ -909,6 +909,8 @@ def _content_outcome(actions):
         result = action.get("result")
         if isinstance(result, dict) and (result.get("batches") or result.get("batch_id")):
             applied.append(result)
+        elif isinstance(result, dict) and result.get("errors"):
+            failures.extend(str(error) for error in result["errors"])
         elif action.get("error"):
             # A manifest that failed the gate is correctable; a block that never
             # became a manifest is not.
@@ -919,11 +921,15 @@ def _content_outcome(actions):
             f"{_COUNT_LABELS.get(key, key)} {value}"
             for key, value in (result.get("counts") or {}).items() if value
         )
+        state = "部分入库" if result.get("errors") else "已成功入库"
         lines.append(
-            f"上一轮内容动作已成功入库：{_batch_label(result)}"
+            f"上一轮内容动作{state}：{_batch_label(result)}"
             f"（{result.get('kind')}，{summary or '无新增'}）。不要重复提交相同内容；"
             "若学生要求的内容还有未导入的章，直接继续提交剩余部分，不要让学生再说一次「继续」。"
         )
+        if result.get("errors"):
+            lines.append("未完成项原因：\n" + "\n".join(result["errors"])
+                         + "\n请修正失败项，保留已完成项，不要宣称整包成功。")
     if failures:
         lines.append(
             "上一轮内容动作被门禁拒收（零写入），逐条原因：\n"
@@ -1704,15 +1710,22 @@ def _apply_content_action(action, root, workspace, conversation_id, turn_id,
         action["result"] = {
             key: applied[key]
             for key in ("batch_id", "kind", "counts", "origins", "batches",
-                        "backup_path", "applied", "typesetting")
+                        "backup_path", "applied", "typesetting", "ok", "partial", "errors")
             if key in applied
         }
         action["result"]["workspace"] = workspace["name"]
+        errors = applied.get("errors") or []
+        has_writes = bool(applied.get("batches") or applied.get("batch_id"))
+        summary = _batch_label(applied) if has_writes else "无新增内容"
+        if errors:
+            summary += "\n" + "\n".join(errors)
         _append_event(
             event_path, "activity", activity_id=activity_id,
-            activity_type="tool", status="done", label="学习内容已入库",
-            output=_batch_label(applied),
-            impact={"status": "known", "summary": _batch_label(applied)},
+            activity_type="tool", status="done" if has_writes else "failed",
+            label=("部分学习内容已入库" if errors else "学习内容已入库")
+                  if has_writes else "学习内容未入库",
+            output=summary,
+            impact={"status": "known", "summary": summary},
         )
     except Exception as exc:
         action["error"] = str(exc)

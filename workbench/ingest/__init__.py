@@ -436,8 +436,7 @@ def _gate_micro_quiz(conn, manifest, course=""):
     identity_errors, refused = _problem_identity_errors(conn, identity_candidates)
     errors.extend(identity_errors)
     # Plans carry only accepted units; `ok` still means "the whole patch is valid".
-    items = [item for item in items
-             if item.get("problem_id") not in refused and item in accepted]
+    items = [item for item in accepted if item.get("problem_id") not in refused]
     return {"ok": not errors, "errors": errors, "items": items,
             "accounting": _accounting(conn)}
 
@@ -504,7 +503,7 @@ def apply_batch(db_path, manifest, *, source, backup_path=None, course=None):
         result = _apply_patch(database, manifest, backup, kind, course)
     return {key: result[key] for key in (
         "ok", "batch_id", "kind", "counts", "origins", "batches", "backup_path",
-        "applied", "typesetting",
+        "applied", "typesetting", "partial", "errors",
     ) if key in result}
 
 
@@ -878,9 +877,11 @@ def _gate_content_bundle(conn, manifest, course=""):
         )
 
     keys = set()
+    resolved_kps = {}
     kp_plans = []
     kp_ids = []
     allocated = {}
+    kp_columns = {row[1] for row in conn.execute("PRAGMA table_info(knowledge_points)")}
 
     def allocate(table, column, prefix):
         """Ids are allocated server-side, in order, inside one bundle."""
@@ -917,7 +918,29 @@ def _gate_content_bundle(conn, manifest, course=""):
         if fields["importance"] is not None and fields["importance"] not in KP_IMPORTANCE:
             errors.append(f"{label}: unknown importance {fields['importance']!r}")
         kp_id = item.get("kp_id")
+        if len(errors) > refused_before:
+            continue
+        authored = _bundle_kp_row({"kp_id": kp_id, "chapter": item_chapter,
+                                  "fields": fields})
+        authored.pop("kp_id")
+        comparable = all(field in kp_columns or value is None
+                         for field, value in authored.items())
+        authored = {field: value for field, value in authored.items() if field in kp_columns}
         if kp_id is None:
+            matches = conn.execute(
+                "SELECT kp_id FROM knowledge_points WHERE " + " AND ".join(
+                    f'"{field}" IS ?' for field in authored),
+                tuple(authored.values()),
+            ).fetchall() if comparable else []
+            if len(matches) > 1:
+                errors.append(f"{label}: several identical knowledge points exist")
+                continue
+            if matches:
+                kp_id = matches[0][0]
+                keys.add(key)
+                resolved_kps[key] = kp_id
+                errors.append(f"{label}: {kp_id} already exists")
+                continue
             kp_id = allocate("knowledge_points", "kp_id", f"{scope}kp-")
         elif not isinstance(kp_id, str) or not kp_id.startswith(scope):
             errors.append(_chapter_mismatch(label, "kp_id", kp_id, scope, course))
@@ -927,17 +950,25 @@ def _gate_content_bundle(conn, manifest, course=""):
         ).fetchone()
         if exists or kp_id in kp_ids:
             errors.append(f"{label}: {kp_id} already exists")
+            if exists and comparable and conn.execute(
+                "SELECT 1 FROM knowledge_points WHERE kp_id=? AND "
+                + " AND ".join(f'"{field}" IS ?' for field in authored),
+                (kp_id, *authored.values()),
+            ).fetchone():
+                keys.add(key)
+                resolved_kps[key] = kp_id
             continue
         if len(errors) > refused_before:
             continue
         keys.add(key)
         kp_ids.append(kp_id)
+        resolved_kps[key] = kp_id
         kp_plans.append({"key": key, "kp_id": kp_id, "chapter": item_chapter,
                          "fields": fields})
 
     def resolve_kp(reference):
-        if isinstance(reference, str) and reference in {kp["key"] for kp in kp_plans}:
-            return next(kp["kp_id"] for kp in kp_plans if kp["key"] == reference)
+        if isinstance(reference, str) and reference in resolved_kps:
+            return resolved_kps[reference]
         return reference
 
     known_kps = {row[0] for row in conn.execute("SELECT kp_id FROM knowledge_points")}
@@ -1244,8 +1275,8 @@ def _publish_figure(database, course, chapter, entry, created_files):
         if destination.read_bytes() != entry["content"]:
             raise ValueError(f"destination conflict for {entry['name']}")
         return
-    shutil.copyfile(entry["source"], destination)
     created_files.append(destination)
+    shutil.copyfile(entry["source"], destination)
 
 
 def _bundle_kp_row(plan):
@@ -1314,6 +1345,7 @@ def _apply_content_bundle(database, manifest, backup, course=None):
     errors = []
     applied = {"knowledge_points": [], "problems": [], "flash_cards": []}
     batches = {}
+    published_files = []
     try:
         conn.execute("BEGIN IMMEDIATE")
         gate = _gate_content_bundle(conn, manifest, course)
@@ -1324,145 +1356,176 @@ def _apply_content_bundle(database, manifest, backup, course=None):
         if not (kp_plans or problem_plans or card_plans):
             raise ValueError("\n".join(errors) or "content-bundle has no valid item")
         _backup_database(database, backup)
-        existing_kps = {row[0] for row in conn.execute(
-            "SELECT kp_id FROM knowledge_points")}
         chapters = sorted({plan["chapter"]
                            for plan in (*kp_plans, *problem_plans, *card_plans)})
-        for item_chapter in chapters:
-            # One chapter is one batch, so its rows, its figures and its batch
-            # record commit or roll back together; units inside stay independent.
-            chapter_files = []
-            chapter_applied = {"knowledge_points": [], "problems": [], "flash_cards": []}
+        kp_chapters = {plan["kp_id"]: plan["chapter"] for plan in kp_plans}
+        neighbours = {chapter: set() for chapter in chapters}
+        for plan in (*problem_plans, *card_plans):
+            references = (plan["fields"]["kp_ids"] if "fields" in plan
+                          else [plan["kp_id"]])
+            for kp_id in references:
+                owner = kp_chapters.get(kp_id)
+                if owner is not None:
+                    neighbours[plan["chapter"]].add(owner)
+                    neighbours[owner].add(plan["chapter"])
+        components = []
+        remaining = set(chapters)
+        while remaining:
+            pending = [min(remaining)]
+            component = set()
+            while pending:
+                chapter = pending.pop()
+                if chapter not in component:
+                    component.add(chapter)
+                    pending.extend(neighbours[chapter] - component)
+            remaining -= component
+            components.append(sorted(component))
+        # Reserve readable ids in chapter order; a rolled-back component can
+        # leave a gap, but cannot reorder another chapter's provenance.
+        batch_ids = {chapter: _allocate_batch_id(conn) for chapter in chapters}
+        for component in components:
+            component_files = []
+            component_batches = {}
+            component_applied = {chapter: {"knowledge_points": [], "problems": [],
+                                           "flash_cards": []} for chapter in component}
             try:
                 with _unit(conn):
-                    applied_kps = set()
+                    # Cross-chapter references can point in either direction.
+                    # Insert all KPs before any dependent problem or card.
                     for plan in (item for item in kp_plans
-                                 if item["chapter"] == item_chapter):
+                                 if item["chapter"] in component):
                         try:
                             with _unit(conn):
-                                _insert_row(conn, "knowledge_points",
-                                            _bundle_kp_row(plan))
+                                _insert_row(conn, "knowledge_points", _bundle_kp_row(plan))
                         except Exception as exc:
                             errors.append(f"{plan['kp_id']}: {exc}")
                             continue
-                        chapter_applied["knowledge_points"].append(plan)
-                        applied_kps.add(plan["kp_id"])
-                    for plan in (item for item in problem_plans
-                                 if item["chapter"] == item_chapter):
-                        missing = [item for item in plan["fields"]["kp_ids"]
-                                   if item not in existing_kps
-                                   and item not in applied_kps]
-                        if missing:
-                            errors.append(
-                                f"{plan['problem_id']}: depends on a rejected "
-                                f"knowledge point {missing[0]}")
-                            continue
-                        unit_files = []
-                        try:
-                            with _unit(conn):
-                                _bundle_problem_insert(conn, plan)
-                                for entry in plan["figures"]:
-                                    _publish_figure(database, course, item_chapter,
-                                                    entry, unit_files)
-                        except Exception as exc:
-                            for path in unit_files:
-                                path.unlink(missing_ok=True)
-                            errors.append(f"{plan['problem_id']}: {exc}")
-                            continue
-                        chapter_files.extend(unit_files)
-                        chapter_applied["problems"].append(plan)
-                    for row in (item for item in card_plans
-                                if item["chapter"] == item_chapter):
-                        if row["kp_id"] not in existing_kps \
-                                and row["kp_id"] not in applied_kps:
-                            errors.append(
-                                f"{row['card_id']}: depends on a rejected "
-                                f"knowledge point {row['kp_id']}")
-                            continue
-                        try:
-                            with _unit(conn):
-                                _insert_row(conn, "flash_cards", {
-                                    **{key: value for key, value in row.items()
-                                       if key != "chapter"},
-                                    "directions": json.dumps(
-                                        row["directions"], ensure_ascii=False),
-                                })
-                        except Exception as exc:
-                            errors.append(f"{row['card_id']}: {exc}")
-                            continue
-                        chapter_applied["flash_cards"].append(row)
-                    if any(chapter_applied.values()):
-                        batch_id = _allocate_batch_id(conn)
-                        ids = {
-                            "knowledge_points": [plan["kp_id"] for plan in
-                                                 chapter_applied["knowledge_points"]],
-                            "problems": [plan["problem_id"] for plan in
-                                         chapter_applied["problems"]],
-                            "flash_cards": [row["card_id"] for row in
-                                            chapter_applied["flash_cards"]],
-                        }
-                        figures = sorted({entry["logical"] for plan in
-                                          chapter_applied["problems"]
-                                          for entry in plan["figures"]})
-                        counts = {
-                            "knowledge_points": len(ids["knowledge_points"]),
-                            "problems": len(ids["problems"]),
-                            "flash_cards": len(ids["flash_cards"]),
-                            "figures": len(figures),
-                            "keyless": sum(1 for plan in chapter_applied["problems"]
-                                           if plan.get("keyless")),
-                        }
-                        origins = {}
-                        for plan in chapter_applied["problems"]:
-                            origin = plan["fields"].get("origin_kind")
-                            if isinstance(origin, str):
-                                origins[origin] = origins.get(origin, 0) + 1
-                        for kind, id_column in (("knowledge_points", "kp_id"),
-                                                ("problems", "problem_id"),
-                                                ("flash_cards", "card_id")):
-                            for item_id in ids[kind]:
-                                conn.execute(
-                                    f'UPDATE "{kind}" SET ingest_batch_id=? '
-                                    f'WHERE {id_column}=?', (batch_id, item_id))
-                        snapshot = {
-                            **{key: manifest[key] for key in _BUNDLE_LISTS
-                               if key in manifest},
-                            "kind": CONTENT_BUNDLE_KIND,
-                            "chapter": item_chapter,
-                            "_applied": {**ids, "figures": figures},
-                        }
-                        manifest_path = _write_manifest_snapshot(
-                            database, batch_id, snapshot)
-                        _save_post_state(
-                            conn, database, manifest_path, snapshot,
-                            {
-                                "knowledge_points": {
-                                    "id_column": "kp_id",
-                                    "ids": ids["knowledge_points"]},
-                                "problems": {"id_column": "problem_id",
-                                             "ids": ids["problems"]},
-                                "flash_cards": {"id_column": "card_id",
-                                               "ids": ids["flash_cards"]},
-                            },
-                            batch_id=batch_id,
-                            figures=figures,
-                        )
-                        _record_batch(conn, batch_id, CONTENT_BUNDLE_KIND,
-                                      manifest_path, counts, backup)
-                        batches[item_chapter] = {
-                            "batch_id": batch_id, "chapter": item_chapter,
-                            "counts": counts, "origins": origins}
+                        component_applied[plan["chapter"]]["knowledge_points"].append(plan)
+                    for item_chapter in component:
+                        chapter_applied = component_applied[item_chapter]
+                        for plan in (item for item in problem_plans
+                                     if item["chapter"] == item_chapter):
+                            missing = [item for item in plan["fields"]["kp_ids"]
+                                       if not conn.execute(
+                                           "SELECT 1 FROM knowledge_points WHERE kp_id=?",
+                                           (item,)).fetchone()]
+                            if missing:
+                                errors.append(
+                                    f"{plan['problem_id']}: depends on a rejected "
+                                    f"knowledge point {missing[0]}")
+                                continue
+                            unit_files = []
+                            try:
+                                with _unit(conn):
+                                    _bundle_problem_insert(conn, plan)
+                                    for entry in plan["figures"]:
+                                        _publish_figure(database, course, item_chapter,
+                                                        entry, unit_files)
+                            except Exception as exc:
+                                for path in unit_files:
+                                    path.unlink(missing_ok=True)
+                                errors.append(f"{plan['problem_id']}: {exc}")
+                                continue
+                            component_files.extend(unit_files)
+                            chapter_applied["problems"].append(plan)
+                        for row in (item for item in card_plans
+                                    if item["chapter"] == item_chapter):
+                            if not conn.execute(
+                                    "SELECT 1 FROM knowledge_points WHERE kp_id=?",
+                                    (row["kp_id"],)).fetchone():
+                                errors.append(
+                                    f"{row['card_id']}: depends on a rejected "
+                                    f"knowledge point {row['kp_id']}")
+                                continue
+                            try:
+                                with _unit(conn):
+                                    _insert_row(conn, "flash_cards", {
+                                        **{key: value for key, value in row.items()
+                                           if key != "chapter"},
+                                        "directions": json.dumps(
+                                            row["directions"], ensure_ascii=False),
+                                    })
+                            except Exception as exc:
+                                errors.append(f"{row['card_id']}: {exc}")
+                                continue
+                            chapter_applied["flash_cards"].append(row)
+                        if any(chapter_applied.values()):
+                            batch_id = batch_ids[item_chapter]
+                            ids = {
+                                "knowledge_points": [plan["kp_id"] for plan in
+                                                     chapter_applied["knowledge_points"]],
+                                "problems": [plan["problem_id"] for plan in
+                                             chapter_applied["problems"]],
+                                "flash_cards": [row["card_id"] for row in
+                                                chapter_applied["flash_cards"]],
+                            }
+                            figures = sorted({entry["logical"] for plan in
+                                              chapter_applied["problems"]
+                                              for entry in plan["figures"]})
+                            counts = {
+                                "knowledge_points": len(ids["knowledge_points"]),
+                                "problems": len(ids["problems"]),
+                                "flash_cards": len(ids["flash_cards"]),
+                                "figures": len(figures),
+                                "keyless": sum(1 for plan in chapter_applied["problems"]
+                                               if plan.get("keyless")),
+                            }
+                            origins = {}
+                            for plan in chapter_applied["problems"]:
+                                origin = plan["fields"].get("origin_kind")
+                                if isinstance(origin, str):
+                                    origins[origin] = origins.get(origin, 0) + 1
+                            for kind, id_column in (("knowledge_points", "kp_id"),
+                                                    ("problems", "problem_id"),
+                                                    ("flash_cards", "card_id")):
+                                for item_id in ids[kind]:
+                                    conn.execute(
+                                        f'UPDATE "{kind}" SET ingest_batch_id=? '
+                                        f'WHERE {id_column}=?', (batch_id, item_id))
+                            snapshot = {
+                                **{key: manifest[key] for key in _BUNDLE_LISTS
+                                   if key in manifest},
+                                "kind": CONTENT_BUNDLE_KIND,
+                                "chapter": item_chapter,
+                                "_applied": {**ids, "figures": figures},
+                            }
+                            manifest_path = _write_manifest_snapshot(
+                                database, batch_id, snapshot, created_files=component_files)
+                            _save_post_state(
+                                conn, database, manifest_path, snapshot,
+                                {
+                                    "knowledge_points": {
+                                        "id_column": "kp_id",
+                                        "ids": ids["knowledge_points"]},
+                                    "problems": {"id_column": "problem_id",
+                                                 "ids": ids["problems"]},
+                                    "flash_cards": {"id_column": "card_id",
+                                                   "ids": ids["flash_cards"]},
+                                },
+                                batch_id=batch_id,
+                                figures=figures,
+                            )
+                            _record_batch(conn, batch_id, CONTENT_BUNDLE_KIND,
+                                          manifest_path, counts, backup)
+                            component_batches[item_chapter] = {
+                                "batch_id": batch_id, "chapter": item_chapter,
+                                "counts": counts, "origins": origins}
             except Exception as exc:
-                for path in chapter_files:
+                for path in component_files:
                     path.unlink(missing_ok=True)
-                errors.append(f"{item_chapter}: {exc}")
+                errors.append(f"{', '.join(component)}: {exc}")
                 continue
-            for kind in chapter_applied:
-                applied[kind].extend(chapter_applied[kind])
+            batches.update(component_batches)
+            published_files.extend(component_files)
+            for chapter_applied in component_applied.values():
+                for kind in chapter_applied:
+                    applied[kind].extend(chapter_applied[kind])
         accounting = _accounting(conn)
         conn.commit()
     except Exception:
         conn.rollback()
+        for path in published_files:
+            path.unlink(missing_ok=True)
         raise
     finally:
         conn.close()
@@ -1514,8 +1577,10 @@ def _allocate_batch_id(conn):
     return f"batch-{next_value - 1:03d}"
 
 
-def _write_manifest_snapshot(database, batch_id, manifest):
+def _write_manifest_snapshot(database, batch_id, manifest, *, created_files=None):
     path = database.parent / "ingest" / f"{batch_id}.json"
+    if created_files is not None:
+        created_files.append(path)
     write_artifact(path, manifest)
     return path
 

@@ -233,6 +233,7 @@ class MicroQuizIngestTests(unittest.TestCase):
         result = ingest.apply_micro_quiz(self.db_path, path)
         self.assertTrue(result["applied"])
         self.assertEqual(result["batch_id"], "batch-001")
+
         self.assertTrue(Path(result["backup_path"]).exists())
         snapshot_path = self.root / "ingest" / "batch-001.json"
         snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
@@ -264,6 +265,14 @@ class MicroQuizIngestTests(unittest.TestCase):
         self.assertEqual(batch[0], "micro-quiz-patch")
         self.assertEqual(Path(batch[1]), snapshot_path)
         self.assertEqual(json.loads(batch[2]), {"problems": 1})
+
+    def test_non_object_items_do_not_block_valid_neighbours(self):
+        result = ingest.apply_micro_quiz(
+            self.db_path, self.manifest([manifest_item(), 17, None]))
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["counts"]["problems"], 1)
+        with open_db(self.db_path) as conn:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM problems").fetchone()[0], 1)
 
     def test_gate_refuses_an_existing_identity_and_reports_its_source(self):
         with open_db(self.db_path) as conn:

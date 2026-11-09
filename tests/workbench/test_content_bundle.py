@@ -879,6 +879,85 @@ class ContentBundleTests(unittest.TestCase):
         self.assertFalse((self.ws / ".lessonkit" / "figures").exists())
         self.assertTrue(original)                            # nothing to restore
 
+    def test_auto_id_corrected_retry_reuses_unchanged_knowledge_point(self):
+        manifest = {"kind": "content-bundle", "chapter": "ch06",
+                    "knowledge_points": [{"key": "k", "knowledge_item": "RetryKP",
+                                          "body": "original"}],
+                    "problems": [formal("p", ["k"], source_kind="invalid")]}
+        first = self.apply(manifest)
+        self.assertEqual(first["counts"]["knowledge_points"], 1)
+        kp_id = self.query("SELECT kp_id FROM knowledge_points WHERE knowledge_item='RetryKP'")[0][0]
+        manifest["problems"][0]["source_kind"] = "textbook"
+        second = self.apply(manifest)
+        self.assertEqual(second["counts"]["knowledge_points"], 0)
+        self.assertEqual(second["counts"]["problems"], 1)
+        self.assertIn("already exists", "\n".join(second["errors"]))
+        self.assertEqual(self.query("SELECT kp_id FROM knowledge_points WHERE knowledge_item='RetryKP'"), [(kp_id,)])
+        self.assertEqual(self.query("SELECT kp_ids FROM problems WHERE problem_text='Question p'"), [(json.dumps([kp_id]),)])
+
+    def test_exact_content_reuse_is_chapter_scoped_and_does_not_merge_changed_bodies(self):
+        for chapter, body in (("ch06", "one"), ("ch07", "one"), ("ch06", "two")):
+            self.assertTrue(self.apply({"kind": "content-bundle", "chapter": chapter,
+                                       "knowledge_points": [{"key": "same-key", "knowledge_item": "SameTitle", "body": body}]})["ok"])
+        self.assertEqual(self.query("SELECT COUNT(*) FROM knowledge_points WHERE knowledge_item='SameTitle'"), [(3,)])
+
+    def test_new_dependencies_work_in_both_chapter_directions(self):
+        result = self.apply({"kind": "content-bundle",
+            "knowledge_points": [
+                {"key": "a", "chapter": "ch05", "knowledge_item": "A"},
+                {"key": "b", "chapter": "ch07", "knowledge_item": "B"}],
+            "problems": [formal("early", ["b"], chapter="ch05"),
+                         formal("late", ["a"], chapter="ch07")],
+            "flash_cards": [{"key": "c", "chapter": "ch05", "kp_id": "b",
+                             "front": "Q", "back": "A", "source_evidence": "book"}],
+        })
+        self.assertTrue(result["ok"], result["errors"])
+        self.assertEqual(result["counts"]["problems"], 2)
+        self.assertEqual(result["counts"]["flash_cards"], 1)
+        self.assertEqual([batch["chapter"] for batch in result["batches"]], ["ch05", "ch07"])
+        self.assertEqual([batch["counts"]["knowledge_points"] for batch in result["batches"]], [1, 1])
+
+    def test_cross_chapter_failed_kp_blocks_dependents_only(self):
+        from unittest import mock
+        insert = ingest._insert_row
+        def fail_kp(conn, table, row):
+            if table == "knowledge_points" and row["knowledge_item"] == "Fail":
+                raise sqlite3.IntegrityError("injected KP failure")
+            return insert(conn, table, row)
+        with mock.patch.object(ingest, "_insert_row", side_effect=fail_kp):
+            result = self.apply({"kind": "content-bundle",
+                "knowledge_points": [{"key": "bad", "chapter": "ch07", "knowledge_item": "Fail"}],
+                "problems": [formal("blocked", ["bad"], chapter="ch05"),
+                             formal("good", ["dmath-ch06-kp-001"], chapter="ch05")],
+            })
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertIn("depends on a rejected", "\n".join(result["errors"]))
+        self.assertEqual(self.query("SELECT problem_text FROM problems WHERE problem_text LIKE 'Question %'"), [("Question good",)])
+
+    def test_late_batch_failure_cannot_leave_cross_chapter_dangling_dependencies(self):
+        from unittest import mock
+        record = ingest._record_batch
+        def fail_late(conn, batch_id, kind, path, counts, backup):
+            snapshot = json.loads(Path(path).read_text(encoding="utf-8"))
+            if snapshot["chapter"] == "ch07":
+                raise OSError("injected batch failure")
+            return record(conn, batch_id, kind, path, counts, backup)
+        figure = self.image("cross.png")
+        with mock.patch.object(ingest, "_record_batch", side_effect=fail_late):
+            result = self.apply({"kind": "content-bundle",
+                "knowledge_points": [{"key": "late", "chapter": "ch07", "knowledge_item": "Late"}],
+                "problems": [formal("dependent", ["late"], chapter="ch05", text="Cross ![f](figure:f)",
+                                    figures=[{"key": "f", "source_path": str(figure)}]),
+                             formal("independent", ["dmath-ch06-kp-001"], chapter="ch08")],
+            })
+        self.assertFalse(result["ok"])
+        self.assertEqual([batch["chapter"] for batch in result["batches"]], ["ch08"])
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertEqual(self.query("SELECT COUNT(*) FROM knowledge_points WHERE knowledge_item='Late'"), [(0,)])
+        self.assertEqual(self.query("SELECT COUNT(*) FROM problems WHERE problem_text LIKE 'Cross %'"), [(0,)])
+        self.assertEqual(self.count("ingest_batches"), 1)
+        self.assertFalse(any((self.ws / ".lessonkit" / "figures").rglob("*.png")))
+
     def test_a_corrected_retry_applies_the_missing_unit_only(self):
         first = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
             {"key": "k1", "kp_id": "dmath-ch06-kp-900",
@@ -897,6 +976,86 @@ class ContentBundleTests(unittest.TestCase):
         self.assertEqual(self.query(
             "SELECT COUNT(*) FROM knowledge_points WHERE kp_id='dmath-ch06-kp-900'"),
             [(1,)])
+
+    def test_explicit_completed_kp_can_resolve_a_corrected_dependency(self):
+        kp = {"key": "done", "kp_id": "dmath-ch06-kp-900", "knowledge_item": "Done"}
+        self.apply({"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [kp]})
+        result = self.apply({"kind": "content-bundle", "chapter": "ch06",
+                             "knowledge_points": [kp], "problems": [formal("p", ["done"])]})
+        self.assertEqual(result["counts"]["knowledge_points"], 0)
+        self.assertEqual(result["counts"]["problems"], 1)
+
+    def test_ambiguous_exact_kps_do_not_bind_an_arbitrary_identity(self):
+        self.apply({"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
+            {"key": "a", "knowledge_item": "Ambiguous"},
+            {"key": "b", "knowledge_item": "Ambiguous"}]})
+        result = self.apply({"kind": "content-bundle", "chapter": "ch06",
+            "knowledge_points": [{"key": "k", "knowledge_item": "Ambiguous"}],
+            "problems": [formal("blocked", ["k"]), formal("valid", ["dmath-ch06-kp-001"])]})
+        self.assertEqual(result["counts"]["knowledge_points"], 0)
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertIn("several identical", "\n".join(result["errors"]))
+
+    def test_final_commit_failure_cleans_new_files_but_preserves_shared_figures(self):
+        from unittest import mock
+        image = self.image("commit.png")
+        shared = self.image("shared.png", b"shared-image-bytes")
+        self.apply({"kind": "content-bundle", "chapter": "ch06", "problems": [
+            formal("original", ["dmath-ch06-kp-001"], text="Original ![s](figure:s)",
+                   figures=[{"key": "s", "source_path": str(shared)}])]})
+        before_figures = set((self.ws / ".lessonkit" / "figures").rglob("*.png"))
+        before_snapshots = set((self.db_path.parent / "ingest").glob("*.json"))
+        connect = sqlite3.connect
+        class FailingCommit(sqlite3.Connection):
+            def commit(self):
+                raise sqlite3.OperationalError("injected commit failure")
+        def failing_connect(*args, **kwargs):
+            return connect(*args, **kwargs, factory=FailingCommit)
+        with mock.patch.object(ingest.sqlite3, "connect", side_effect=failing_connect):
+            with self.assertRaisesRegex(sqlite3.OperationalError, "injected commit failure"):
+                self.apply({"kind": "content-bundle", "chapter": "ch06", "problems": [
+                    formal("new", ["dmath-ch06-kp-001"], text="New ![n](figure:n) ![s](figure:s)",
+                           figures=[{"key": "n", "source_path": str(image)},
+                                    {"key": "s", "source_path": str(shared)}])]})
+        self.assertEqual(self.count("ingest_batches"), 1)
+        self.assertEqual(set((self.ws / ".lessonkit" / "figures").rglob("*.png")), before_figures)
+        self.assertEqual(set((self.db_path.parent / "ingest").glob("*.json")), before_snapshots)
+
+    def test_partial_image_copy_is_removed_and_correction_can_retry(self):
+        from unittest import mock
+        image = self.image("partial.png")
+        manifest = {"kind": "content-bundle", "chapter": "ch06", "problems": [
+            formal("image", ["dmath-ch06-kp-001"], text="Illustration ![n](figure:n)",
+                   figures=[{"key": "n", "source_path": str(image)}]),
+            formal("neighbour", ["dmath-ch06-kp-001"])]}
+        def partial_copy(source, destination):
+            Path(destination).write_bytes(b"partial")
+            raise OSError("partial image copy")
+        with mock.patch.object(ingest.shutil, "copyfile", side_effect=partial_copy):
+            result = self.apply(manifest)
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertFalse(any((self.ws / ".lessonkit" / "figures").rglob("*.png")))
+        retry = self.apply(manifest)
+        self.assertEqual(retry["counts"]["problems"], 1)
+        self.assertNotIn("destination conflict", "\n".join(retry["errors"]))
+
+    def test_interrupted_snapshot_write_is_cleaned_before_independent_chapter_continues(self):
+        from unittest import mock
+        write = ingest.write_artifact
+        def interrupted(path, manifest):
+            if manifest.get("chapter") == "ch05":
+                Path(path).parent.mkdir(parents=True, exist_ok=True)
+                Path(path).write_text("partial", encoding="utf-8")
+                raise OSError("partial snapshot write")
+            return write(path, manifest)
+        with mock.patch.object(ingest, "write_artifact", side_effect=interrupted):
+            result = self.apply({"kind": "content-bundle", "problems": [
+                formal("bad-snapshot", ["dmath-ch06-kp-001"], chapter="ch05"),
+                formal("good-snapshot", ["dmath-ch06-kp-001"], chapter="ch07")]})
+        self.assertEqual([batch["chapter"] for batch in result["batches"]], ["ch07"])
+        snapshots = list((self.db_path.parent / "ingest").glob("*.json"))
+        self.assertEqual(len(snapshots), 1)
+        self.assertEqual(json.loads(snapshots[0].read_text(encoding="utf-8"))["chapter"], "ch07")
 
 
 if __name__ == "__main__":

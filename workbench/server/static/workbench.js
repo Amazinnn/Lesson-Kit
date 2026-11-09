@@ -4822,6 +4822,7 @@
     if (result.backup_path) {
       lines.push("备份 " + String(result.backup_path).split(/[\\/]/).pop());
     }
+    if (result.errors && result.errors.length) lines.push(result.errors.join("\n"));
     return lines.join("\n");
   }
 
@@ -4871,6 +4872,10 @@
     var result = action.result;
     if (!result) return;
     var batches = Array.isArray(result.batches) ? result.batches : [];
+    if (!batches.length && !result.batch_id && result.errors && result.errors.length) {
+      aiAddCheckCard("入库未执行", result.errors.join("\n"), null);
+      return;
+    }
     if (batches.length > 1) {
       // One bundle that spanned chapters: every recorded batch gets its own row
       // and its own rollback.
@@ -4883,7 +4888,8 @@
       return;
     }
     if (!result.batch_id) return;
-    var single = aiAddCheckCard("入库完成", aiResultDetail(result), result.batch_id);
+    var single = aiAddCheckCard(result.errors && result.errors.length ? "部分入库" : "入库完成",
+      aiResultDetail(result), result.batch_id);
     var line = single ? single.querySelector(".check-card-detail") : null;
     if (line) line.dataset.assets = aiAssetSummary(result.counts || {});
     // A reopened card shows the batch's current state, not the state at the time
@@ -4894,7 +4900,8 @@
   }
 
   function aiAddMultiBatchCard(result, batches) {
-    var card = aiAddCheckCard("入库完成", aiMultiBatchDetail(result, batches), null);
+    var card = aiAddCheckCard(result.errors && result.errors.length ? "部分入库" : "入库完成",
+      aiMultiBatchDetail(result, batches), null);
     if (!card) return null;
     var body = card.children[0];
     batches.forEach(function (batch) {
@@ -4936,6 +4943,7 @@
     if (result.backup_path) {
       lines.push("备份 " + String(result.backup_path).split(/[\\/]/).pop());
     }
+    if (result.errors && result.errors.length) lines.push(result.errors.join("\n"));
     return lines.join("\\n");
   }
 

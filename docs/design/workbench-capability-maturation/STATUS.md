@@ -2,6 +2,13 @@
 
 > 下一阶段：后续队列（json-content-repository-sync 7.1–7.3、graph-settle-smoothness 9.1/9.2、workbench-display-redundancy-cleanup/import-attempts/ads-answer-gap-repair 各 4 条收尾、WP04–06）。交接：本文件 + `evidence/retire-project-approval-gates/`。
 
+## 2026-11-09：main 审查修复（repair-recent-content-actions）
+
+- 范围：以 `8b1c89c7` 为基线，修复五项实现缺陷及公共回执丢失部分失败原因的问题；独立复核又补齐最终提交失败、部分图复制失败、发布路径 FileNotFoundError 三种异常边界，并补测修复快照初次写入中断的清理。没有操作真实课程、重启运行服务或推送。
+- 实现：同章全部作者字段精确且唯一匹配的 auto-ID 知识点报已存在，并供本地 key 引用；不猜请求谱系，不覆盖旧点。相连章节先写 KP 再写依赖题/卡，仍每章一批；溯源失败回滚相连未提交章节、独立章节可完成。方法追加关联走共同题目更新 writer 清空失效难度；坏 micro-quiz 项不阻断邻项。旧动作仅真实输入错误终结 invalid，操作失败保留原记录并报错，下次恢复重校验。
+- OpenSpec：五份活跃 delta 补回遗漏场景；settings 与 Attempt 要求同步已合入的偏好/小问兼容基线，保留各自计划增量。第六项是已归档 complete-live-display-preferences 的空目录残留，已清空，不伪造 skip_specs。当前严格全量验证 **42/42**（26 specs、16 changes）。
+- 已验证：核心相关回归 **100 passed**，加入对话/契约后的六文件合跑 **189 passed**，Node **299 passed**；compileall、extract-problems guard、diff check 通过。独立验收通过：最终冻结源码全仓 **1599 passed / 476.89s**，补充上下文 **89 passed / 22.89s**；最终 diff 无剩余 P1/P2，完整记录见 `openspec/changes/repair-recent-content-actions/evidence.md`。未进行真实模型、安装运行时切换或真实课程迁移验收。
+
 ## 2026-11-09 终：WP03 归档（live specs 26/26）
 
 - `retire-project-approval-gates` 归档为 `archive/2026-11-09-retire-project-approval-gates`（`c1ec0cb7`）：direct-project-actions 新能力进入 live；ai-teacher-bridge 1 REMOVED+2 MODIFIED、workbench-ui 2 REMOVED+3 MODIFIED、practice-set-export 1 MODIFIED 全部并入；live specs strict **26/26**，归档后逐块验证（ADDED 在场/scenario 保全/REMOVED 消失）11/11 PASS。

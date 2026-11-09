@@ -19,6 +19,8 @@ class AgentContractTests(unittest.TestCase):
         self.assertIn("staged_manifest_dir", content)
         self.assertIn("source_evidence", content)
         self.assertIn("zero-write", content)
+        self.assertNotIn("entire submitted manifest is zero-write", content)
+        self.assertNotIn("rejects the whole manifest", content)
         self.assertIn("Problem parts (综合题小问)", content)
         self.assertIn("Do not also declare `quiz_type`", content)
 
@@ -43,6 +45,8 @@ class AgentContractTests(unittest.TestCase):
             },
             "working_set": {"kind": "practice", "items": []},
         })
+        self.assertNotIn("失败零写入", prompt)
+        self.assertIn("独立有效项照常完成", prompt)
 
         self.assertIn("context.focus", prompt)
         self.assertIn("context.working_set", prompt)
