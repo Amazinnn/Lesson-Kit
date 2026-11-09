@@ -1362,6 +1362,200 @@ class PaperBoundImportTests(AttemptsTestCase):
                          "no Paper progress, checkpoint or execution id survives")
         self.assertEqual(self.rows("SELECT * FROM attempt_operations"), [])
 
+    def test_new_checkpoint_records_source_generation_and_item_revisions(self):
+        paper_id = self.save_paper(
+            "卷子", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+
+        code, result = self.apply_to_paper(
+            "import-details", paper_id,
+            [{"problem_id": "dmath-ch12-prob-001", "answer_text": "纸上作答"}])
+
+        self.assertEqual(code, 0)
+        execution_id = result["paper"]["execution_id"]
+        self.assertTrue(execution_id)
+        allocated = self.rows(
+            "SELECT * FROM practice_execution_ids WHERE id=?",
+            (execution_id,))
+        self.assertEqual(len(allocated), 1)
+        checkpoint = json.loads(self.rows(
+            "SELECT checkpoint_json, generation FROM paper_state WHERE paper_id=?",
+            (paper_id,))[0]["checkpoint_json"])
+        self.assertEqual(checkpoint["source_kind"], "paper")
+        self.assertEqual(checkpoint["execution_id"], execution_id)
+        self.assertEqual(checkpoint["reveal_timing"], "on_submit")
+        self.assertEqual(checkpoint["paper_generation"],
+                         self.rows("SELECT generation FROM paper_state "
+                                   "WHERE paper_id=?", (paper_id,))[0]["generation"])
+        self.assertEqual(len(checkpoint["items"]), 2)
+        for item in checkpoint["items"]:
+            self.assertTrue(item["content_revision"],
+                            "every checkpoint item carries its content revision")
+
+    def test_explicit_mode_import_waits_for_the_learners_submission(self):
+        from workbench.data import active_practice
+
+        paper_id = self.save_paper(
+            "显式交卷", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        pool = self.open_pool()
+        try:
+            active_practice.start_saved(
+                pool, paper_id, reveal_timing="on_submit", rating_mode="off")
+
+            code, result = self.apply_to_paper(
+                "import-explicit", paper_id,
+                [{"problem_id": "dmath-ch12-prob-001", "answer_text": "答案一"},
+                 {"problem_id": "dmath-ch12-prob-002", "answer_text": "答案二"}])
+
+            self.assertEqual(code, 0)
+            self.assertEqual(result["paper"]["reveal_timing"], "on_submit")
+            self.assertFalse(result["paper"]["completed"])
+            self.assertIsNone(result["paper"]["run_id"])
+            self.assertEqual(self.rows("SELECT * FROM practice_runs"), [])
+            items = self.rows(
+                "SELECT position,state,attempt_id FROM active_practice_items "
+                "ORDER BY position")
+            self.assertEqual([item["state"] for item in items],
+                             ["answered", "answered"])
+            self.assertEqual(items[0]["attempt_id"],
+                             result["items"][0]["attempt_id"])
+            self.assertEqual(items[1]["attempt_id"],
+                             result["items"][1]["attempt_id"])
+        finally:
+            pool.close()
+
+    def test_import_clears_pending_draft_and_keeps_reference_viewed(self):
+        from workbench.data import active_practice
+
+        paper_id = self.save_paper(
+            "草稿", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        pool = self.open_pool()
+        try:
+            started = active_practice.start_saved(
+                pool, paper_id, reveal_timing="per_item", rating_mode="off")
+            active_practice.save_draft(
+                pool, started["execution_id"], 0,
+                {"answer": "写到一半", "choices": [], "stuck": True,
+                 "reference_viewed": True},
+                sequence=1)
+            active_practice.mark(pool, 0, "stuck")
+
+            code, result = self.apply_to_paper(
+                "import-draft", paper_id,
+                [{"problem_id": "dmath-ch12-prob-001", "answer_text": "完整答案"}])
+
+            self.assertEqual(code, 0)
+            item = self.rows(
+                "SELECT state,draft_json FROM active_practice_items WHERE position=0")[0]
+            self.assertEqual(item["state"], "answered")
+            draft = json.loads(item["draft_json"] or "{}")
+            self.assertNotIn("answer", draft)
+            self.assertNotIn("choices", draft)
+            self.assertFalse(draft.get("stuck"))
+            self.assertTrue(draft.get("reference_viewed"),
+                            "the recorded reference-view fact is not invented away")
+            self.assertEqual(result["paper"]["rebound"],
+                             ["dmath-ch12-prob-001"])
+        finally:
+            pool.close()
+
+    def test_attempts_get_reports_the_paper_linkage(self):
+        paper_id = self.save_paper("卷子", ["dmath-ch12-prob-001"])
+        code, result = self.apply_to_paper(
+            "import-get", paper_id,
+            [{"problem_id": "dmath-ch12-prob-001", "answer_text": "答案"}])
+        self.assertEqual(code, 0)
+        attempt_id = result["items"][0]["attempt_id"]
+
+        code, got = self.json_cli(
+            "attempts", "course", "get", str(attempt_id))
+
+        self.assertEqual(code, 0)
+        self.assertEqual(got["paper"], {
+            "paper_id": paper_id, "position": 0, "state": "answered",
+            "mode": "parked",
+        })
+
+    def test_start_after_import_resumes_the_imported_progress(self):
+        from workbench.data import active_practice
+
+        paper_id = self.save_paper(
+            "卷子", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        code, result = self.apply_to_paper(
+            "import-resume", paper_id,
+            [{"problem_id": "dmath-ch12-prob-001", "answer_text": "纸上作答"}])
+        self.assertEqual(code, 0)
+        imported_execution = result["paper"]["execution_id"]
+        pool = self.open_pool()
+        try:
+            started = active_practice.start_saved(pool, paper_id)
+
+            self.assertEqual(started["execution_id"], imported_execution,
+                             "starting resumes the imported execution, not a new one")
+            items = self.rows(
+                "SELECT position,state,attempt_id FROM active_practice_items "
+                "ORDER BY position")
+            self.assertEqual(items[0]["state"], "answered")
+            self.assertEqual(items[0]["attempt_id"],
+                             result["items"][0]["attempt_id"])
+            self.assertEqual(items[1]["state"], "pending")
+            self.assertEqual(self.rows("SELECT * FROM practice_runs"), [])
+        finally:
+            pool.close()
+
+    def test_stale_imported_checkpoint_is_not_offered(self):
+        """An imported checkpoint that names an unavailable problem is not remapped."""
+        paper_id = self.save_paper("卷子", ["dmath-ch12-prob-001"])
+        code, _ = self.apply_to_paper(
+            "import-stale", paper_id,
+            [{"problem_id": "dmath-ch12-prob-001", "answer_text": "纸上作答"}])
+        self.assertEqual(code, 0)
+        code, before = self.json_cli("papers", "course", "get", paper_id)
+        self.assertEqual(code, 0)
+        self.assertTrue(before["continuation"]["available"])
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute("DELETE FROM problems WHERE problem_id=?",
+                         ("dmath-ch12-prob-001",))
+            conn.commit()
+        finally:
+            conn.close()
+
+        code, after = self.json_cli("papers", "course", "get", paper_id)
+        self.assertEqual(code, 0)
+        self.assertFalse(after["continuation"]["available"])
+        self.assertIn("不可用题目", after["continuation"]["reason"])
+        checkpoint = json.loads(self.rows(
+            "SELECT checkpoint_json FROM paper_state WHERE paper_id=?",
+            (paper_id,))[0]["checkpoint_json"])
+        self.assertEqual(checkpoint["items"][0]["state"], "answered",
+                         "the stale checkpoint keeps its recorded state, unmapped")
+
+    def test_paper_generation_gap_makes_the_checkpoint_unavailable(self):
+        paper_id = self.save_paper("卷子", ["dmath-ch12-prob-001"])
+        code, _ = self.apply_to_paper(
+            "import-gen", paper_id,
+            [{"problem_id": "dmath-ch12-prob-001", "answer_text": "纸上作答"}])
+        self.assertEqual(code, 0)
+        paper_before = self.rows(
+            "SELECT generation, checkpoint_json FROM paper_state WHERE paper_id=?",
+            (paper_id,))[0]
+        checkpoint = json.loads(paper_before["checkpoint_json"])
+        self.assertEqual(checkpoint["paper_generation"], paper_before["generation"])
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute("UPDATE paper_state SET generation=generation+1 "
+                         "WHERE paper_id=?", (paper_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
+        code, after = self.json_cli("papers", "course", "get", paper_id)
+        self.assertEqual(code, 0)
+        self.assertFalse(after["continuation"]["available"])
+        self.assertIn("结构版本已过期", after["continuation"]["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -214,6 +214,40 @@ class PapersCliTests(unittest.TestCase):
         self.assertFalse(db_path.exists())
         self.assertFalse((missing / ".lessonkit" / "practice-sets").exists())
 
+    def test_append_refusals_exit_two_without_writing(self):
+        # An unknown problem is refused at the CLI with exit 2.
+        code, output = self.run_cli(
+            "append", self.prior["practice_set_id"],
+            "--problem", "dmath-ch06-prob-999")
+        self.assertEqual(code, 2, output)
+        self.assertIn("error", json.loads(output))
+        self.assertEqual(
+            [item["problem_id"] for item in self.practice_sets.get_saved(
+                self.pool, self.prior["practice_set_id"])["plan"]["items"]],
+            ["dmath-ch06-prob-001"])
+
+        # A second append of the same problem is idempotent, not an error.
+        code, output = self.run_cli(
+            "append", self.prior["practice_set_id"],
+            "--problem", "dmath-ch06-prob-002")
+        self.assertEqual(code, 0, output)
+        first = json.loads(output)
+        code, output = self.run_cli(
+            "append", self.prior["practice_set_id"],
+            "--problem", "dmath-ch06-prob-002")
+        self.assertEqual(code, 0, output)
+        second = json.loads(output)
+        self.assertTrue(first["appended"])
+        self.assertFalse(first["already_present"])
+        self.assertTrue(second["already_present"])
+        self.assertFalse(second["appended"])
+        self.assertEqual(second["requires_reload"], False,
+                         "an idempotent repeat requires no reload and writes nothing")
+        self.assertEqual(
+            [item["problem_id"] for item in self.practice_sets.get_saved(
+                self.pool, self.prior["practice_set_id"])["plan"]["items"]],
+            ["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
+
 
 if __name__ == "__main__":
     unittest.main()

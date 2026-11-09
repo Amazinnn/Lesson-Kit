@@ -183,7 +183,7 @@ COMMANDS = {
     "practice": (AGENT, ""),
     "feedback": (AGENT, ""),
     "goals": (AGENT, ""),
-    "attempts": (AGENT, ""),
+    "attempts": (AGENT, "records/corrects attempts; an optional manifest paper_id binds them to a saved Paper's execution progress"),
     "grading": (AGENT, "versioned part grading; no Attempt or learning effects"),
     "data": (AGENT, "reads/writes current content and runs a read-only content audit"),
     "difficulty": (AGENT, ""),
