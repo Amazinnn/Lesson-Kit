@@ -127,9 +127,10 @@ parked legacy checkpoint does not archive by itself).
 
 ## Risks
 
-- An import that fills the last pending item of a legacy Paper archives it
-  immediately. This is the existing legacy completion rule, not a new one; the
-  manifest's `paper_id` makes the target explicit.
+- An import that fills the last pending item of a legacy selected (active) Paper
+  archives it immediately. This is the existing legacy completion rule, not a new
+  one; the manifest's `paper_id` makes the target explicit. A parked legacy Paper
+  keeps its checkpoint (see the reconciliation addendum).
 - Imported attempts get the import time, not the paper-answering time. The
   calendar and schedule will show the import day. Backdating is out of scope.
 - Import-created parked progress does not create a records-center run card until
