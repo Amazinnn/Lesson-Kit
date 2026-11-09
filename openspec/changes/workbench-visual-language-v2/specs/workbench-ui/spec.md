@@ -818,6 +818,18 @@ written explanation of the state.
 - **WHEN** a state is marked on any surface
 - **THEN** no explanatory text label is placed beside it to convey that state
 
+#### Scenario: A review entry carries its state
+
+- **WHEN** the learner views the left column's review group
+- **THEN** each entry leads with a status dot whose colour and geometry both
+  identify why it is there
+
+#### Scenario: The state set is fixed
+
+- **WHEN** the learner sees a review entry's dot
+- **THEN** its colour and geometry come from the defined set of review states
+  and from no other meaning
+
 ### Requirement: Records center
 
 The three-column shell SHALL expose a 记录 navigation entry as a dedicated
@@ -1015,6 +1027,17 @@ composer scrolls away with the messages.
 - **THEN** the drawer shows the session list, the messages and the composer in
   the same structure as the docked rail, with the composer still reachable
 
+#### Scenario: Sessions are grouped by recency
+
+- **WHEN** the learner opens the Agent rail's session list
+- **THEN** the entries are grouped under headings for today, yesterday and
+  earlier, in that order
+
+#### Scenario: A group heading carries no figure
+
+- **WHEN** the learner reads a session-list group heading
+- **THEN** it shows only the recency wording, and no count or statistic
+
 ### Requirement: Accessible Paper status dots
 
 A compact numbered status-dot panel SHALL navigate to every item. Whole-Paper mode before submission SHALL distinguish unanswered, filled and stuck without showing correctness. Per-item mode SHALL show correct/wrong only with usable verdicts, and distinguish filled-but-unsubmitted from submitted-without-verdict. Current item SHALL have an outline or equivalent non-color cue. Statuses SHALL have readable accessible names, not color alone; many items SHALL not obscure the question or navigation.
@@ -1202,6 +1225,18 @@ scrollbar.
 
 - **WHEN** the learner views a middle page with a title band
 - **THEN** no unclaimed strip remains beside the title or under the title band
+
+#### Scenario: The study group leads the left column
+
+- **WHEN** the learner views the left column
+- **THEN** its first group is the study group, and it holds the study entries
+  with a pictogram and a label each
+
+#### Scenario: The workspace identity is not a rail section
+
+- **WHEN** the learner views the left column
+- **THEN** no separate workspace section occupies the top of the rail, because
+  the workspace identity is shown in the top bar
 
 ## Self-check
 

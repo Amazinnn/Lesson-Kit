@@ -312,6 +312,34 @@ itself.
   radius and radial position as the redundant cue, and no state word is drawn on
   the node
 
+#### Scenario: A state carries colour and shape
+
+- **WHEN** a Paper status dot, an answer cell, a knowledge-point row or a record
+  verdict is shown
+- **THEN** it carries a coloured dot in addition to its colour
+
+#### Scenario: A state is not explained in words
+
+- **WHEN** a state is marked on any surface
+- **THEN** no explanatory text label is placed beside it to convey that state
+
+Each entry in the left column's review group SHALL carry the redundant state
+channel for the state that put it there, and the state SHALL be readable from
+the dot's colour **and** its geometry alone. The set of states a review entry
+can carry SHALL be fixed and SHALL use the contract words for those states.
+
+#### Scenario: A review entry carries its state
+
+- **WHEN** the learner views the left column's review group
+- **THEN** each entry leads with a status dot whose colour and geometry both
+  identify why it is there
+
+#### Scenario: The state set is fixed
+
+- **WHEN** the learner sees a review entry's dot
+- **THEN** its colour and geometry come from the defined set of review states
+  and from no other meaning
+
 ### Requirement: Soft Mondrian visual foundation
 
 <!-- ⚠️ A-10.2：须在 workbench-visual-language-v2 合入后 re-base 到 v2 的版本（见文件头）。本块正文目前是 v2 之前的基线文本，re-base 时删除本行标注。 -->

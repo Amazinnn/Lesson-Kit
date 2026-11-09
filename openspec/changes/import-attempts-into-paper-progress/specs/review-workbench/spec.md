@@ -49,19 +49,36 @@ A wrong or stuck result MAY be discussed with the Agent to request authoring a n
 
 ### Requirement: Durable attempt records for every surface
 
-Every submitted answer SHALL become a durable, append-only attempt row regardless
-of the surface that produced it — the browser practice flow, the CLI, or an
-Agent manifest. A browser-submitted attempt SHALL store the answer text, the
-chosen option texts when the item has options, and the objective verdict when
-the item carries a usable answer key; a comprehensive answer SHALL store its
-text with no verdict. An attempt row alone SHALL NOT move learning progress,
-schedule, signals, or current state; those still move only through the rating
-flow, which SHALL link its event back to the attempt (`attempt_id`) after
-validating that the attempt belongs to the rated item. Paper execution progress
-MAY move when an explicit import names a `paper_id` and binds the attempt to
-that Paper's active or parked execution. A pool that predates the columns SHALL
-still accept the attempt (degraded, without verdict or choices) instead of
-failing the practice flow.
+Every submitted answer SHALL become a durable, append-only attempt regardless
+of the browser, CLI or Agent surface. A browser objective attempt SHALL store
+response text, chosen option texts and the objective verdict when a usable key
+exists. A subjective attempt SHALL store the original response with its legacy
+objective verdict empty; separate versioned Part Grading Results SHALL hold
+subjective conclusions. Structured-part submissions SHALL preserve the owning
+problem, stable part and content version; separate submissions of different
+parts SHALL NOT be mistaken for duplicate attempts. Retrying the same
+submission SHALL return its original result. Whole-problem and final-Paper
+submission SHALL NOT duplicate already submitted parts.
+
+An attempt alone SHALL NOT move learning projections except for existing
+independent objective off-mode behavior. Existing explicit rating SHALL link
+back through a validated `attempt_id`. Subjective grading and composite status
+counts SHALL NOT produce automatic problem-level learning effects. Old pools
+SHALL retain the existing degraded legacy answer-recording path, without
+manufacturing part structure or conclusions; new structured grading requires
+the explicit additive migration.
+
+A pool that has not received that additive migration SHALL keep working end to
+end rather than fail on the new storage: opening or refreshing a practice run
+SHALL present its items with no part grading requested and no grading
+conclusions, and an explicit subjective submission SHALL record the attempt
+through the pre-migration attempt columns only, without writing part context or
+grading-job rows. Explicit part-grading requests on such a pool SHALL fail with
+an actionable migration message and zero writes; they SHALL NOT silently
+succeed, fabricate conclusions, or surface as an internal server error. The
+migration gap SHALL be observable from the product's own read-only diagnostics.
+
+Paper execution progress MAY move when an explicit import names a `paper_id` and binds the attempt to that Paper's active or parked execution.
 
 #### Scenario: A browser answer is durable
 
@@ -87,3 +104,18 @@ failing the practice flow.
 
 - **WHEN** an ungraded attempt is imported with a `paper_id`
 - **THEN** the named Paper's item state and attempt link change, while learning progress, signals, current states and schedule remain unchanged
+
+#### Scenario: Practice status on an unmigrated pool
+
+- **WHEN** a practice run on a pool without the additive part-grading schema is opened or refreshed
+- **THEN** its items render with no part grading requested, no grading conclusions and no server error, exactly like the legacy whole-problem path
+
+#### Scenario: Submit on an unmigrated pool
+
+- **WHEN** the learner explicitly submits a subjective answer on a pool without the additive schema
+- **THEN** the attempt is recorded through the pre-migration columns only, the paper keeps advancing, and no part context or grading-job row is invented
+
+#### Scenario: Explicit grading on an unmigrated pool
+
+- **WHEN** an Agent or CLI asks for part grading on a pool without the additive schema
+- **THEN** the request fails with a message naming the migration command, writes nothing, and is not reported as an internal server error
