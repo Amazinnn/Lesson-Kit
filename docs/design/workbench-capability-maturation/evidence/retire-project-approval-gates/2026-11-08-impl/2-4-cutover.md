@@ -10,8 +10,8 @@ WP03 **无 schema 变更、无破坏性数据操作**：迁移是 JSON 级（会
 
 - **installed CLI**：`lesson-kit`（editable，dist 0.1.0），`workbench.__file__`（中性 cwd）= `D:\Projects\Academic Workflow\lesson-kit\workbench\__init__.py` = 主检出。本会话早段纠正了 `.pth` 误指向 course-sync worktree 的问题（`pip install -e . --no-deps` 重装）。
 - **daemon（临时 wb64，3123）**：`/api/runtime` = `source_root: D:\Projects\Academic Workflow\lesson-kit`、`supervisor_pid: 27040`、`worker_pid: 7352`、`assets_generation: 1`。
-- **daemon（默认 home，验收端口 3099 临时启动后已 stop 复原）**：`/api/runtime` = source_root 主检出（pid 6928/14388）；`GET /static/workbench.js` 实服 253,507 字节 = 新代码（`ai-paper-approval` 0 处、replay `replace: true` 在、恢复卡折叠顺序修复在、`wbApplyCollapse` 在）；`/static/agent-ui.js` 的 `function confirm` 计数 0；`GET /api/w/lesson-kit/ai/sessions` 200（新代码读真实工作区会话）。验收后 `daemon stop` 已执行，3099 端口停止（000）。
-- 静态资源版本：workbench.js 与 agent-ui.js 内容指纹与主检出工作树一致（grep 标记法核对）。
+- **daemon（默认 home，验收端口 3099 临时启动后已 stop 复原）**：`/api/runtime` = source_root 主检出（pid 37952/29456，QC 指出首轮记录 253,507 字节系编辑中间态读数后重测）；`GET /static/workbench.js` 实服 **260,971 字节**，与主检出磁盘文件**逐字节相同**，且 grep 标记核检通过（`ai-paper-approval` 0 处、replay `replace: true` 在、恢复卡折叠顺序修复在、`wbApplyCollapse` 在）；`/static/agent-ui.js` 的 `function confirm` 计数 0；`GET /api/w/lesson-kit/ai/sessions` 200（新代码读真实工作区会话）。验收后 `daemon stop` 已执行，3099 端口停止。
+- 静态资源版本：实测 served 与磁盘逐字节一致（260,971B）。
 
 ## 切换执行
 

@@ -10,7 +10,7 @@
 - `api.py`/`app.py`/`surface.py`：`ai_paper_approval` 处理器与 `POST /paper-approval` 路由退役（404）。
 - `agent-ui.css`：删 70 行审批规则。
 - `conversations.py`：删死块 `_invalid_paper_approval`/`_sync_paper_approval_action`/`_approval_response`/`resolve_paper_approval`（179 行）。
-- 净删 915 行（workbench.js+agent-ui.js+css）+ 179 行（bridge）。
+- 静态面净删 494 行（workbench.js 362 + agent-ui.js 58 + agent-ui.css 74，numstat 实计）+ bridge 215 行。
 
 ## 浏览器实测（Playwright，daemon 3123，隔离 wb64）
 
