@@ -2,6 +2,15 @@
 
 > 下一阶段：后续队列（json-content-repository-sync 7.1–7.3、graph-settle-smoothness 9.1/9.2、workbench-display-redundancy-cleanup/import-attempts/ads-answer-gap-repair 各 4 条收尾、WP04–06）。交接：本文件 + `evidence/retire-project-approval-gates/`。
 
+## 2026-11-09：推荐队列收尾（repair/display 归档；ads 诚实注记；evaluation 31/31）
+
+- **repair-recent-content-actions 归档**（`e67499c8`，6/6，live 已同步零 diff）。
+- **workbench-display-redundancy-cleanup 21/21 并归档**（`86128c81`/`8b36d71c`）：隔离 `drc` 工作区（walkthrough seed 120/120，realPoolUnchanged）+ daemon 3325——2.2 四态（hover/focus/点击钉住/Esc/reduced-motion）全过；5.3 练习页+壳层+记录页 12/12；5.4 焦点遍历逐项 aria 宣告 + 复核组状态点双通道（里程碑退役半边实测、aria 半边 node 钉住）；4.3 三列对照板（改前=4ca1d5a2^ worktree 独立 daemon、靶子=mockup-baseline capture-static，`evidence/2026-11-09-board/`，像素差 1.4–5.9%）。
+- **ads-answer-gap-repair 18/22 + 诚实注记**（`55491b2b`）：真实 c02 库（已迁课程工作区）只读实测——修复核心成果在库（3 道名义缺解析题均有解析 674/423/485 字、objective keyless=1=已备案例外、keyed 行 392 attempt 可读）；7.1–7.3 原文绝对判据对已演进库（497→535）不可复现（基线文件丢失、冻结校验器查退役表、学习表因后续真实练习增长），**保持未勾**，是否按残差结案由所有者决定；8.3 已勾（validate valid）。
+- **evaluation-terminology-and-agent-crud 31/31**（`648773d2`）：live spec 两处「关闭自评」→「关闭评价」对齐 records.py 实际渲染；PM 正文 1 处；新增术语 gate 测试（test_terminology_gate.py：live docs/specs 全扫 + 契约/提示词「评价」断言）与 4.6/4.9 两条测试。
+- 仓库终态：全仓 pytest **1,619 passed**、compileall、live specs strict 26/26、12 个其余活跃 change strict valid、`git diff --check` 净。`--all --strict` 的 2 个失败（graph-node-visual-language/workbench-visual-language-v2）源自**其他会话在途未跟踪占位 delta**（其文件头自述「必须先合入 v2 再 re-base」的归档顺序约束），非本会话引入、未触碰。
+- 未推送（本批待单独授权）。
+
 ## 2026-11-09 终：import-attempts-into-paper-progress 归档（37/37，live specs 26/26）
 
 - 独立审查两轮：主审（报告 `tmp/agent-runs/IA-REVIEW-report.md`，七项全结论、无 P1、probe3–6 隔离实测 119 项检查）+ 重启后终验（结论"可以归档"）。唯一阻塞 P2（legacy 归档场景未限定 active/parked）已按 change 自身 design D-4 裁决收窄并登记（`efe3755b`：delta 措辞 + design Reconciliation addendum + 停放 legacy 不归档回归测试；实测确认停放 legacy 恢复也不自动归档，spec 措辞与事实一致）；Risks 节散文同步（`710f9ae6`）。P3×4 与终验备注（Risks 散文）均已登记或同步，无遗留阻塞。
