@@ -82,17 +82,17 @@ Paper execution progress MAY move when an explicit import names a `paper_id` and
 
 #### Scenario: A browser answer is durable
 
-- **WHEN** the student submits an answer on the practice page
-- **THEN** one attempt row persists the answer text, the chosen options, and the objective verdict, and no learning projection changes until the rating lands
+- **WHEN** the learner submits a subjective response on the practice page
+- **THEN** one attempt stores the original response, separate grading may follow, and no learning projection changes merely because grading is requested
 
 #### Scenario: The rating links back
 
-- **WHEN** the session's rating is recorded for an item that submitted an attempt
-- **THEN** the feedback event carries that attempt's id, and the attempt reads back with its rating
+- **WHEN** an explicit rating is recorded for a submitted attempt
+- **THEN** feedback carries that exact validated attempt id and the attempt reads back with its rating
 
 #### Scenario: A mismatched attempt id is refused
 
-- **WHEN** a rating names an attempt that belongs to another item
+- **WHEN** a rating names an attempt belonging to another target
 - **THEN** the rating is refused with zero writes
 
 #### Scenario: Submit remaining parts without duplicates
