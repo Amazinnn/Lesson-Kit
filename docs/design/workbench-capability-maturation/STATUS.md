@@ -9,7 +9,7 @@
 - **6.5 真实验收**（隔离 `ia-accept` + daemon 3221 + Playwright）：A 建卷 → B check 零写入/apply 只写 attempt+绑定（学习表零变化）→ C 浏览器见导入答案、刷新恢复、继续作答、交卷归档 → D 活动卷逐字段不受停放卷导入影响 → E 受治理补题+append 幂等+重放零重复 → G 三类拒绝零残留。证据 `openspec/changes/import-attempts-into-paper-progress/evidence.md`（截图 `.playwright-mcp/ia-accept-*.png`，本地留证）。
 - **契约保全**：旧 delta 三个 scenario 措辞会覆盖 live 的 part-grading 契约，已对齐（67200db0）；四份 delta 逐块对 live 核对零场景丢失；5.2–5.6 文档抽查与实现一致。
 - **仓库检查**：全仓 pytest **1,613 passed / 477.25s**、compileall、`--all --strict` 42/42、guard extract-problems、`git diff --check` 全过。
-- **未完成**：5.1（归档时同步四份 delta，机械步骤）与独立审查报告——审查 agent 因所有者临时关机被要求停机固化，报告写到 `tmp/agent-runs/IA-REVIEW-report.md`（若已落盘则按其结论决定归档；未落盘则重派）。daemon 3221 已停，隔离环境 `%TEMP%\ia-accept` 保留可复现。
+- **未完成**：5.1（归档时同步四份 delta，机械步骤）。审查报告已落盘 `tmp/agent-runs/IA-REVIEW-report.md`（七项全有结论、无 P1）；其唯一阻塞 P2（legacy 归档场景未限定 active/parked）**已裁决并修复**：按 change 自身 design D-4 收窄 delta 为「legacy 选中（活动）执行」，实测确认停放 legacy 恢复不自动归档，裁决登记于 design 的 Reconciliation addendum，回归测试已加——commit `efe3755b`。审查员被打断前未及复验该修复并出最终一句结论；**下次会话：读其报告 + efe3755b diff，若无疑义即 `openspec archive import-attempts-into-paper-progress --yes` → strict → STATUS 收尾**。daemon 3221 已停，隔离环境 `%TEMP%\ia-accept` 保留可复现。
 
 ## 2026-11-09：main 审查修复（repair-recent-content-actions）
 
