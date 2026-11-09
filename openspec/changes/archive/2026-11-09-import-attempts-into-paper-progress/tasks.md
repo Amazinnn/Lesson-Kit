@@ -38,7 +38,7 @@
 
 ## 5. Contracts and docs
 
-- [ ] 5.1 Sync the four capability deltas into `openspec/specs/` at archive time.
+- [x] 5.1 Sync the four capability deltas into `openspec/specs/` at archive time.归档为 `archive/2026-11-09-import-attempts-into-paper-progress`；live specs strict 26/26；四 capability 15 项逐块验证全过（ADDED 在场/场景保全/收窄措辞落 live）。
 - [x] 5.2 Update `FILE_CONTRACT.md` with the attempt manifest contract.（实现/契约/测试已在当前树核对）
 - [x] 5.3 Update `docs/DATA_MODEL.md` with import binding, checkpoint creation, and the distinction between learning and execution progress.（实现/契约/测试已在当前树核对）
 - [x] 5.4 Add `导入绑定` and `Paper 追加题` to `docs/GLOSSARY.md`; update `试卷执行进度`.（实现/契约/测试已在当前树核对）

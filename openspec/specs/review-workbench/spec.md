@@ -118,7 +118,7 @@ per-problem picker or scope/filter/quantity assembly controls. Browser Paper-lis
 - **THEN** the returned problems reflect that evidence and each carries the matching reason
 
 ### Requirement: Paper-backed Practice Run
-A Practice Run SHALL execute one already determined Paper and preserve its ordered item identities. Viewing, answering, skipping, rating, scheduling or Agent discussion SHALL NOT dynamically pull extra items into it. At most one selected active run exists per workspace execution resource, but each saved Paper MAY retain its own unfinished execution independently. Switching selection SHALL pause rather than abandon the previous Paper and SHALL NOT require completing it first. Only explicit governed content edits/deletion under this change may alter or reset unfinished execution state; those are not scheduler-driven assembly.
+A Practice Run SHALL execute one already determined Paper and preserve its ordered item identities. Viewing, answering, skipping, rating, scheduling or Agent discussion SHALL NOT dynamically pull extra items into it. An explicit `papers append` of a problem that was missing from the saved container is a governed content edit; it MAY extend the running Paper at the end without changing existing item states or drafts. At most one selected active run exists per workspace execution resource, but each saved Paper MAY retain its own unfinished execution independently. Switching selection SHALL pause rather than abandon the previous Paper and SHALL NOT require completing it first. Only explicit governed content edits/deletion under this change may alter or reset unfinished execution state; those are not scheduler-driven assembly.
 
 A Paper SHALL NOT be defined by one product-level content-mode choice. Each item SHALL use its actual validated answering type. Existing `practice_mode` fields MAY remain compatibility metadata but SHALL NOT force every item into the same form or recreate a dynamic queue. Self-rating preference controls learning feedback only; Answer Reveal Timing separately controls result disclosure and answer locking. Displaying, drafting, revealing, skipping or ending work SHALL NOT manufacture learning evidence. Scheduling SHALL never lock an item.
 
@@ -145,6 +145,10 @@ A Paper SHALL NOT be defined by one product-level content-mode choice. Each item
 #### Scenario: Switch between unfinished Papers
 - **WHEN** Paper A is partly completed and the learner starts or resumes Paper B, then returns to A
 - **THEN** both retain independent unfinished progress, A resumes its own cursor/items/drafts, and no run is marked abandoned or completed merely by switching
+
+#### Scenario: Explicit repair append extends the running Paper
+- **WHEN** the learner explicitly appends one missing problem to the running Paper
+- **THEN** the Paper gains a pending item at the end while every existing item keeps its state, draft, attempt link and cursor meaning
 
 ### Requirement: Durable practice run archive
 
@@ -179,14 +183,17 @@ item identities and final states, rating compatibility metadata, timestamps, and
 
 ### Requirement: Re-assembly after wrong results
 
-A wrong or stuck result MAY be discussed with the Agent to request authoring a new Paper from relevant knowledge scope or learning evidence. It SHALL NOT expose a learner-operated assemble-similar button. The completed or
-running Paper SHALL never be extended in place, and the follow-up SHALL not
-silently inherit an old seen-id queue as its execution identity.
+A wrong or stuck result MAY be discussed with the Agent to request authoring a new Paper from relevant knowledge scope or learning evidence. It SHALL NOT expose a learner-operated assemble-similar button. Outside the explicit repair append defined by `practice-set-export`, the completed or running Paper SHALL never be extended in place, and the follow-up SHALL not silently inherit an old seen-id queue as its execution identity.
 
 #### Scenario: Build a follow-up Paper after a wrong answer
 
 - **WHEN** a problem is answered wrong or stuck and the learner asks the Agent to author similar material
 - **THEN** Lesson Kit assembles a new Paper from the relevant scope/evidence and starts it only after its item list is determined
+
+#### Scenario: Repair append is not a follow-up Paper
+
+- **WHEN** the learner supplies a missing problem that belongs to the Paper's source material
+- **THEN** the existing Paper gains that problem at the end; a new assembled Paper is not created
 
 ### Requirement: Flexible feedback
 
@@ -966,6 +973,8 @@ an actionable migration message and zero writes; they SHALL NOT silently
 succeed, fabricate conclusions, or surface as an internal server error. The
 migration gap SHALL be observable from the product's own read-only diagnostics.
 
+Paper execution progress MAY move when an explicit import names a `paper_id` and binds the attempt to that Paper's active or parked execution.
+
 #### Scenario: A browser answer is durable
 
 - **WHEN** the learner submits a subjective response on the practice page
@@ -985,6 +994,11 @@ migration gap SHALL be observable from the product's own read-only diagnostics.
 
 - **WHEN** part A is already submitted and the learner submits the remaining parts together, then retries after a lost response
 - **THEN** A's attempt is unchanged and each remaining submitted part has exactly one new attempt, with the retry returning the original outcome
+
+#### Scenario: An imported attempt moves only Paper execution progress
+
+- **WHEN** an ungraded attempt is imported with a `paper_id`
+- **THEN** the named Paper's item state and attempt link change, while learning progress, signals, current states and schedule remain unchanged
 
 #### Scenario: Practice status on an unmigrated pool
 

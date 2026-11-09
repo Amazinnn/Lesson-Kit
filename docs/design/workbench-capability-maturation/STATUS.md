@@ -2,6 +2,12 @@
 
 > 下一阶段：后续队列（json-content-repository-sync 7.1–7.3、graph-settle-smoothness 9.1/9.2、workbench-display-redundancy-cleanup/import-attempts/ads-answer-gap-repair 各 4 条收尾、WP04–06）。交接：本文件 + `evidence/retire-project-approval-gates/`。
 
+## 2026-11-09 终：import-attempts-into-paper-progress 归档（37/37，live specs 26/26）
+
+- 独立审查两轮：主审（报告 `tmp/agent-runs/IA-REVIEW-report.md`，七项全结论、无 P1、probe3–6 隔离实测 119 项检查）+ 重启后终验（结论"可以归档"）。唯一阻塞 P2（legacy 归档场景未限定 active/parked）已按 change 自身 design D-4 裁决收窄并登记（`efe3755b`：delta 措辞 + design Reconciliation addendum + 停放 legacy 不归档回归测试；实测确认停放 legacy 恢复也不自动归档，spec 措辞与事实一致）；Risks 节散文同步（`710f9ae6`）。P3×4 与终验备注（Risks 散文）均已登记或同步，无遗留阻塞。
+- 归档 `archive/2026-11-09-import-attempts-into-paper-progress`：四 capability delta 并入 live（aapr/pse/rw/ai-teacher-bridge），strict **26/26**，15 项逐块验证（ADDED 在场/场景保全/收窄措辞落 live）全过。
+- 全仓基线：**1,613 passed / 477.25s**、compileall、`--all --strict` 42/42、guard、`git diff --check`。未推送；真实工作区与既有服务全程未干扰。
+
 ## 2026-11-09：import-attempts-into-paper-progress 收尾（33/37 → 36/37，5.1 待归档）
 
 - **4.4/4.8 已补**：未知 Paper 拒绝零写入、中段写入失败整批回滚（故障注入）、Agent 契约 paper_id/三步补题/显式意图门槛断言（此前三处文本零断言）。
