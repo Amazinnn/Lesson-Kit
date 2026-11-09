@@ -2,6 +2,15 @@
 
 > 下一阶段：后续队列（json-content-repository-sync 7.1–7.3、graph-settle-smoothness 9.1/9.2、workbench-display-redundancy-cleanup/import-attempts/ads-answer-gap-repair 各 4 条收尾、WP04–06）。交接：本文件 + `evidence/retire-project-approval-gates/`。
 
+## 2026-11-09：import-attempts-into-paper-progress 收尾（33/37 → 36/37，5.1 待归档）
+
+- **4.4/4.8 已补**：未知 Paper 拒绝零写入、中段写入失败整批回滚（故障注入）、Agent 契约 paper_id/三步补题/显式意图门槛断言（此前三处文本零断言）。
+- **delta 场景补齐**：显式模式末项等交卷、新检查点细节（source_kind/paper_generation/content_revision/execution_id）、attempts get 链接、绑定清草稿保 reference_viewed、start 恢复导入执行、stale 不续接（不可用题目/generation 过期）、papers append CLI 拒绝+幂等；surface.py attempts 备注。提交 60e7d5ab / 78c70651。
+- **6.5 真实验收**（隔离 `ia-accept` + daemon 3221 + Playwright）：A 建卷 → B check 零写入/apply 只写 attempt+绑定（学习表零变化）→ C 浏览器见导入答案、刷新恢复、继续作答、交卷归档 → D 活动卷逐字段不受停放卷导入影响 → E 受治理补题+append 幂等+重放零重复 → G 三类拒绝零残留。证据 `openspec/changes/import-attempts-into-paper-progress/evidence.md`（截图 `.playwright-mcp/ia-accept-*.png`，本地留证）。
+- **契约保全**：旧 delta 三个 scenario 措辞会覆盖 live 的 part-grading 契约，已对齐（67200db0）；四份 delta 逐块对 live 核对零场景丢失；5.2–5.6 文档抽查与实现一致。
+- **仓库检查**：全仓 pytest **1,613 passed / 477.25s**、compileall、`--all --strict` 42/42、guard extract-problems、`git diff --check` 全过。
+- **未完成**：5.1（归档时同步四份 delta，机械步骤）与独立审查报告——审查 agent 因所有者临时关机被要求停机固化，报告写到 `tmp/agent-runs/IA-REVIEW-report.md`（若已落盘则按其结论决定归档；未落盘则重派）。daemon 3221 已停，隔离环境 `%TEMP%\ia-accept` 保留可复现。
+
 ## 2026-11-09：main 审查修复（repair-recent-content-actions）
 
 - 范围：以 `8b1c89c7` 为基线，修复五项实现缺陷及公共回执丢失部分失败原因的问题；独立复核又补齐最终提交失败、部分图复制失败、发布路径 FileNotFoundError 三种异常边界，并补测修复快照初次写入中断的清理。没有操作真实课程、重启运行服务或推送。
