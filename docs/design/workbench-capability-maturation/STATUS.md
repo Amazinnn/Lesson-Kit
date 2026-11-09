@@ -1,6 +1,10 @@
 # 规划交接状态
 
-> 下一阶段：WP03 收尾（3.5/3.6 待独立验收结论）+ 后续队列（json-content-repository-sync、graph-settle-smoothness、三个 4 项收尾 change、WP04–06）。交接：本文件 + `evidence/retire-project-approval-gates/2026-11-08-impl/`。
+> 下一阶段：后续队列（json-content-repository-sync 7.1–7.3、graph-settle-smoothness 9.1/9.2、workbench-display-redundancy-cleanup/import-attempts/ads-answer-gap-repair 各 4 条收尾、WP04–06）。交接：本文件 + `evidence/retire-project-approval-gates/`。
+
+## 2026-11-09 终：WP03 归档（live specs 26/26）
+
+- `retire-project-approval-gates` 归档为 `archive/2026-11-09-retire-project-approval-gates`（`c1ec0cb7`）：direct-project-actions 新能力进入 live；ai-teacher-bridge 1 REMOVED+2 MODIFIED、workbench-ui 2 REMOVED+3 MODIFIED、practice-set-export 1 MODIFIED 全部并入；live specs strict **26/26**，归档后逐块验证（ADDED 在场/scenario 保全/REMOVED 消失）11/11 PASS。
 
 ## 2026-11-08/09：WP03 2.1–3.4 实施完成（12/13，3.5 待独立验收）
 
@@ -11,7 +15,7 @@
 - **3.1**（`98eaca82`）：GLOSSARY 两条词条标退役、ARCHITECTURE 279 重写、PRODUCT-MANUAL §4/§8.5/§9、动作图 L0/L2/L3/L4；DATA_MODEL/FILE_CONTRACT 零命中未动。
 - **3.2–3.4**（`96c91166`/`8a6d273c`）：FLOW-01/02/03 实测汇总、RELEASE-01 全绿（全仓 pytest **1583 passed/502.67s**、node 全套 0 fail、compileall、live specs 25/25、change strict、guard extract-problems PASS）。
 - **3.5 独立验收结论**（只读 agent，报告 `tmp/agent-runs/WP03-QC-report.md`）：**可归档/交付**；条件项 P2-1（FILE_CONTRACT 审批退役描述）已补齐；无 P1。已登记后续（不阻断）：P2-3＝迁移把瞬时 IO/锁异常也永久翻 invalid（须后续 change 区分"输入无效"与"暂时失败"）；P3-1＝七处不可达的审批暂停死代码（`_ensure_approval_pause`/start_turn/dispatch/interrupt/continue_queue 守卫，reconcile 先行后不可达，建议随清理 change 删除）；P3-2＝`_paper_update_preview` 的 workspace_name 参数未用；P3-4＝get() 对 turn 文件重复 glob。QC 证据疑点（字节读数、删除行数、领先数）已在证据中更正为重测值。
-- 推送：未推送（需单独授权）；main 现领先 origin/main 10 提交。
+- 推送：未推送（需单独授权）；main 现领先 origin/main 12 提交（含归档提交）。
 
 ## 2026-11-08：前置收口（推送 + 6.4 归档）；WP03 开工
 
