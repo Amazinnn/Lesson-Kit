@@ -14,7 +14,7 @@
 - [x] 2.1 A1：移除 `part-practice.js`「详情」文字按钮 + 孤儿 CSS `.part-details`；把"钉住小问
       状态卡"动作迁到弹卡本身（点卡切 pinned、Esc 解除，键盘可达性靠卡的 tabIndex/role 保留）；
       `.paper-dot` 保持 hover/focus 弹卡，不劫持其点击
-- [ ] 2.2 A1 验证：手测 hover / focus / 点击钉住 / reduced-motion 四态，pin 能力未丢
+- [x] 2.2 A1 验证：手测 hover / focus / 点击钉住 / reduced-motion 四态，pin 能力未丢。隔离 `drc` 工作区 Playwright 实测四态+Esc+reduced-motion 全过（证据 `evidence/2026-11-09-verify.md`）
 - [x] 2.3 A2：删除 `part-practice.js:35` 解析纸 provenance 行「参考来源 / Agent 独立推导」
 - [x] 2.4 A3：`part-practice.js:33` 去掉「（Agent 提炼）」括号注释，保留「你的答案」
 - [x] 2.5 A4/A6：统一 `paper-practice.js` 与 `practice-flow.js` 判定口径为自然陈述句去「判定：」前缀
@@ -41,13 +41,13 @@
 
 - [x] 4.1 `docs/PRODUCT-MANUAL.md` 同步（题号预览句：去「详情」按钮，改「点击预览卡钉住」）
 - [x] 4.2 `docs/ACTION-GRAPH.md` 登记退役动作（「详情」入口）+ 本波改级概览
-- [ ] 4.3 用 `tools/walkthrough/view.py` 出「靶子 | 改前 | 改后」三列对照板，核对 B 组壳层
+- [x] 4.3 用 `tools/walkthrough/view.py` 出「靶子 | 改前 | 改后」三列对照板，核对 B 组壳层。改前=4ca1d5a2^ worktree 独立 daemon；板与两侧抓图在 `evidence/2026-11-09-board/`（像素差 1.4–5.9%，4 行带靶子）
 
 ## 5. 验证
 
 - [x] 5.1 仓库级检查：`python -m pytest tests -q`（1315 passed）、`python -m compileall -q lessonkit.py workbench pipeline pool tests`
 - [x] 5.2 `openspec validate --specs --strict`（21/21 passed）、`openspec validate <change> --strict`（valid）
-- [ ] 5.3 渲染后逐项核对 specs delta 两条 Requirement 的每个 Scenario 均成立
+- [x] 5.3 渲染后逐项核对 specs delta 两条 Requirement 的每个 Scenario 均成立。练习页+壳层+记录页 12/12 PASS（同证据文件）
       （题号格无多余标签、解析纸无 provenance、判定/来源无字段名前缀、会话无 meta 行、
       组标题无计数、设置条目具象名、卡片无 kicker/机器 ID、状态仅几何+aria-label）
-- [ ] 5.4 屏幕阅读器/焦点遍历复核：移除可见状态文字后各状态仍可被宣告
+- [x] 5.4 屏幕阅读器/焦点遍历复核：移除可见状态文字后各状态仍可被宣告。6 题号格 aria 完整宣告+Tab 有序；复核组 aria 宣告+状态点双通道；里程碑退役半边浏览器证实、aria 半边 node 套件钉住

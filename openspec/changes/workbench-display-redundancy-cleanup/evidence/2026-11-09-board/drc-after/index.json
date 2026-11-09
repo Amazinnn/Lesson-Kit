@@ -1,0 +1,112 @@
+{
+  "anchor": {
+    "head": "e67499c8",
+    "css_bytes": 257895,
+    "css_sha256": "3474d2b9f90c1881",
+    "captured_at": "2026-11-09 20:20:28",
+    "tree_dirty": false
+  },
+  "ws": "drc",
+  "base_url": "http://127.0.0.1:3325",
+  "views": [
+    {
+      "id": "practice-1440",
+      "caption": "练习页 · 1440（A 档：三栏 280 / 740 / 420）",
+      "file": "practice-1440.png",
+      "width": 1440,
+      "theme": "paper",
+      "page": "practice",
+      "settled": true,
+      "running_at_shot": [],
+      "middle_text_chars": 385
+    },
+    {
+      "id": "practice-in-progress",
+      "caption": "练习页 · 1440 · 进行中（样板图 shell.html 对应的那一态）",
+      "file": "practice-in-progress.png",
+      "width": 1440,
+      "theme": "paper",
+      "page": "practice",
+      "settled": true,
+      "running_at_shot": [],
+      "middle_text_chars": 384
+    },
+    {
+      "id": "practice-1280",
+      "caption": "练习页 · 1280（B 档：收窄到 248 / 652 / 380）",
+      "file": "practice-1280.png",
+      "width": 1280,
+      "theme": "paper",
+      "page": "practice",
+      "settled": true,
+      "running_at_shot": [],
+      "middle_text_chars": 385
+    },
+    {
+      "id": "practice-1024",
+      "caption": "练习页 · 1024（C 档：右栏出栅格，中栏拿到 792）",
+      "file": "practice-1024.png",
+      "width": 1024,
+      "theme": "paper",
+      "page": "practice",
+      "settled": true,
+      "running_at_shot": [],
+      "middle_text_chars": 385
+    },
+    {
+      "id": "practice-768",
+      "caption": "练习页 · 768（D 档：单栏 + 双抽屉）",
+      "file": "practice-768.png",
+      "width": 768,
+      "theme": "paper",
+      "page": "practice",
+      "settled": true,
+      "running_at_shot": [],
+      "middle_text_chars": 385
+    },
+    {
+      "id": "kps-1440",
+      "caption": "知识点列表 · 1440",
+      "file": "kps-1440.png",
+      "width": 1440,
+      "theme": "paper",
+      "page": "kps",
+      "settled": true,
+      "running_at_shot": [],
+      "middle_text_chars": 968
+    },
+    {
+      "id": "records-1440",
+      "caption": "记录中心 · 1440",
+      "file": "records-1440.png",
+      "width": 1440,
+      "theme": "paper",
+      "page": "records",
+      "settled": true,
+      "running_at_shot": [],
+      "middle_text_chars": 831
+    },
+    {
+      "id": "hub-1440",
+      "caption": "工作台首页 · 1440",
+      "file": "hub-1440.png",
+      "width": 1440,
+      "theme": "paper",
+      "page": "hub",
+      "settled": true,
+      "running_at_shot": [],
+      "middle_text_chars": 385
+    },
+    {
+      "id": "practice-1440-night",
+      "caption": "练习页 · 1440 · 夜纸（夜纸值集不变）",
+      "file": "practice-1440-night.png",
+      "width": 1440,
+      "theme": "night",
+      "page": "practice",
+      "settled": true,
+      "running_at_shot": [],
+      "middle_text_chars": 385
+    }
+  ]
+}

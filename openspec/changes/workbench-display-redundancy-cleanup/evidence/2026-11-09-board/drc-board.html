@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>版式视觉板 · before / after</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 28px 60px;
+    background: #fdf8ef; color: #3b3630;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px; line-height: 1.6;
+  }
+  header { border-bottom: 1px solid #e6dcc4; padding-bottom: 14px; margin-bottom: 22px; }
+  h1 { margin: 0 0 8px; font-size: 22px; }
+  .anchors { font-size: 12px; color: #6b6459; display: grid; gap: 3px; }
+  .anchors b { color: #221f1a; font-weight: 600; }
+  .row { margin: 0 0 30px; }
+  .row h2 { font-size: 15px; margin: 0 0 8px; font-weight: 600; color: #221f1a;
+             display: flex; gap: 12px; align-items: baseline; }
+  .delta { font-size: 12px; font-weight: 400; color: #6b6459; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  /* 带靶子列的行是**三列**（靶子 | 改前 | 改后）—— 原来的两列网格会把
+     靶子挤到下一行，三列对照板就散开了。 */
+  .pair--3 { grid-template-columns: 1fr 1fr 1fr; }
+  figure { margin: 0; }
+  figcaption { font-size: 12px; color: #6b6459; margin-bottom: 4px; }
+  img { width: 100%; height: auto; display: block; border: 1px solid #e6dcc4;
+         border-radius: 8px; background: #fff; }
+  .note { font-size: 12px; color: #6b6459; margin-top: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>版式视觉板 · 改前 / 改后</h1>
+  <div class="anchors">
+    <div>改前：<b>HEAD e67499c8</b> · CSS 257895 B · sha256 3474d2b9f90c1881 · 抓取于 2026-11-09 20:19:25</div>
+    <div>改后：<b>HEAD e67499c8</b> · CSS 257895 B · sha256 3474d2b9f90c1881 · 抓取于 2026-11-09 20:20:28</div>
+    <div class="note">「像素差」= 两张图逐像素比较后不同像素的占比（容差 8/255）。分母是整幅画面，
+      所以几何改动通常只有百分之几 —— 看图比看这个数有用。</div>
+  </div>
+</header>
+
+    <section class="row">
+      <h2>练习页 · 1440（A 档：三栏 280 / 740 / 420）<span class="delta">改前→改后 像素差 4.919%</span></h2>
+      <div class="pair pair--3">
+        
+        <figure><figcaption>靶子 · 样板图基线</figcaption>
+          <img src="drc-ref\practice-1440.png" alt="reference practice-1440"></figure>
+        <figure><figcaption>改前</figcaption>
+          <img src="drc-before\practice-1440.png" alt="before practice-1440"></figure>
+        <figure><figcaption>改后</figcaption>
+          <img src="drc-after\practice-1440.png" alt="after practice-1440"></figure>
+      </div>
+    </section>
+    <section class="row">
+      <h2>练习页 · 1440 · 进行中（样板图 shell.html 对应的那一态）<span class="delta">改前→改后 像素差 5.946%</span></h2>
+      <div class="pair pair--3">
+        
+        <figure><figcaption>靶子 · 样板图基线</figcaption>
+          <img src="drc-ref\practice-in-progress.png" alt="reference practice-in-progress"></figure>
+        <figure><figcaption>改前</figcaption>
+          <img src="drc-before\practice-in-progress.png" alt="before practice-in-progress"></figure>
+        <figure><figcaption>改后</figcaption>
+          <img src="drc-after\practice-in-progress.png" alt="after practice-in-progress"></figure>
+      </div>
+    </section>
+    <section class="row">
+      <h2>练习页 · 1280（B 档：收窄到 248 / 652 / 380）<span class="delta">改前→改后 像素差 5.683%</span></h2>
+      <div class="pair">
+        
+        <figure><figcaption>改前</figcaption>
+          <img src="drc-before\practice-1280.png" alt="before practice-1280"></figure>
+        <figure><figcaption>改后</figcaption>
+          <img src="drc-after\practice-1280.png" alt="after practice-1280"></figure>
+      </div>
+    </section>
+    <section class="row">
+      <h2>练习页 · 1024（C 档：右栏出栅格，中栏拿到 792）<span class="delta">改前→改后 像素差 1.468%</span></h2>
+      <div class="pair">
+        
+        <figure><figcaption>改前</figcaption>
+          <img src="drc-before\practice-1024.png" alt="before practice-1024"></figure>
+        <figure><figcaption>改后</figcaption>
+          <img src="drc-after\practice-1024.png" alt="after practice-1024"></figure>
+      </div>
+    </section>
+    <section class="row">
+      <h2>练习页 · 768（D 档：单栏 + 双抽屉）<span class="delta">改前→改后 像素差 1.552%</span></h2>
+      <div class="pair">
+        
+        <figure><figcaption>改前</figcaption>
+          <img src="drc-before\practice-768.png" alt="before practice-768"></figure>
+        <figure><figcaption>改后</figcaption>
+          <img src="drc-after\practice-768.png" alt="after practice-768"></figure>
+      </div>
+    </section>
+    <section class="row">
+      <h2>知识点列表 · 1440<span class="delta">改前→改后 像素差 4.141%</span></h2>
+      <div class="pair pair--3">
+        
+        <figure><figcaption>靶子 · 样板图基线</figcaption>
+          <img src="drc-ref\kps-1440.png" alt="reference kps-1440"></figure>
+        <figure><figcaption>改前</figcaption>
+          <img src="drc-before\kps-1440.png" alt="before kps-1440"></figure>
+        <figure><figcaption>改后</figcaption>
+          <img src="drc-after\kps-1440.png" alt="after kps-1440"></figure>
+      </div>
+    </section>
+    <section class="row">
+      <h2>记录中心 · 1440<span class="delta">改前→改后 像素差 4.141%</span></h2>
+      <div class="pair pair--3">
+        
+        <figure><figcaption>靶子 · 样板图基线</figcaption>
+          <img src="drc-ref\records-1440.png" alt="reference records-1440"></figure>
+        <figure><figcaption>改前</figcaption>
+          <img src="drc-before\records-1440.png" alt="before records-1440"></figure>
+        <figure><figcaption>改后</figcaption>
+          <img src="drc-after\records-1440.png" alt="after records-1440"></figure>
+      </div>
+    </section>
+    <section class="row">
+      <h2>工作台首页 · 1440<span class="delta">改前→改后 像素差 4.855%</span></h2>
+      <div class="pair">
+        
+        <figure><figcaption>改前</figcaption>
+          <img src="drc-before\hub-1440.png" alt="before hub-1440"></figure>
+        <figure><figcaption>改后</figcaption>
+          <img src="drc-after\hub-1440.png" alt="after hub-1440"></figure>
+      </div>
+    </section>
+    <section class="row">
+      <h2>练习页 · 1440 · 夜纸（夜纸值集不变）<span class="delta">改前→改后 像素差 5.569%</span></h2>
+      <div class="pair">
+        
+        <figure><figcaption>改前</figcaption>
+          <img src="drc-before\practice-1440-night.png" alt="before practice-1440-night"></figure>
+        <figure><figcaption>改后</figcaption>
+          <img src="drc-after\practice-1440-night.png" alt="after practice-1440-night"></figure>
+      </div>
+    </section>
+</body>
+</html>
