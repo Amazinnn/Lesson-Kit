@@ -67,10 +67,23 @@
 - [ ] 7.1 Gap diff against baseline: keyless = 0, empty `solution` = 0,
   sub-40-char `error_reason` residue on pre-existing rows = 0 (new 109
   short tags excepted), 346 existing keys untouched.
+  （2026-11-09 复核：原 `pool/c02.db` 已随课程工作区迁移且继续演进 497→535 行、
+  `repair/` 基线与 1.2 before-image 文件已不存在——原文前提不可复现。
+  当日只读实测（真实库）：objective keyless=1（即已备案例外 c02-ch07-mq-007）；
+  三道名义缺解析题均有解析（674/423/485 字符）；short_error_reason=324 含新增 109 短标签。
+  修复核心成果在库可验，绝对零值判据无法对演进后的库成立——保持未勾，见 reconciliation。）
 - [ ] 7.2 Run `pipeline/scripts/validate-pool.py --db pool/c02.db` and
   `lesson-kit data <ws> audit`; both exit 0.
+  （2026-11-09 复核：validate exit 2 = 冻结校验器查已退役表 candidate_problems/candidate_attempts
+  两个 schema-conformance ERROR（course-sync 已登记的已知退役名，非池质量缺陷）；
+  data audit exit 1 = 3 条既有 unmarked-objective（非本 repair 范围）。与 2026-10-09
+  reconciliation 判定一致，保持未勾。）
 - [ ] 7.3 Learning-record diff: the three tables byte-identical to 1.2's
   before-image; spot-check a keyed row's `problem_attempts` still reads.
+  （2026-11-09 复核：before-image 文件已不存在；学习三表 36/39/36 → 280/392/280，
+  增长来自修复后真实练习（attempt 日期晚于 repair 批次），无法做字节级对照。
+  可验部分已过：keyed 行的 problem_attempts 正常可读（keyed 行上共 392 条 attempt）。
+  保持未勾。）
 - [x] 7.4 Practice-page render spot check: a newly keyed 判断/单选/多选 item
   grades and shows its error reason; a 325-row item shows the expanded
   sentence; one of the 3 new solutions displays.
@@ -81,8 +94,10 @@
   file + location, confidence) and the conflict list with resolutions.
 - [x] 8.2 Publish the batch ledger (chapter → batch id → rollback
   command) and the residual report (any row still keyless, with reason).
-- [ ] 8.3 Check off this change's tasks and run
-  `openspec validate ads-answer-gap-repair`.
+- [x] 8.3 Check off this change's tasks and run
+  `openspec validate ads-answer-gap-repair`.（validate valid；7.1–7.3 按 2026-11-09
+  复核注记保持未勾——原文绝对判据对已演进的库不可复现，修复核心成果已在真实库验证，
+  是否按残差结案由所有者决定。）
 
 ## 2026-10-09 evidence reconciliation
 
